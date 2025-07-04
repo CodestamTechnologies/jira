@@ -51,11 +51,11 @@ export const Navigation = () => {
             <Link
               href={fullHref}
               className={cn(
-                'flex items-center gap-2.5 rounded-md p-2.5 font-medium text-neutral-500 transition hover:text-primary',
+                'flex items-center gap-2.5 rounded-md p-2.5 font-sans text-sm text-neutral-500 transition hover:text-primary',
                 isActive && 'bg-white text-primary shadow-sm hover:opacity-100',
               )}
             >
-              <Icon className="size-5 text-neutral-500" />
+              <Icon className="size-4 text-neutral-500 mr-2" />
               {route.label}
             </Link>
           </li>

@@ -1,4 +1,4 @@
-# Code of Conduct - Jira Clone
+# Code of Conduct - Codestam Jira
 
 ## Our Pledge
 

@@ -1,8 +1,8 @@
 <a name="readme-top"></a>
 
-# Full-stack Jira Clone using Next.js 14 and Appwrite
+# Full-stack Codestam Jira using Next.js 14 and Appwrite
 
-![Full-stack Jira Clone using Next.js 14 and Appwrite](/.github/images/img_main.png 'Full-stack Jira Clone using Next.js 14 and Appwrite')
+![Full-stack Codestam Jira using Next.js 14 and Appwrite](/.github/images/img_main.png 'Full-stack Codestam Jira using Next.js 14 and Appwrite')
 
 [![Ask Me Anything!](https://flat.badgen.net/static/Ask%20me/anything?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy 'Ask Me Anything!')
 [![GitHub license](https://flat.badgen.net/github/license/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy/jira-clone/blob/main/LICENSE 'GitHub license')
@@ -284,7 +284,7 @@ For each collection:
 3. Visit the [GitHub Developer Settings](https://github.com/settings/developers):
    - Under **OAuth Apps**, click **New OAuth App**.
 4. Fill out the required fields:
-   - **Application Name**: `Jira Clone` (or any preferred name).
+   - **Application Name**: `Codestam Jira` (or any preferred name).
    - **Homepage URL**: `http://localhost:3000` (or your app's base URL).
    - **Authorization Callback URL**: Paste the **Redirect URI** copied from Appwrite.
 5. Click **Register Application**.
@@ -315,7 +315,7 @@ For each collection:
 
 ## :wrench: Stats
 
-[![Stats for Jira Clone](/.github/images/stats.svg 'Stats for Jira Clone')](https://pagespeed.web.dev/analysis?url=https://clone-jira.vercel.app/ 'Stats for Jira Clone')
+[![Stats for Codestam Jira](/.github/images/stats.svg 'Stats for Codestam Jira')](https://pagespeed.web.dev/analysis?url=https://clone-jira.vercel.app/ 'Stats for Codestam Jira')
 
 ## :raised_hands: Contribute
 
@@ -323,7 +323,7 @@ You might encounter some bugs while using this app. You are more than welcome to
 
 ## :gem: Acknowledgements
 
-Useful resources and dependencies that are used in Jira Clone.
+Useful resources and dependencies that are used in Codestam Jira.
 
 - Thanks to CodeWithAntonio: https://codewithantonio.com/
 - [@hello-pangea/dnd](https://www.npmjs.com/package/@hello-pangea/dnd): ^17.0.0

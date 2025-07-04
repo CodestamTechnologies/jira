@@ -18,7 +18,7 @@ export const metadata: Metadata = siteConfig;
 const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
   return (
     <html lang="en">
-      <body className={cn(inter.className, 'min-h-screen antialiased')}>
+      <body className={cn('font-sans min-h-screen antialiased')}>
         <QueryProvider>
           <Toaster theme="light" richColors closeButton />
 

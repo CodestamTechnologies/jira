@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import type { PropsWithChildren } from 'react';
 
 import { Logo } from '@/components/logo';
-import { SourceCode } from '@/components/source-code';
 import { Button } from '@/components/ui/button';
 
 const AuthLayout = ({ children }: PropsWithChildren) => {
@@ -23,7 +22,6 @@ const AuthLayout = ({ children }: PropsWithChildren) => {
               <Link href={isSignIn ? '/sign-up' : 'sign-in'}>{isSignIn ? 'Register' : 'Login'}</Link>
             </Button>
 
-            <SourceCode />
           </div>
         </nav>
 
