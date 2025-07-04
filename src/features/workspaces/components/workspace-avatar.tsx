@@ -20,7 +20,7 @@ export const WorkspaceAvatar = ({ image, name, className }: WorkspaceAvatarProps
 
   return (
     <Avatar className={cn('size-10 rounded-md', className)}>
-      <AvatarFallback className="rounded-md bg-blue-600 text-lg font-semibold uppercase text-white">{name.charAt(0)}</AvatarFallback>
+      <AvatarFallback className="rounded-md bg-primary text-lg font-semibold uppercase text-primary-foreground">{name.charAt(0)}</AvatarFallback>
     </Avatar>
   );
 };

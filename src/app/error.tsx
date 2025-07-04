@@ -12,12 +12,12 @@ const ErrorPage = ({ error, reset }: { error: Error & { digest?: string }; reset
   }, [error]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="max-w-xl space-y-6 text-center">
         <AlertCircle className="mx-auto size-20 text-rose-500" />
 
-        <h1 className="text-4xl font-bold text-gray-900">Oops! Something went wrong</h1>
-        <p className="text-lg text-gray-600">
+        <h1 className="text-4xl font-bold text-foreground">Oops! Something went wrong</h1>
+        <p className="text-lg text-muted-foreground">
           We&apos;re sorry, but it seems there was an error processing your request. Please try again.
         </p>
 

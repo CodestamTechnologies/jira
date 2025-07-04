@@ -11,11 +11,11 @@ interface KanbanColumnHeaderProps {
 }
 
 const statusIconMap: Record<TaskStatus, React.ReactNode> = {
-  [TaskStatus.BACKLOG]: <CircleDashed className="size-[18px] text-pink-400" />,
-  [TaskStatus.TODO]: <Circle className="size-[18px] text-red-400" />,
-  [TaskStatus.IN_PROGRESS]: <CircleDotDashed className="size-[18px] text-yellow-400" />,
-  [TaskStatus.IN_REVIEW]: <CircleDot className="size-[18px] text-blue-400" />,
-  [TaskStatus.DONE]: <CircleCheck className="size-[18px] text-emerald-400" />,
+  [TaskStatus.BACKLOG]: <CircleDashed className="size-[18px] text-accent" />,
+  [TaskStatus.TODO]: <Circle className="size-[18px] text-destructive" />,
+  [TaskStatus.IN_PROGRESS]: <CircleDotDashed className="size-[18px] text-warning" />,
+  [TaskStatus.IN_REVIEW]: <CircleDot className="size-[18px] text-info" />,
+  [TaskStatus.DONE]: <CircleCheck className="size-[18px] text-success" />,
 };
 
 export const KanbanColumnHeader = ({ board, taskCount }: KanbanColumnHeaderProps) => {
@@ -28,7 +28,7 @@ export const KanbanColumnHeader = ({ board, taskCount }: KanbanColumnHeaderProps
         {icon}
         <h2 className="text-sm font-medium">{snakeCaseToTitleCase(board)}</h2>
 
-        <div className="flex size-5 items-center justify-center rounded-md bg-neutral-200 text-xs font-medium text-neutral-700">
+        <div className="flex size-5 items-center justify-center rounded-md bg-muted text-xs font-medium text-foreground">
           {taskCount}
         </div>
       </div>
@@ -40,7 +40,7 @@ export const KanbanColumnHeader = ({ board, taskCount }: KanbanColumnHeaderProps
         className="size-5"
         title={`Create ${snakeCaseToTitleCase(board)} task`}
       >
-        <Plus className="size-4 text-neutral-500" />
+        <Plus className="size-4 text-muted-foreground" />
       </Button>
     </div>
   );

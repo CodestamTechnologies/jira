@@ -62,7 +62,7 @@ export const TaskActions = ({ id, projectId, children }: PropsWithChildren<TaskA
             Edit Task
           </DropdownMenuItem>
 
-          <DropdownMenuItem onClick={onDelete} disabled={isPending} className="p-[10px] font-medium text-amber-700 focus:text-amber-700">
+          <DropdownMenuItem onClick={onDelete} disabled={isPending} className="p-[10px] font-medium text-warning focus:text-warning">
             <Trash className="mr-2 size-4 stroke-2" />
             Delete Task
           </DropdownMenuItem>

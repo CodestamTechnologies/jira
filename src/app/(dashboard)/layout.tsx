@@ -9,7 +9,7 @@ const DashboardLayout = ({ children }: PropsWithChildren) => {
     <div className="min-h-screen">
       <ModalProvider />
 
-      <div className="flex size-full">
+      <div className="flex size-full ">
         <div className="fixed left-0 top-0 hidden h-full overflow-auto lg:block lg:w-[264px]">
           <Sidebar />
         </div>

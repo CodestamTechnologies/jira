@@ -75,8 +75,8 @@ export const MembersList = () => {
               <MemberAvatar name={member.name} className="size-10" fallbackClassName="text-lg" />
 
               <div className="flex flex-col">
-                <p className="text-sm font-medium">{member.name}</p>
-                <p className="to-muted-foreground text-xs">{member.email}</p>
+                <p className="text-sm font-medium text-foreground">{member.name}</p>
+                <p className="text-xs text-muted-foreground">{member.email}</p>
               </div>
 
               <DropdownMenu>
@@ -104,7 +104,7 @@ export const MembersList = () => {
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
-                    className="font-medium text-amber-700"
+                    className="font-medium text-warning"
                     onClick={() => handleDeleteMember(member.$id)}
                     disabled={isPending}
                   >

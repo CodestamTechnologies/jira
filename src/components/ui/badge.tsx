@@ -13,11 +13,11 @@ const badgeVariants = cva(
         secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
         destructive: 'border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80',
         outline: 'text-foreground',
-        [TaskStatus.TODO]: 'border-transparent bg-red-400 text-red-50 hover:bg-red-400/80',
-        [TaskStatus.IN_PROGRESS]: 'border-transparent bg-yellow-400 text-yellow-50 hover:bg-yellow-400/80',
-        [TaskStatus.IN_REVIEW]: 'border-transparent bg-blue-400 text-blue-50 hover:bg-blue-400/80',
-        [TaskStatus.DONE]: 'border-transparent bg-emerald-400 text-emerald-50 hover:bg-emerald-400/80',
-        [TaskStatus.BACKLOG]: 'border-transparent bg-pink-400 text-pink-50 hover:bg-pink-400/80',
+        [TaskStatus.TODO]: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
+        [TaskStatus.IN_PROGRESS]: 'border-transparent bg-warning text-warning-foreground hover:bg-warning/80',
+        [TaskStatus.IN_REVIEW]: 'border-transparent bg-info text-info-foreground hover:bg-info/80',
+        [TaskStatus.DONE]: 'border-transparent bg-success text-success-foreground hover:bg-success/80',
+        [TaskStatus.BACKLOG]: 'border-transparent bg-accent text-accent-foreground hover:bg-accent/80',
       },
     },
     defaultVariants: {
@@ -26,7 +26,7 @@ const badgeVariants = cva(
   },
 );
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
+export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> { }
 
 function Badge({ className, variant, ...props }: BadgeProps) {
   return <div className={cn(badgeVariants({ variant }), className)} {...props} />;

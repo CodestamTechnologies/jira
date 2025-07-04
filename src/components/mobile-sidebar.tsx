@@ -22,7 +22,7 @@ export const MobileSidebar = () => {
     <Sheet open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <SheetTrigger asChild>
         <Button title="Open Menu" size="icon" variant="secondary" className="size-10 lg:hidden">
-          <MenuIcon className="size-6 text-neutral-500" />
+          <MenuIcon className="size-6 text-muted-foreground" />
         </Button>
       </SheetTrigger>
 

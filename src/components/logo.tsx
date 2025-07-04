@@ -13,7 +13,7 @@ export const Logo = () => {
   return (
     <Link href="/" className="flex items-center gap-x-1.5">
       <Image src="/codestam_logo.webp" alt="Icon" height={35} width={35} />
-      <p className={cn('text-2xl font-bold text-[#111]', font.className)}>Codestam</p>
+      <p className={cn('text-2xl font-bold text-foreground', font.className)}>Codestam</p>
     </Link>
   );
 };
