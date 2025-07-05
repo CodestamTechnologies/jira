@@ -50,8 +50,7 @@ export const siteConfig: Metadata = {
     'lucide-react',
   ] as Array<string>,
   authors: {
-    name: 'Sanidhya Kumar Verma',
-    url: 'https://github.com/sanidhyy',
+    name: 'Codestam Technologies',
+    url: 'https://github.com/CodestamTechnologies/jira.git',
   },
 } as const;
-

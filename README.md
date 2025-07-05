@@ -4,13 +4,13 @@
 
 ![Full-stack Codestam Jira using Next.js 14 and Appwrite](/.github/images/img_main.png 'Full-stack Codestam Jira using Next.js 14 and Appwrite')
 
-[![Ask Me Anything!](https://flat.badgen.net/static/Ask%20me/anything?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy 'Ask Me Anything!')
-[![GitHub license](https://flat.badgen.net/github/license/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy/jira-clone/blob/main/LICENSE 'GitHub license')
-[![Maintenance](https://flat.badgen.net/static/Maintained/yes?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy/jira-clone/commits/main 'Maintenance')
-[![GitHub branches](https://flat.badgen.net/github/branches/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy/jira-clone/branches 'GitHub branches')
-[![Github commits](https://flat.badgen.net/github/commits/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy/jira-clone/commits 'Github commits')
-[![GitHub issues](https://flat.badgen.net/github/issues/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy/jira-clone/issues 'GitHub issues')
-[![GitHub pull requests](https://flat.badgen.net/github/prs/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/sanidhyy/jira-clone/pulls 'GitHub pull requests')
+[![Ask Me Anything!](https://flat.badgen.net/static/Ask%20me/anything?icon=github&color=black&scale=1.01)](https://github.com/CodestamTechnologies/jira.git 'Ask Me Anything!')
+[![GitHub license](https://flat.badgen.net/github/license/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/CodestamTechnologies/jira.git/jira-clone/blob/main/LICENSE 'GitHub license')
+[![Maintenance](https://flat.badgen.net/static/Maintained/yes?icon=github&color=black&scale=1.01)](https://github.com/CodestamTechnologies/jira.git/jira-clone/commits/main 'Maintenance')
+[![GitHub branches](https://flat.badgen.net/github/branches/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/CodestamTechnologies/jira.git/jira-clone/branches 'GitHub branches')
+[![Github commits](https://flat.badgen.net/github/commits/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/CodestamTechnologies/jira.git/jira-clone/commits 'Github commits')
+[![GitHub issues](https://flat.badgen.net/github/issues/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/CodestamTechnologies/jira.git/jira-clone/issues 'GitHub issues')
+[![GitHub pull requests](https://flat.badgen.net/github/prs/sanidhyy/jira-clone?icon=github&color=black&scale=1.01)](https://github.com/CodestamTechnologies/jira.git/jira-clone/pulls 'GitHub pull requests')
 [![Vercel status](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://clone-jira.vercel.app 'Vercel status')
 
 <!-- Table of Contents -->
@@ -389,7 +389,7 @@ Useful resources and dependencies that are used in Codestam Jira.
 
 ## :rocket: Follow Me
 
-[![Follow Me](https://img.shields.io/github/followers/sanidhyy?style=social&label=Follow&maxAge=2592000)](https://github.com/sanidhyy 'Follow Me')
+[![Follow Me](https://img.shields.io/github/followers/sanidhyy?style=social&label=Follow&maxAge=2592000)](https://github.com/CodestamTechnologies/jira.git 'Follow Me')
 [![Tweet about this project](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2FTechnicalShubam)](https://twitter.com/intent/tweet?text=Check+out+this+amazing+app:&url=https%3A%2F%2Fgithub.com%2Fsanidhyy%2Fjira-clone 'Tweet about this project')
 [![Subscribe to my YouTube Channel](https://img.shields.io/youtube/channel/subscribers/UCNAz_hUVBG2ZUN8TVm0bmYw)](https://www.youtube.com/@OPGAMER./?sub_confirmation=1 'Subscribe to my YouTube Channel')
 

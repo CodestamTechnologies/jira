@@ -12,9 +12,9 @@
     "format:fix": "prettier --write . --config .prettierrc.mjs"
   },
   "author": {
-    "name": "Sanidhya Kumar Verma",
-    "email": "sanidhya.verma12345@gmail.com",
-    "url": "https://github.com/sanidhyy"
+    "name": "Codestam Technologies",
+    "email": "codestamtechnologies@gmail.com",
+    "url": "https://github.com/CodestamTechnologies/jira.git"
   },
   "description": "Full-stack Codestam Jira using Next.js 14 and Appwrite.",
   "keywords": [
@@ -63,23 +63,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sanidhyy/jira-clone.git"
+    "url": "https://github.com/CodestamTechnologies/jira.git/jira-clone.git"
   },
-  "homepage": "https://github.com/sanidhyy/jira-clone#readme",
+  "homepage": "https://github.com/CodestamTechnologies/jira.git/jira-clone#readme",
   "bugs": {
-    "url": "https://github.com/sanidhyy/jira-clone/issues",
-    "email": "sanidhya.verma12345@gmail.com"
+    "url": "https://github.com/CodestamTechnologies/jira.git/jira-clone/issues",
+    "email": "codestamtechnologies@gmail.com"
   },
-  "funding": [
-    {
-      "type": "patreon",
-      "url": "https://www.patreon.com/sanidhy"
-    },
-    {
-      "type": "Buy me a coffee",
-      "url": "https://www.buymeacoffee.com/sanidhy"
-    }
-  ],
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@hono/zod-validator": "^0.7.0",
