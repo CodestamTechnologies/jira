@@ -6,7 +6,7 @@ import { Sidebar } from '@/components/sidebar';
 
 const DashboardLayout = ({ children }: PropsWithChildren) => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <ModalProvider />
 
       <div className="flex size-full ">
