@@ -10,6 +10,7 @@ import { createTaskSchema } from '@/features/tasks/schema';
 import { type Task, TaskStatus } from '@/features/tasks/types';
 import { createAdminClient } from '@/lib/appwrite';
 import { sessionMiddleware } from '@/lib/session-middleware';
+import commentsRoute from './comments';
 
 const app = new Hono()
   .get(
@@ -300,5 +301,7 @@ const app = new Hono()
 
     return ctx.json({ data: task });
   });
+
+app.route('/:taskId/comments', commentsRoute);
 
 export default app;

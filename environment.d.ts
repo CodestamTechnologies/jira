@@ -19,6 +19,7 @@ declare global {
       NEXT_PUBLIC_APPWRITE_PROJECTS_ID: string;
       NEXT_PUBLIC_APPWRITE_TASKS_ID: string;
       NEXT_PUBLIC_APPWRITE_WORKSPACES_ID: string;
+      NEXT_PUBLIC_APPWRITE_COMMENTS_ID: string;
     }
   }
 }

@@ -18,3 +18,11 @@ export type Task = Models.Document & {
   dueDate: string;
   description?: string;
 };
+
+export type Comment = Models.Document & {
+  taskId: string;
+  authorId: string; // references Member.userId
+  username: string; // store the author's name at the time of comment
+  content: string;
+  createdAt: string;
+};

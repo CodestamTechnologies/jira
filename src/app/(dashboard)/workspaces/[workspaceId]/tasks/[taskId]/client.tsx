@@ -8,11 +8,14 @@ import { TaskBreadcrumbs } from '@/features/tasks/components/task-breadcrumbs';
 import { TaskDescription } from '@/features/tasks/components/task-description';
 import { TaskOverview } from '@/features/tasks/components/task-overview';
 import { useTaskId } from '@/features/tasks/hooks/use-task-id';
+import { TaskComments } from '@/features/tasks/components/task-comments';
+import { useCurrent } from '@/features/auth/api/use-current';
 
 export const TaskIdClient = () => {
   const taskId = useTaskId();
 
   const { data: task, isLoading } = useGetTask({ taskId });
+  const { data: currentUser } = useCurrent();
 
   if (isLoading) return <PageLoader />;
 
@@ -28,6 +31,13 @@ export const TaskIdClient = () => {
         <TaskOverview task={task} />
         <TaskDescription task={task} />
       </div>
+      {currentUser && (
+        <TaskComments
+          taskId={task.$id}
+          currentUserId={currentUser.$id}
+          currentUserName={currentUser.name || currentUser.email || currentUser.$id}
+        />
+      )}
     </div>
   );
 };
