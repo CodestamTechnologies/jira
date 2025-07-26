@@ -11,7 +11,7 @@ import { useBulkUpdateTasks } from '@/features/tasks/api/use-bulk-update-tasks';
 import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
 import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
-import type { TaskStatus } from '@/features/tasks/types';
+import { TaskStatus } from '@/features/tasks/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
 import { columns } from './columns';
@@ -35,6 +35,11 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
   const workspaceId = useWorkspaceId();
 
   const { open } = useCreateTaskModal();
+
+  // Function to open task creation with current project context
+  const openCreateTask = () => {
+    open(TaskStatus.TODO, projectId);
+  };
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({
     workspaceId,
     status,
@@ -73,7 +78,7 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
             </TabsTrigger>
           </TabsList>
 
-          <Button onClick={() => open()} size="sm" className="w-full lg:w-auto">
+          <Button onClick={openCreateTask} size="sm" className="w-full lg:w-auto">
             <PlusIcon className="size-4" />
             New
           </Button>

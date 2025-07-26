@@ -10,10 +10,11 @@ import { CreateTaskForm } from './create-task-form';
 
 interface CreateTaskFormWrapperProps {
   initialStatus?: TaskStatus | null;
+  initialProjectId?: string | null;
   onCancel: () => void;
 }
 
-export const CreateTaskFormWrapper = ({ initialStatus, onCancel }: CreateTaskFormWrapperProps) => {
+export const CreateTaskFormWrapper = ({ initialStatus, initialProjectId, onCancel }: CreateTaskFormWrapperProps) => {
   const workspaceId = useWorkspaceId();
 
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
@@ -45,6 +46,7 @@ export const CreateTaskFormWrapper = ({ initialStatus, onCancel }: CreateTaskFor
   return (
     <CreateTaskForm
       initialStatus={initialStatus}
+      initialProjectId={initialProjectId}
       onCancel={onCancel}
       projectOptions={projectOptions ?? []}
       memberOptions={memberOptions ?? []}

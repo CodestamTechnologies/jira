@@ -51,6 +51,18 @@ const app = new Hono()
       workspaceId,
     });
 
+    // Create initial task for the project
+    const initialTask = await databases.createDocument(DATABASE_ID, TASKS_ID, ID.unique(), {
+      name: 'Update metadata including favicon',
+      status: TaskStatus.TODO,
+      assigneeId: member.$id,
+      projectId: project.$id,
+      workspaceId,
+      position: 1000,
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+      description: 'Update project metadata including favicon and other branding elements.',
+    });
+
     return ctx.json({ data: project });
   })
   .get(

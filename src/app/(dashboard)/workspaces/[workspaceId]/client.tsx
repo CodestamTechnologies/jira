@@ -19,6 +19,7 @@ import { useCreateProjectModal } from '@/features/projects/hooks/use-create-proj
 import type { Project } from '@/features/projects/types';
 import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
+import { TaskStatus } from '@/features/tasks/types';
 import type { Task } from '@/features/tasks/types';
 import { useGetWorkspaceAnalytics } from '@/features/workspaces/api/use-get-workspace-analytics';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
@@ -64,7 +65,7 @@ export const TaskList = ({ data, total }: TaskListProps) => {
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Tasks ({total})</p>
 
-          <Button title="Create Task" variant="secondary" size="icon" onClick={() => createTask()}>
+          <Button title="Create Task" variant="secondary" size="icon" onClick={() => createTask(TaskStatus.TODO)}>
             <PlusIcon className="size-4 text-muted-foreground" />
           </Button>
         </div>

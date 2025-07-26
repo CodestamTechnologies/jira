@@ -22,26 +22,31 @@ import { cn } from '@/lib/utils';
 
 interface CreateTaskFormProps {
   initialStatus?: TaskStatus | null;
+  initialProjectId?: string | null;
   onCancel?: () => void;
   projectOptions: { id: string; name: string; imageUrl?: string }[];
   memberOptions: { id: string; name: string }[];
 }
 
-export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, projectOptions }: CreateTaskFormProps) => {
+export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memberOptions, projectOptions }: CreateTaskFormProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
 
   const { mutate: createTask, isPending } = useCreateTask();
 
+  // Set default due date to 2 days from now
+  const defaultDueDate = new Date();
+  defaultDueDate.setDate(defaultDueDate.getDate() + 2);
+
   const createTaskForm = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema),
     defaultValues: {
       name: '',
-      dueDate: undefined,
+      dueDate: defaultDueDate,
       assigneeId: undefined,
       description: '',
-      projectId: undefined,
-      status: initialStatus ?? undefined,
+      projectId: initialProjectId ?? undefined,
+      status: initialStatus ?? TaskStatus.TODO,
       workspaceId,
     },
   });
