@@ -75,39 +75,45 @@ app.get('/', async (c) => {
       return c.json({ error: 'Invalid workspace ID' }, 400);
     }
 
-    // Check if user is admin for this workspace
-    let isAdmin = false;
-    try {
-      const { databases } = await createSessionClient();
-      const membersResponse = await databases.listDocuments(
-        DATABASE_ID,
-        MEMBERS_ID,
-        [
-          Query.equal('workspaceId', workspaceId.trim()),
-          Query.equal('userId', user.$id)
-        ]
-      );
 
-      if (membersResponse.documents.length > 0) {
-        const member = membersResponse.documents[0];
-        isAdmin = member.role === 'ADMIN';
-      }
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-    }
 
     let queries = [
       Query.equal('workspaceId', workspaceId.trim())
     ];
 
-    // If not admin, filter by user ID
-    if (!isAdmin) {
-      queries.push(Query.equal('userId', userId || user.$id));
-    } else if (userId) {
+    // Always filter by user ID unless a specific userId is provided for admin views
+    if (userId) {
+      // If specific userId is provided, check if user is admin
+      let isAdmin = false;
+      try {
+        const { databases } = await createSessionClient();
+        const membersResponse = await databases.listDocuments(
+          DATABASE_ID,
+          MEMBERS_ID,
+          [
+            Query.equal('workspaceId', workspaceId.trim()),
+            Query.equal('userId', user.$id)
+          ]
+        );
+
+        if (membersResponse.documents.length > 0) {
+          const member = membersResponse.documents[0];
+          isAdmin = member.role === 'ADMIN';
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+      }
+
+      if (!isAdmin) {
+        return c.json({ error: 'Unauthorized: Only admins can view other users\' attendance' }, 403);
+      }
+
       // If admin and specific userId is provided, filter by that user
       queries.push(Query.equal('userId', userId));
+    } else {
+      // Otherwise, show only current user's records
+      queries.push(Query.equal('userId', user.$id));
     }
-    // If admin and no userId provided, show all users' records
 
     // Add optional filters
     if (startDate) {
@@ -120,9 +126,7 @@ app.get('/', async (c) => {
       queries.push(Query.equal('status', status));
     }
 
-    console.log('Main query:', queries); // Debug log
-    console.log('Database ID:', DATABASE_ID); // Debug log
-    console.log('Attendance ID:', ATTENDANCE_ID); // Debug log
+
 
     const { databases } = await createSessionClient();
     const response = await databases.listDocuments(
