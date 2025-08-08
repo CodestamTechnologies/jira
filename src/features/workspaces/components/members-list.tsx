@@ -1,11 +1,12 @@
 'use client';
 
-import { ArrowLeft, MoreVertical } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { Fragment } from 'react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
@@ -15,11 +16,17 @@ import { useUpdateMember } from '@/features/members/api/use-update-member';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { MemberRole } from '@/features/members/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import { useCurrent } from '@/features/auth/api/use-current';
 import { useConfirm } from '@/hooks/use-confirm';
+import { useAdminStatus } from '@/features/attendance/hooks/use-admin-status';
 
 export const MembersList = () => {
   const workspaceId = useWorkspaceId();
+  const { data: user } = useCurrent();
+  const { data: isAdmin, isLoading: isAdminLoading } = useAdminStatus();
   const [ConfirmDialog, confirm] = useConfirm('Remove member', 'This member will be removed from this workspace.', 'destructive');
+
+
 
   const { data: members } = useGetMembers({ workspaceId });
   const { mutate: deleteMember, isPending: isDeletingMember } = useDeleteMember();
@@ -69,13 +76,40 @@ export const MembersList = () => {
       </div>
 
       <CardContent className="p-7">
+        {/* Admin Summary */}
+        {members?.documents && (
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">
+                Total Members: {members.documents.length}
+              </span>
+              <span className="text-muted-foreground">
+                Admins: {members.documents.filter(m => m.role === 'ADMIN').length}
+              </span>
+            </div>
+          </div>
+        )}
+
         {members?.documents.map((member, i) => (
           <Fragment key={member.$id}>
             <div className="flex items-center gap-2">
               <MemberAvatar name={member.name} className="size-10" fallbackClassName="text-lg" />
 
               <div className="flex flex-col">
-                <p className="text-sm font-medium text-foreground">{member.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">{member.name}</p>
+                  {member.role === 'ADMIN' && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Admin
+                    </Badge>
+                  )}
+                  {member.email === user?.email && (
+                    <Badge variant="outline" className="text-xs">
+                      You
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">{member.email}</p>
               </div>
 
@@ -87,6 +121,17 @@ export const MembersList = () => {
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent side="bottom" align="end">
+                  {isAdmin && !isAdminLoading && (
+                    <DropdownMenuItem
+                      className="font-medium"
+                      asChild
+                    >
+                      <Link href={`/workspaces/${workspaceId}/members/${member.userId}/attendance`}>
+                        View Attendance
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuItem
                     className="font-medium"
                     onClick={() => handleUpdateMember(member.$id, MemberRole.ADMIN)}
