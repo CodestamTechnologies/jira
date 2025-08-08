@@ -4,7 +4,7 @@ import { AttendanceFilters } from '../types';
 
 export const useGetAttendance = (workspaceId: string, filters?: AttendanceFilters) => {
   return useQuery({
-    queryKey: ['attendance', workspaceId, filters],
+    queryKey: ['attendance', workspaceId, filters?.userId, filters],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters?.startDate) params.append('startDate', filters.startDate);

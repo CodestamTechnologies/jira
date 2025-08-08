@@ -66,6 +66,16 @@ app.get('/', async (c) => {
     const status = searchParams.get('status');
     const userId = searchParams.get('userId');
 
+    console.log('Attendance API Request:', {
+      workspaceId,
+      startDate,
+      endDate,
+      status,
+      userId,
+      currentUser: user.$id,
+      url: c.req.url
+    });
+
     if (!workspaceId) {
       return c.json({ error: 'Workspace ID is required' }, 400);
     }
