@@ -8,6 +8,7 @@ import { CreateWorkspaceForm } from './create-workspace-form';
 import { JoinWorkspaceForm } from './join-workspace-form';
 
 export const CreateWorkspaceModal = () => {
+  
   const { isOpen, setIsOpen, close } = useCreateWorkspaceModal();
 
   return (
