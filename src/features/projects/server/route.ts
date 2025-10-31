@@ -55,7 +55,7 @@ const app = new Hono()
     const initialTask = await databases.createDocument(DATABASE_ID, TASKS_ID, ID.unique(), {
       name: 'Update metadata including favicon',
       status: TaskStatus.TODO,
-      assigneeId: member.$id,
+      assigneeIds: [member.$id],
       projectId: project.$id,
       workspaceId,
       position: 1000,
@@ -280,14 +280,14 @@ const app = new Hono()
 
     const thisMonthAssignedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('projectId', projectId),
-      Query.equal('assigneeId', member.$id),
+      Query.contains('assigneeIds', member.$id),
       Query.greaterThanEqual('$createdAt', thisMonthStart.toISOString()),
       Query.lessThanEqual('$createdAt', thisMonthEnd.toISOString()),
     ]);
 
     const lastMonthAssignedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('projectId', projectId),
-      Query.equal('assigneeId', member.$id),
+      Query.contains('assigneeIds', member.$id),
       Query.greaterThanEqual('$createdAt', lastMonthStart.toISOString()),
       Query.lessThanEqual('$createdAt', lastMonthEnd.toISOString()),
     ]);

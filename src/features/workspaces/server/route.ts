@@ -340,14 +340,14 @@ const app = new Hono()
 
     const thisMonthAssignedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('workspaceId', workspaceId),
-      Query.equal('assigneeId', member.$id),
+      Query.contains('assigneeIds', member.$id),
       Query.greaterThanEqual('$createdAt', thisMonthStart.toISOString()),
       Query.lessThanEqual('$createdAt', thisMonthEnd.toISOString()),
     ]);
 
     const lastMonthAssignedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('workspaceId', workspaceId),
-      Query.equal('assigneeId', member.$id),
+      Query.contains('assigneeIds', member.$id),
       Query.greaterThanEqual('$createdAt', lastMonthStart.toISOString()),
       Query.lessThanEqual('$createdAt', lastMonthEnd.toISOString()),
     ]);

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import type { Task } from '@/features/tasks/types';
-import { snakeCaseToTitleCase } from '@/lib/utils';
+import { cn, snakeCaseToTitleCase } from '@/lib/utils';
 
 import { TaskActions } from './task-actions';
 import { TaskDate } from './task-date';
@@ -63,13 +63,36 @@ export const columns: ColumnDef<Task>[] = [
       );
     },
     cell: ({ row }) => {
-      const assignee = row.original.assignee;
+      const assignees = row.original.assignees || (row.original.assignee ? [row.original.assignee] : []);
 
       return (
         <div className="flex items-center gap-x-2 text-sm font-medium">
-          <MemberAvatar fallbackClassName="text-xs" className="size-6" name={assignee.name} />
-
-          <p className="line-clamp-1">{assignee.name}</p>
+          {assignees.length > 0 ? (
+            <>
+              <div className="flex items-center -space-x-1.5">
+                {assignees.slice(0, 3).map((assignee, index) => (
+                  <MemberAvatar
+                    key={assignee.$id}
+                    fallbackClassName="text-xs"
+                    className={cn('size-6', index > 0 && '-ml-1.5')}
+                    name={assignee.name}
+                  />
+                ))}
+                {assignees.length > 3 && (
+                  <div className="flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground">
+                    +{assignees.length - 3}
+                  </div>
+                )}
+              </div>
+              <p className="line-clamp-1">
+                {assignees.length === 1
+                  ? assignees[0].name
+                  : `${assignees[0].name}${assignees.length > 1 ? ` +${assignees.length - 1}` : ''}`}
+              </p>
+            </>
+          ) : (
+            <p className="text-muted-foreground">Unassigned</p>
+          )}
         </div>
       );
     },

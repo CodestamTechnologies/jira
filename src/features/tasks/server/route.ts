@@ -51,7 +51,7 @@ const app = new Hono()
 
       if (status) query.push(Query.equal('status', status));
 
-      if (assigneeId) query.push(Query.equal('assigneeId', assigneeId));
+      if (assigneeId) query.push(Query.contains('assigneeIds', assigneeId));
 
       if (dueDate) query.push(Query.equal('dueDate', dueDate));
 
@@ -60,7 +60,7 @@ const app = new Hono()
       const tasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, query);
 
       const projectIds = tasks.documents.map((task) => task.projectId);
-      const assigneeIds = tasks.documents.map((task) => task.assigneeId);
+      const allAssigneeIds = tasks.documents.flatMap((task) => task.assigneeIds || []);
 
       const projects = await databases.listDocuments<Project>(
         DATABASE_ID,
@@ -68,10 +68,12 @@ const app = new Hono()
         projectIds.length > 0 ? [Query.contains('$id', projectIds)] : [],
       );
 
+      const uniqueAssigneeIds = [...new Set(allAssigneeIds)];
+
       const members = await databases.listDocuments(
         DATABASE_ID,
         MEMBERS_ID,
-        assigneeIds.length > 0 ? [Query.contains('$id', assigneeIds)] : [],
+        uniqueAssigneeIds.length > 0 ? [Query.contains('$id', uniqueAssigneeIds)] : [],
       );
 
       const assignees = await Promise.all(
@@ -89,7 +91,9 @@ const app = new Hono()
       const populatedTasks: (Models.Document & Task)[] = await Promise.all(
         tasks.documents.map(async (task) => {
           const project = projects.documents.find((project) => project.$id === task.projectId);
-          const assignee = assignees.find((assignee) => assignee.$id === task.assigneeId);
+          const taskAssignees = (task.assigneeIds || []).map((assigneeId) =>
+            assignees.find((assignee) => assignee.$id === assigneeId),
+          ).filter(Boolean) as Array<{ $id: string; name: string; email?: string }>;
 
           let imageUrl: string | undefined = undefined;
 
@@ -104,7 +108,8 @@ const app = new Hono()
               ...project,
               imageUrl,
             },
-            assignee,
+            assignees: taskAssignees,
+            assignee: taskAssignees[0], // For backward compatibility
           };
         }),
       );
@@ -138,21 +143,28 @@ const app = new Hono()
 
     const project = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, task.projectId);
 
-    const member = await databases.getDocument(DATABASE_ID, MEMBERS_ID, task.assigneeId);
+    const assigneeIds = task.assigneeIds || [];
+    const members = await Promise.all(
+      assigneeIds.map((assigneeId) => databases.getDocument(DATABASE_ID, MEMBERS_ID, assigneeId)),
+    );
 
-    const user = await users.get(member.userId);
-
-    const assignee = {
-      ...member,
-      name: user.name,
-      email: user.email,
-    };
+    const assignees = await Promise.all(
+      members.map(async (member) => {
+        const user = await users.get(member.userId);
+        return {
+          ...member,
+          name: user.name,
+          email: user.email,
+        };
+      }),
+    );
 
     return ctx.json({
       data: {
         ...task,
         project,
-        assignee,
+        assignees,
+        assignee: assignees[0], // For backward compatibility
       },
     });
   })
@@ -160,7 +172,7 @@ const app = new Hono()
     const user = ctx.get('user');
     const databases = ctx.get('databases');
 
-    const { name, status, workspaceId, projectId, dueDate, assigneeId } = ctx.req.valid('json');
+    const { name, status, workspaceId, projectId, dueDate, assigneeIds } = ctx.req.valid('json');
 
     const member = await getMember({
       databases,
@@ -187,7 +199,7 @@ const app = new Hono()
       workspaceId,
       projectId,
       dueDate,
-      assigneeId,
+      assigneeIds,
       position: newPosition,
     });
 
@@ -197,7 +209,7 @@ const app = new Hono()
     const user = ctx.get('user');
     const databases = ctx.get('databases');
 
-    const { name, status, description, projectId, dueDate, assigneeId } = ctx.req.valid('json');
+    const { name, status, description, projectId, dueDate, assigneeIds } = ctx.req.valid('json');
     const { taskId } = ctx.req.param();
 
     const existingTask = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
@@ -212,14 +224,19 @@ const app = new Hono()
       return ctx.json({ error: 'Unauthorized.' }, 401);
     }
 
-    const task = await databases.updateDocument(DATABASE_ID, TASKS_ID, taskId, {
+    const updateData: Partial<Task> = {
       name,
       status,
       projectId,
       dueDate,
-      assigneeId,
       description,
-    });
+    };
+
+    if (assigneeIds !== undefined) {
+      updateData.assigneeIds = assigneeIds;
+    }
+
+    const task = await databases.updateDocument(DATABASE_ID, TASKS_ID, taskId, updateData);
 
     return ctx.json({ data: task });
   })

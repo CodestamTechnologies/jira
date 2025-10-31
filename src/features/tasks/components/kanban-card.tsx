@@ -26,7 +26,25 @@ export const KanbanCard = ({ task }: KanbanCardProps) => {
       <DottedSeparator />
 
       <div className="flex items-center gap-x-1.5">
-        <MemberAvatar name={task.assignee.name} fallbackClassName="text-[10px]" />
+        <div className="flex items-center -space-x-1.5">
+          {task.assignees && task.assignees.length > 0 ? (
+            task.assignees.slice(0, 3).map((assignee, index) => (
+              <MemberAvatar
+                key={assignee.$id}
+                name={assignee.name}
+                fallbackClassName="text-[10px]"
+                className={index > 0 ? '-ml-1.5' : ''}
+              />
+            ))
+          ) : task.assignee ? (
+            <MemberAvatar name={task.assignee.name} fallbackClassName="text-[10px]" />
+          ) : null}
+          {task.assignees && task.assignees.length > 3 && (
+            <div className="flex size-5 items-center justify-center rounded-full bg-muted text-[8px] font-medium text-muted-foreground">
+              +{task.assignees.length - 3}
+            </div>
+          )}
+        </div>
         <div aria-hidden className="size-1 rounded-full bg-muted" />
         <TaskDate value={task.dueDate} className="text-xs" />
       </div>

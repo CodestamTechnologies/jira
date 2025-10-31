@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { MultiSelect } from '@/components/ui/multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
@@ -43,7 +44,7 @@ export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memb
     defaultValues: {
       name: '',
       dueDate: defaultDueDate,
-      assigneeId: undefined,
+      assigneeIds: [],
       description: '',
       projectId: initialProjectId ?? undefined,
       status: initialStatus ?? TaskStatus.TODO,
@@ -116,29 +117,26 @@ export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memb
               <FormField
                 disabled={isPending}
                 control={createTaskForm.control}
-                name="assigneeId"
+                name="assigneeIds"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assignee</FormLabel>
+                    <FormLabel>Assignees</FormLabel>
 
-                    <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>{field.value ? <SelectValue placeholder="Select assignee" /> : 'Select assignee'}</SelectTrigger>
-                      </FormControl>
+                    <FormControl>
+                      <MultiSelect
+                        disabled={isPending}
+                        options={memberOptions.map((member) => ({
+                          label: member.name,
+                          value: member.id,
+                          avatar: <MemberAvatar className="size-4" name={member.name} />,
+                        }))}
+                        selected={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select assignees"
+                      />
+                    </FormControl>
 
-                      <FormMessage />
-
-                      <SelectContent>
-                        {memberOptions.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            <div className="flex items-center gap-x-2">
-                              <MemberAvatar className="size-6" name={member.name} />
-                              {member.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />

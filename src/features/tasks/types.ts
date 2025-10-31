@@ -11,12 +11,22 @@ export enum TaskStatus {
 export type Task = Models.Document & {
   name: string;
   status: TaskStatus;
-  assigneeId: string;
+  assigneeIds: string[];
   projectId: string;
   workspaceId: string;
   position: number;
   dueDate: string;
   description?: string;
+  assignees?: Array<{
+    $id: string;
+    name: string;
+    email?: string;
+  }>;
+  assignee?: {
+    $id: string;
+    name: string;
+    email?: string;
+  };
 };
 
 export type Comment = Models.Document & {

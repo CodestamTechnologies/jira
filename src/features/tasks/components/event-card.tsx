@@ -10,7 +10,8 @@ import { cn } from '@/lib/utils';
 
 interface EventCardProps {
   title: string;
-  assignee: Member;
+  assignee?: Member;
+  assignees?: Array<{ $id: string; name: string; email?: string }>;
   project: Project;
   status: TaskStatus;
   id: string;
@@ -24,7 +25,7 @@ const statusColorMap: Record<TaskStatus, string> = {
   [TaskStatus.DONE]: 'border-l-emerald-500',
 };
 
-export const EventCard = ({ title, assignee, project, status, id }: EventCardProps) => {
+export const EventCard = ({ title, assignee, assignees, project, status, id }: EventCardProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
 
@@ -46,7 +47,20 @@ export const EventCard = ({ title, assignee, project, status, id }: EventCardPro
         <p>{title}</p>
 
         <div className="flex items-center gap-x-1">
-          <MemberAvatar name={assignee?.name} />
+          {assignees && assignees.length > 0 ? (
+            <div className="flex items-center -space-x-1">
+              {assignees.slice(0, 2).map((a, index) => (
+                <MemberAvatar key={a.$id} name={a.name} className={index > 0 ? '-ml-1' : ''} />
+              ))}
+              {assignees.length > 2 && (
+                <div className="flex size-4 items-center justify-center rounded-full bg-muted text-[7px] font-medium text-muted-foreground">
+                  +{assignees.length - 2}
+                </div>
+              )}
+            </div>
+          ) : assignee ? (
+            <MemberAvatar name={assignee?.name} />
+          ) : null}
 
           <div aria-hidden className="size-1 rounded-full bg-muted" />
           <ProjectAvatar name={project?.name} image={project?.imageUrl} />
