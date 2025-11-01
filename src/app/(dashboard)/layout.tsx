@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
 
+import { CommandPalette } from '@/components/command-palette';
 import { ModalProvider } from '@/components/modal-provider';
 import { Navbar } from '@/components/navbar';
 import { Sidebar } from '@/components/sidebar';
@@ -8,6 +9,7 @@ const DashboardLayout = ({ children }: PropsWithChildren) => {
   return (
     <div className="min-h-screen bg-background">
       <ModalProvider />
+      <CommandPalette />
 
       <div className="flex size-full ">
         <div className="fixed left-0 top-0 hidden h-full overflow-auto lg:block lg:w-[264px]">
