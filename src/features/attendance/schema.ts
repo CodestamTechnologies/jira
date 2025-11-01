@@ -12,7 +12,7 @@ export const updateAttendanceSchema = z.object({
   checkOutLatitude: z.number().min(-90).max(90, 'Invalid latitude'),
   checkOutLongitude: z.number().min(-180).max(180, 'Invalid longitude'),
   checkOutAddress: z.string().optional(),
-  notes: z.string().optional(),
+  notes: z.string().min(10, 'Daily summary must be at least 10 characters').max(1000, 'Daily summary cannot exceed 1000 characters'),
 });
 
 export const attendanceFiltersSchema = z.object({

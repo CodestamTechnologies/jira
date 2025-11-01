@@ -289,7 +289,7 @@ app.put('/check-out', zValidator('json', updateAttendanceSchema), async (c) => {
         checkOutAddress,
         totalHours,
         status,
-        notes: notes || attendanceRecord.notes,
+        notes,
       }
     );
 

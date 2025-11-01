@@ -30,7 +30,7 @@ export interface UpdateAttendanceRequest {
   checkOutLatitude: number;
   checkOutLongitude: number;
   checkOutAddress?: string;
-  notes?: string;
+  notes: string;
 }
 
 export interface AttendanceStats {

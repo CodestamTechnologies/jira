@@ -13,6 +13,7 @@ import { useGetTodayAttendance } from '../api/use-get-today-attendance';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useCurrent } from '@/features/auth/api/use-current';
 import { Attendance } from '../types';
+import { CheckoutDialog } from './checkout-dialog';
 
 interface LocationData {
   latitude: number;
@@ -24,6 +25,7 @@ export const AttendanceCard = () => {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [locationError, setLocationError] = useState<string>('');
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
 
   const workspaceId = useWorkspaceId();
   const { data: user } = useCurrent();
@@ -123,7 +125,7 @@ export const AttendanceCard = () => {
     }
   };
 
-  const handleCheckOut = async () => {
+  const handleCheckOutClick = async () => {
     if (!location) {
       try {
         await getCurrentLocation();
@@ -133,16 +135,17 @@ export const AttendanceCard = () => {
     }
 
     if (location) {
-      checkOutMutation.mutate({
-        checkOutLatitude: location.latitude,
-        checkOutLongitude: location.longitude,
-        checkOutAddress: location.address,
-      }, {
-        onSuccess: () => {
-          refetchToday();
-        },
-      });
+      setCheckoutDialogOpen(true);
     }
+  };
+
+  const handleCheckOut = (data: { checkOutLatitude: number; checkOutLongitude: number; checkOutAddress?: string; notes: string }) => {
+    checkOutMutation.mutate(data, {
+      onSuccess: () => {
+        refetchToday();
+        setCheckoutDialogOpen(false);
+      },
+    });
   };
 
   const getStatusIcon = (status: string) => {
@@ -249,14 +252,24 @@ export const AttendanceCard = () => {
           )}
 
           {isCheckedIn && (
-            <Button
-              onClick={handleCheckOut}
-              disabled={checkOutMutation.isPending || isLoadingLocation}
-              variant="outline"
-              className="w-full"
-            >
-              {isLoadingLocation ? 'Getting Location...' : 'Check Out'}
-            </Button>
+            <>
+              <Button
+                onClick={handleCheckOutClick}
+                disabled={checkOutMutation.isPending || isLoadingLocation}
+                variant="outline"
+                className="w-full"
+              >
+                {isLoadingLocation ? 'Getting Location...' : 'Check Out'}
+              </Button>
+              <CheckoutDialog
+                open={checkoutDialogOpen}
+                onOpenChange={setCheckoutDialogOpen}
+                onCheckOut={handleCheckOut}
+                location={location}
+                isLoadingLocation={isLoadingLocation}
+                isPending={checkOutMutation.isPending}
+              />
+            </>
           )}
 
           {isCheckedOut && (
