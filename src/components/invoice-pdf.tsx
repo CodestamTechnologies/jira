@@ -134,7 +134,7 @@ const InvoicePDF: React.FC<InvoiceData> = ({
         {/* Header Title */}
         <Text>
           <Text style={{ fontSize: 18, fontWeight: '600', textAlign: 'center' }}>
-            INVOICE{"\n"}
+            INVOICE{"\n\n"}
           </Text>
           {companyName && (
             <Text style={{ fontSize: 16, fontWeight: '500', textAlign: 'center' }}>
@@ -239,7 +239,7 @@ const InvoicePDF: React.FC<InvoiceData> = ({
 
         {/* Bank Details */}
         <View style={{ marginTop: 6, marginBottom: 6 }}>
-          <Text style={{ fontWeight: 'bold', fontSize: 11 }}>BANK DETAILS:{"\n"}</Text>
+          <Text style={{ fontWeight: 'bold', fontSize: 11 }}>BANK DETAILS:{"\n\n"}</Text>
           <Text>
             <Text style={styles.key}>BANK NAME    : </Text><Text style={styles.value}>{bankName}{"\n"}</Text>
             <Text style={styles.key}>ACCOUNT NAME : </Text><Text style={styles.value}>{accountName}{"\n"}</Text>

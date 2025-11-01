@@ -45,9 +45,8 @@ const TERMS_AND_CONDITIONS = `
 1. Payment Terms: Payment is due within 30 days of invoice date.
 2. Late Payment: A late fee of 1.5% per month will be applied to overdue accounts.
 3. Disputes: Any disputes must be submitted in writing within 15 days of invoice date.
-4. Refunds: Refunds are subject to our refund policy available on our website.
-5. Liability: Our liability is limited to the amount paid for the services.
-6. Governing Law: This invoice is governed by the laws of the jurisdiction where services were provided.
+4. Liability: Our liability is limited to the amount paid for the services.
+5. Governing Law: This invoice is governed by the laws of the jurisdiction where services were provided.
 `;
 
 export const InvoiceGenerator = () => {
