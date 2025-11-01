@@ -110,9 +110,20 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
           className="p-0" 
           align="start" 
           sideOffset={4}
-          style={{ width: width ? `${width}px` : undefined }}
+          style={{ 
+            width: width ? `${width}px` : undefined,
+            maxHeight: '300px',
+            overflow: 'hidden',
+          }}
         >
-          <div className="max-h-[300px] overflow-y-auto overscroll-contain">
+          <div 
+            style={{ 
+              maxHeight: '300px',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+            }}
+            className="overscroll-contain"
+          >
             <div className="p-1">
               {options.map((option) => (
                 <div
