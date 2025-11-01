@@ -24,17 +24,41 @@ export const TodayAttendanceStats = () => {
 
   if (isLoading) {
     return (
-      <ScrollArea className="w-full shrink-0 whitespace-nowrap rounded-lg border">
-        <div className="flex w-full flex-row">
-          <div className="flex flex-1 items-center">
-            <div className="flex flex-col gap-1 p-4">
-              <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-              <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+      <div className="flex flex-col gap-3">
+        {/* Your Status Card Skeleton */}
+        <Card className="border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="size-10 bg-muted animate-pulse rounded-full" />
+                <div className="flex flex-col gap-2 flex-1">
+                  <div className="h-4 w-32 bg-muted animate-pulse rounded" />
+                  <div className="h-3 w-48 bg-muted animate-pulse rounded" />
+                </div>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats Cards Skeleton */}
+        <ScrollArea className="w-full shrink-0 whitespace-nowrap rounded-lg border">
+          <div className="flex w-full flex-row">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex flex-1 items-center">
+                <div className="flex flex-col gap-2.5 p-6 min-w-[140px]">
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 bg-muted animate-pulse rounded" />
+                    <div className="h-4 w-28 bg-muted animate-pulse rounded" />
+                  </div>
+                  <div className="h-10 w-16 bg-muted animate-pulse rounded" />
+                </div>
+                {i < 4 && <DottedSeparator direction="vertical" />}
+              </div>
+            ))}
           </div>
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+      </div>
     );
   }
 
@@ -47,7 +71,7 @@ export const TodayAttendanceStats = () => {
   const userStatus = userAttendance?.status || 'not-checked-in';
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {/* User's Personal Status Card - Compact and Clean */}
       {user && (
         <Card className="border">
@@ -55,12 +79,12 @@ export const TodayAttendanceStats = () => {
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className={`flex items-center justify-center size-10 rounded-full shrink-0 ${hasUserCheckedIn
-                    ? userStatus === 'present'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                      : userStatus === 'late'
-                        ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                        : 'bg-muted'
-                    : 'bg-red-100 dark:bg-red-900/30'
+                  ? userStatus === 'present'
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                    : userStatus === 'late'
+                      ? 'bg-yellow-100 dark:bg-yellow-900/30'
+                      : 'bg-muted'
+                  : 'bg-red-100 dark:bg-red-900/30'
                   }`}>
                   {hasUserCheckedIn ? (
                     userStatus === 'present' ? (
@@ -79,8 +103,8 @@ export const TodayAttendanceStats = () => {
                     <span className="text-sm font-medium truncate">Your Status</span>
                     {hasUserCheckedIn && (
                       <span className={`text-xs px-2 py-0.5 rounded-full ${userStatus === 'present' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                          userStatus === 'late' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                            'bg-muted text-muted-foreground'
+                        userStatus === 'late' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                          'bg-muted text-muted-foreground'
                         }`}>
                         {userStatus === 'present' ? 'Present' : userStatus === 'late' ? 'Late' : userStatus}
                       </span>
