@@ -44,7 +44,7 @@ export const Projects = () => {
               )}
             >
               <ProjectAvatar image={project.imageUrl} name={project.name} />
-              <span className="truncate">{project.name}</span>
+              <span className="truncate text-sm">{project.name}</span>
             </div>
           </Link>
         );

@@ -5,6 +5,7 @@ import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
 import { DATABASE_ID, IMAGES_BUCKET_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import { createProjectSchema, updateProjectSchema } from '@/features/projects/schema';
 import type { Project } from '@/features/projects/types';
@@ -91,10 +92,44 @@ const app = new Hono()
         return ctx.json({ error: 'Unauthorized.' }, 401);
       }
 
-      const projects = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
-        Query.equal('workspaceId', workspaceId),
-        Query.orderDesc('$createdAt'),
-      ]);
+      // Admins can see all projects
+      const isAdmin = member.role === MemberRole.ADMIN;
+
+      let projects;
+
+      if (isAdmin) {
+        // Admins see all projects
+        projects = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+          Query.equal('workspaceId', workspaceId),
+          Query.orderDesc('$createdAt'),
+        ]);
+      } else {
+        // Regular members only see projects where they have tasks
+        const tasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+          Query.equal('workspaceId', workspaceId),
+          Query.contains('assigneeIds', member.$id),
+        ]);
+
+        // Get unique project IDs from tasks
+        const projectIds = Array.from(new Set(tasks.documents.map((task) => task.projectId)));
+
+        // If user has no tasks, return empty result
+        if (projectIds.length === 0) {
+          return ctx.json({
+            data: {
+              documents: [],
+              total: 0,
+            },
+          });
+        }
+
+        // Fetch only projects where user has tasks
+        projects = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+          Query.equal('workspaceId', workspaceId),
+          Query.contains('$id', projectIds),
+          Query.orderDesc('$createdAt'),
+        ]);
+      }
 
       const projectsWithImages: Project[] = await Promise.all(
         projects.documents.map(async (project) => {
@@ -142,6 +177,26 @@ const app = new Hono()
         },
         401,
       );
+    }
+
+    // Admins can access all projects, regular members need tasks
+    const isAdmin = member.role === MemberRole.ADMIN;
+
+    if (!isAdmin) {
+      // Check if user has tasks in this project
+      const tasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+        Query.equal('projectId', projectId),
+        Query.contains('assigneeIds', member.$id),
+      ]);
+
+      if (tasks.total === 0) {
+        return ctx.json(
+          {
+            error: 'Unauthorized. You do not have access to this project.',
+          },
+          403,
+        );
+      }
     }
 
     let imageUrl: string | undefined = undefined;
@@ -255,6 +310,26 @@ const app = new Hono()
 
     if (!member) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    // Admins can access all projects, regular members need tasks
+    const isAdmin = member.role === MemberRole.ADMIN;
+
+    if (!isAdmin) {
+      // Check if user has tasks in this project
+      const userTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+        Query.equal('projectId', projectId),
+        Query.contains('assigneeIds', member.$id),
+      ]);
+
+      if (userTasks.total === 0) {
+        return ctx.json(
+          {
+            error: 'Unauthorized. You do not have access to this project.',
+          },
+          403,
+        );
+      }
     }
 
     const now = new Date();

@@ -4,6 +4,7 @@ import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
 import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
 import { createTaskSchema } from '@/features/tasks/schema';
@@ -45,9 +46,45 @@ const app = new Hono()
         return ctx.json({ error: 'Unauthorized.' }, 401);
       }
 
+      // Admins can see all tasks, regular members only see tasks from projects they have tasks in
+      const isAdmin = member.role === MemberRole.ADMIN;
+      let allowedProjectIds: string[] | null = null;
+
+      if (!isAdmin) {
+        // Find all tasks where the user is assigned to get project IDs
+        const userTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+          Query.equal('workspaceId', workspaceId),
+          Query.contains('assigneeIds', member.$id),
+        ]);
+
+        // Get unique project IDs from user's tasks
+        allowedProjectIds = Array.from(new Set(userTasks.documents.map((task) => task.projectId)));
+
+        // If user has no tasks, return empty result
+        if (allowedProjectIds.length === 0) {
+          return ctx.json({
+            data: {
+              documents: [],
+              total: 0,
+            },
+          });
+        }
+      }
+
       const query = [Query.equal('workspaceId', workspaceId), Query.orderDesc('$createdAt')];
 
-      if (projectId) query.push(Query.equal('projectId', projectId));
+      if (projectId) {
+        // If filtering by specific project, verify user has access (if not admin)
+        if (!isAdmin && allowedProjectIds && !allowedProjectIds.includes(projectId)) {
+          return ctx.json({
+            data: {
+              documents: [],
+              total: 0,
+            },
+          });
+        }
+        query.push(Query.equal('projectId', projectId));
+      }
 
       if (status) query.push(Query.equal('status', status));
 
@@ -59,8 +96,18 @@ const app = new Hono()
 
       const tasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, query);
 
-      const projectIds = tasks.documents.map((task) => task.projectId);
-      const allAssigneeIds = tasks.documents.flatMap((task) => task.assigneeIds || []);
+      // Filter tasks by allowed project IDs if user is not admin
+      let filteredTasks = tasks;
+      if (!isAdmin && allowedProjectIds && allowedProjectIds.length > 0) {
+        filteredTasks = {
+          ...tasks,
+          documents: tasks.documents.filter((task) => allowedProjectIds!.includes(task.projectId)),
+          total: tasks.documents.filter((task) => allowedProjectIds!.includes(task.projectId)).length,
+        };
+      }
+
+      const projectIds = filteredTasks.documents.map((task) => task.projectId);
+      const allAssigneeIds = filteredTasks.documents.flatMap((task) => task.assigneeIds || []);
 
       const projects = await databases.listDocuments<Project>(
         DATABASE_ID,
@@ -68,7 +115,8 @@ const app = new Hono()
         projectIds.length > 0 ? [Query.contains('$id', projectIds)] : [],
       );
 
-      const uniqueAssigneeIds = [...new Set(allAssigneeIds)];
+      // Fix for Set iteration compatibility: avoid using spread operator directly on Set
+      const uniqueAssigneeIds: string[] = Array.from(new Set(allAssigneeIds));
 
       const members = await databases.listDocuments(
         DATABASE_ID,
@@ -89,7 +137,7 @@ const app = new Hono()
       );
 
       const populatedTasks: (Models.Document & Task)[] = await Promise.all(
-        tasks.documents.map(async (task) => {
+        filteredTasks.documents.map(async (task) => {
           const project = projects.documents.find((project) => project.$id === task.projectId);
           const taskAssignees = (task.assigneeIds || []).map((assigneeId) =>
             assignees.find((assignee) => assignee.$id === assigneeId),
@@ -116,7 +164,7 @@ const app = new Hono()
 
       return ctx.json({
         data: {
-          ...tasks,
+          ...filteredTasks,
           documents: populatedTasks,
         },
       });
@@ -139,6 +187,26 @@ const app = new Hono()
 
     if (!currentMember) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    // Admins can access all tasks, regular members only access tasks from projects they have tasks in
+    const isAdmin = currentMember.role === MemberRole.ADMIN;
+
+    if (!isAdmin) {
+      // Check if user has tasks in this project
+      const userTasksInProject = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+        Query.equal('projectId', task.projectId),
+        Query.contains('assigneeIds', currentMember.$id),
+      ]);
+
+      if (userTasksInProject.total === 0) {
+        return ctx.json(
+          {
+            error: 'Unauthorized. You do not have access to this task.',
+          },
+          403,
+        );
+      }
     }
 
     const project = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, task.projectId);
@@ -198,7 +266,7 @@ const app = new Hono()
       status,
       workspaceId,
       projectId,
-      dueDate,
+      dueDate: dueDate instanceof Date ? dueDate.toISOString() : dueDate,
       assigneeIds,
       position: newPosition,
     });
@@ -228,7 +296,7 @@ const app = new Hono()
       name,
       status,
       projectId,
-      dueDate,
+      dueDate: dueDate instanceof Date ? dueDate.toISOString() : dueDate,
       description,
     };
 

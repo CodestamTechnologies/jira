@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 interface EventCardProps {
   title: string;
-  assignee?: Member;
+  assignee?: { $id: string; name: string; email?: string };
   assignees?: Array<{ $id: string; name: string; email?: string }>;
   project: Project;
   status: TaskStatus;

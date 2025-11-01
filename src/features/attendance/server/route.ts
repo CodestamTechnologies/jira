@@ -409,6 +409,74 @@ app.get('/stats', async (c) => {
     console.error('Error fetching attendance stats:', error);
     return c.json({ error: 'Failed to fetch attendance stats' }, 500);
   }
-});
+})
+  .get('/today/stats', async (c) => {
+    try {
+      const user = await getCurrent();
+      if (!user) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+
+      const { searchParams } = new URL(c.req.url);
+      const workspaceId = searchParams.get('workspaceId');
+
+      if (!workspaceId) {
+        return c.json({ error: 'Workspace ID is required' }, 400);
+      }
+
+      if (!workspaceId.trim()) {
+        return c.json({ error: 'Invalid workspace ID' }, 400);
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+
+      const { databases } = await createSessionClient();
+
+      // Get all members in the workspace
+      const members = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
+        Query.equal('workspaceId', workspaceId.trim())
+      ]);
+
+      const memberIds = members.documents.map((m) => m.userId);
+
+      if (memberIds.length === 0) {
+        return c.json({
+          total: 0,
+          present: 0,
+          late: 0,
+          checkedIn: 0
+        });
+      }
+
+      // Get today's attendance for all members in the workspace
+      const todayAttendance = await databases.listDocuments(
+        DATABASE_ID,
+        ATTENDANCE_ID,
+        [
+          Query.equal('workspaceId', workspaceId.trim()),
+          Query.equal('date', today)
+        ]
+      );
+
+      // Filter to only include members of this workspace
+      const memberAttendance = todayAttendance.documents.filter((record) =>
+        memberIds.includes(record.userId)
+      );
+
+      const present = memberAttendance.filter((r) => r.status === 'present').length;
+      const late = memberAttendance.filter((r) => r.status === 'late').length;
+      const checkedIn = memberAttendance.length;
+
+      return c.json({
+        total: memberIds.length,
+        present,
+        late,
+        checkedIn
+      });
+    } catch (error) {
+      console.error('Error fetching today\'s attendance stats:', error);
+      return c.json({ error: 'Failed to fetch today\'s attendance stats' }, 500);
+    }
+  });
 
 export default app;

@@ -12,14 +12,14 @@ interface WorkspaceAvatarProps {
 export const WorkspaceAvatar = ({ image, name, className }: WorkspaceAvatarProps) => {
   if (image) {
     return (
-      <div className={cn('relative size-10 overflow-hidden rounded-md', className)}>
+      <div className={cn('relative size-6 overflow-hidden rounded-md', className)}>
         <Image src={image} alt={name} fill className="object-cover" />
       </div>
     );
   }
 
   return (
-    <Avatar className={cn('size-10 rounded-md', className)}>
+    <Avatar className={cn('size-6 rounded-md', className)}>
       <AvatarFallback className="rounded-md bg-primary text-lg font-semibold uppercase text-primary-foreground">{name.charAt(0)}</AvatarFallback>
     </Avatar>
   );
