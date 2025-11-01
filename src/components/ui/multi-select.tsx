@@ -27,7 +27,8 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
   ({ options, selected, onChange, placeholder = 'Select items...', disabled, className }, ref) => {
     const [open, setOpen] = React.useState(false);
     const [width, setWidth] = React.useState<number | undefined>(undefined);
-    const triggerRef = React.useRef<HTMLButtonElement>(null);
+    const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
     React.useEffect(() => {
       if (open && triggerRef.current) {
@@ -57,8 +58,8 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
               triggerRef.current = node;
               if (typeof ref === 'function') {
                 ref(node);
-              } else if (ref) {
-                ref.current = node;
+              } else if (ref && 'current' in ref) {
+                (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node;
               }
             }}
             variant="outline"
@@ -107,25 +108,33 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
           </Button>
         </PopoverTrigger>
         <PopoverContent 
-          className="p-0 !overflow-hidden" 
+          className="p-0" 
           align="start" 
           sideOffset={4}
           style={{ 
-            width: width ? `${width}px` : undefined,
-            height: '300px',
+            width: width ? `${width}px` : 'auto',
+            maxHeight: '300px',
             overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
+          }}
+          onWheel={(e) => {
+            if (scrollContainerRef.current) {
+              const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+              const isAtTop = scrollTop === 0;
+              const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+              
+              if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+                e.preventDefault();
+              }
+            }
           }}
         >
           <div 
+            ref={scrollContainerRef}
+            className="overflow-y-auto overflow-x-hidden"
             style={{ 
-              height: '100%',
-              overflowY: 'auto',
-              overflowX: 'hidden',
+              maxHeight: '300px',
               WebkitOverflowScrolling: 'touch',
             }}
-            className="overscroll-contain"
           >
             <div className="p-1">
               {options.map((option) => (
