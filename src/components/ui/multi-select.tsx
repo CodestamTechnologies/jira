@@ -92,8 +92,8 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
-          <ScrollArea className="max-h-60">
+        <PopoverContent className="p-0" align="start" sideOffset={4}>
+          <ScrollArea className="h-[300px]">
             <div className="p-1">
               {options.map((option) => (
                 <div
