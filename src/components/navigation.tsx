@@ -1,11 +1,12 @@
 'use client';
 
-import { Settings, UsersIcon, Clock } from 'lucide-react';
+import { Settings, UsersIcon, Clock, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GoCheckCircle, GoCheckCircleFill, GoHome, GoHomeFill } from 'react-icons/go';
 
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import { useAdminStatus } from '@/features/attendance/hooks/use-admin-status';
 import { cn } from '@/lib/utils';
 
 const routes = [
@@ -39,17 +40,33 @@ const routes = [
     icon: UsersIcon,
     activeIcon: UsersIcon,
   },
+  {
+    label: 'Invoices',
+    href: '/invoices',
+    icon: FileText,
+    activeIcon: FileText,
+    adminOnly: true,
+  },
 ];
 
 export const Navigation = () => {
   const pathname = usePathname();
   const workspaceId = useWorkspaceId();
+  const { data: isAdmin } = useAdminStatus();
 
   return (
     <ul className="flex flex-col">
       {routes.map((route) => {
+        // Hide admin-only routes if user is not admin
+        if (route.adminOnly && !isAdmin) {
+          return null;
+        }
+
         const fullHref = `/workspaces/${workspaceId}${route.href}`;
-        const isActive = pathname === fullHref;
+        // For empty href (home), match exactly; for others, match exact or sub-paths
+        const isActive = route.href === '' 
+          ? pathname === fullHref || pathname === `/workspaces/${workspaceId}`
+          : pathname === fullHref || pathname.startsWith(fullHref + '/');
         const Icon = isActive ? route.activeIcon : route.icon;
 
         return (
