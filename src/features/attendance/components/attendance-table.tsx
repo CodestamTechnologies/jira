@@ -2,13 +2,22 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, MapPin, User, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { useGetAttendance } from '../api/use-get-attendance';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { Attendance, AttendanceFilters } from '../types';
@@ -115,82 +124,108 @@ export const AttendanceTable = () => {
         {isLoading ? (
           <div className="text-center py-8">Loading attendance records...</div>
         ) : attendanceRecords && attendanceRecords.length > 0 ? (
-          <div className="space-y-4">
-            {attendanceRecords.map((record: Attendance) => (
-              <div
-                key={record.$id}
-                className="border rounded-lg p-4 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="font-medium">
-                        {format(new Date(record.date), 'EEEE, MMMM do, yyyy')}
-                      </span>
-                    </div>
-                    <Badge className={getStatusColor(record.status)}>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(record.status)}
-                        {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+          <ScrollArea className="w-full whitespace-nowrap rounded-md border">
+            <div className="min-w-full inline-block">
+              <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px]">Date</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="w-[100px]">Check In</TableHead>
+                  <TableHead className="w-[100px]">Check Out</TableHead>
+                  <TableHead className="w-[100px]">Hours</TableHead>
+                  <TableHead className="min-w-[200px]">Check In Location</TableHead>
+                  <TableHead className="min-w-[200px]">Check Out Location</TableHead>
+                  <TableHead className="min-w-[250px]">Daily Summary</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {attendanceRecords.map((record: Attendance) => (
+                  <TableRow key={record.$id}>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span>{format(new Date(record.date), 'MMM dd, yyyy')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(record.date), 'EEEE')}
+                        </span>
                       </div>
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  {/* Check In */}
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Check In: {format(new Date(record.checkInTime), 'HH:mm')}</span>
-                  </div>
-
-                  {/* Check Out */}
-                  {record.checkOutTime && (
-                    <div className="flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-red-500" />
-                      <span>Check Out: {format(new Date(record.checkOutTime), 'HH:mm')}</span>
-                    </div>
-                  )}
-
-                  {/* Total Hours */}
-                  {record.totalHours && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-blue-500" />
-                      <span>Total: {record.totalHours.toFixed(2)}h</span>
-                    </div>
-                  )}
-
-                  {/* Check In Location */}
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <span className="truncate">
-                      Check In: {record.checkInAddress || `${record.checkInLatitude.toFixed(4)}, ${record.checkInLongitude.toFixed(4)}`}
-                    </span>
-                  </div>
-
-                  {/* Check Out Location */}
-                  {record.checkOutLatitude && record.checkOutLongitude && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <span className="truncate">
-                        Check Out: {record.checkOutAddress || `${record.checkOutLatitude.toFixed(4)}, ${record.checkOutLongitude.toFixed(4)}`}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Notes */}
-                  {record.notes && (
-                    <div className="col-span-full">
-                      <span className="text-gray-600">Notes: {record.notes}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(record.status)}>
+                        <div className="flex items-center gap-1">
+                          {getStatusIcon(record.status)}
+                          <span className="hidden sm:inline">
+                            {record.status.charAt(0).toUpperCase() + record.status.slice(1).replace('-', ' ')}
+                          </span>
+                        </div>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                        <span>{format(new Date(record.checkInTime), 'HH:mm')}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {record.checkOutTime ? (
+                        <div className="flex items-center gap-1.5">
+                          <XCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                          <span>{format(new Date(record.checkOutTime), 'HH:mm')}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {record.totalHours ? (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                          <span>{record.totalHours.toFixed(2)}h</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-start gap-1.5 max-w-[200px]">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        <span className="text-sm truncate" title={record.checkInAddress || `${record.checkInLatitude.toFixed(4)}, ${record.checkInLongitude.toFixed(4)}`}>
+                          {record.checkInAddress || `${record.checkInLatitude.toFixed(4)}, ${record.checkInLongitude.toFixed(4)}`}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {record.checkOutLatitude && record.checkOutLongitude ? (
+                        <div className="flex items-start gap-1.5 max-w-[200px]">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                          <span className="text-sm truncate" title={record.checkOutAddress || `${record.checkOutLatitude.toFixed(4)}, ${record.checkOutLongitude.toFixed(4)}`}>
+                            {record.checkOutAddress || `${record.checkOutLatitude.toFixed(4)}, ${record.checkOutLongitude.toFixed(4)}`}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {record.notes ? (
+                        <div className="max-w-[250px]">
+                          <p className="text-sm line-clamp-2" title={record.notes}>
+                            {record.notes}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              </Table>
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             No attendance records found
           </div>
         )}
