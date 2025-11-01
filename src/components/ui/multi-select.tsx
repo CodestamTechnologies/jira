@@ -107,20 +107,23 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
           </Button>
         </PopoverTrigger>
         <PopoverContent 
-          className="p-0" 
+          className="p-0 !overflow-hidden" 
           align="start" 
           sideOffset={4}
           style={{ 
             width: width ? `${width}px` : undefined,
-            maxHeight: '300px',
+            height: '300px',
             overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <div 
             style={{ 
-              maxHeight: '300px',
+              height: '100%',
               overflowY: 'auto',
               overflowX: 'hidden',
+              WebkitOverflowScrolling: 'touch',
             }}
             className="overscroll-contain"
           >
