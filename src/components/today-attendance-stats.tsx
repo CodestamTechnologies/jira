@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, CheckCircle, Clock, Users, LogIn } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Users, LogIn, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -54,15 +54,14 @@ export const TodayAttendanceStats = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className={`flex items-center justify-center size-10 rounded-full shrink-0 ${
-                  hasUserCheckedIn 
-                    ? userStatus === 'present' 
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30' 
+                <div className={`flex items-center justify-center size-10 rounded-full shrink-0 ${hasUserCheckedIn
+                    ? userStatus === 'present'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/30'
                       : userStatus === 'late'
                         ? 'bg-yellow-100 dark:bg-yellow-900/30'
                         : 'bg-muted'
                     : 'bg-red-100 dark:bg-red-900/30'
-                }`}>
+                  }`}>
                   {hasUserCheckedIn ? (
                     userStatus === 'present' ? (
                       <CheckCircle className={`size-5 ${userStatus === 'present' ? 'text-emerald-600 dark:text-emerald-400' : userStatus === 'late' ? 'text-yellow-600 dark:text-yellow-400' : 'text-muted-foreground'}`} />
@@ -79,19 +78,39 @@ export const TodayAttendanceStats = () => {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium truncate">Your Status</span>
                     {hasUserCheckedIn && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        userStatus === 'present' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                        userStatus === 'late' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                        'bg-muted text-muted-foreground'
-                      }`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${userStatus === 'present' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                          userStatus === 'late' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-muted text-muted-foreground'
+                        }`}>
                         {userStatus === 'present' ? 'Present' : userStatus === 'late' ? 'Late' : userStatus}
                       </span>
                     )}
                   </div>
                   {hasUserCheckedIn ? (
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {userAttendance.checkInTime && `Checked in ${formatDistanceToNow(new Date(userAttendance.checkInTime), { addSuffix: true })}`}
-                      {!userAttendance.checkOutTime && userAttendance.checkInTime && ' • Currently at work'}
+                    <div className="flex flex-col gap-1 text-xs text-muted-foreground mt-0.5">
+                      {userAttendance.checkInTime && (
+                        <div className="flex items-center gap-1.5">
+                          <LogIn className="size-3 text-green-600 dark:text-green-400" />
+                          <span>Checked in {formatDistanceToNow(new Date(userAttendance.checkInTime), { addSuffix: true })}</span>
+                        </div>
+                      )}
+                      {userAttendance.checkOutTime ? (
+                        <div className="flex items-center gap-1.5">
+                          <LogOut className="size-3 text-red-600 dark:text-red-400" />
+                          <span>Checked out {formatDistanceToNow(new Date(userAttendance.checkOutTime), { addSuffix: true })}</span>
+                        </div>
+                      ) : userAttendance.checkInTime ? (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="size-3 text-blue-600 dark:text-blue-400" />
+                          <span>Currently at work</span>
+                        </div>
+                      ) : null}
+                      {userAttendance.checkOutTime && userAttendance.totalHours && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Clock className="size-3 text-blue-600 dark:text-blue-400" />
+                          <span>Total: {userAttendance.totalHours.toFixed(2)}h worked</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground mt-0.5">Not checked in today</p>
