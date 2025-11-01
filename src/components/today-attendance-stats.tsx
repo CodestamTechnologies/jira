@@ -24,9 +24,9 @@ export const TodayAttendanceStats = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col lg:flex-row gap-3">
         {/* Your Status Card Skeleton */}
-        <Card className="border">
+        <Card className="border lg:min-w-[320px] lg:flex-shrink-0">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1">
@@ -41,7 +41,7 @@ export const TodayAttendanceStats = () => {
         </Card>
 
         {/* Stats Cards Skeleton */}
-        <ScrollArea className="w-full shrink-0 whitespace-nowrap rounded-lg border">
+        <ScrollArea className="w-full shrink-0 whitespace-nowrap rounded-lg border lg:flex-1">
           <div className="flex w-full flex-row">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex flex-1 items-center">
@@ -71,10 +71,10 @@ export const TodayAttendanceStats = () => {
   const userStatus = userAttendance?.status || 'not-checked-in';
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col lg:flex-row gap-4">
       {/* User's Personal Status Card - Compact and Clean */}
       {user && (
-        <Card className="border">
+        <Card className="border lg:min-w-[320px] lg:flex-shrink-0">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -155,7 +155,7 @@ export const TodayAttendanceStats = () => {
       )}
 
       {/* Overall Stats */}
-      <ScrollArea className="w-full shrink-0 whitespace-nowrap rounded-lg border">
+      <ScrollArea className="w-full shrink-0 whitespace-nowrap rounded-lg border lg:flex-1">
         <div className="flex w-full flex-row">
           <div className="flex flex-1 items-center">
             <AnalyticsCard
