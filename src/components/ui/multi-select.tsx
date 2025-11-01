@@ -113,27 +113,18 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
           sideOffset={4}
           style={{ 
             width: width ? `${width}px` : 'auto',
-            maxHeight: '300px',
-            overflow: 'hidden',
-          }}
-          onWheel={(e) => {
-            if (scrollContainerRef.current) {
-              const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-              const isAtTop = scrollTop === 0;
-              const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-              
-              if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
-                e.preventDefault();
-              }
-            }
+            padding: 0,
           }}
         >
           <div 
             ref={scrollContainerRef}
-            className="overflow-y-auto overflow-x-hidden"
+            className="max-h-[300px] overflow-y-auto overflow-x-hidden"
             style={{ 
               maxHeight: '300px',
+              overflowY: 'auto',
+              overflowX: 'hidden',
               WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'thin',
             }}
           >
             <div className="p-1">
