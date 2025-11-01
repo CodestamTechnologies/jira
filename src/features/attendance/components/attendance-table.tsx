@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useGetAttendance } from '../api/use-get-attendance';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { Attendance, AttendanceFilters } from '../types';
@@ -136,7 +137,7 @@ export const AttendanceTable = () => {
                   <TableHead className="w-[100px]">Hours</TableHead>
                   <TableHead className="min-w-[200px]">Check In Location</TableHead>
                   <TableHead className="min-w-[200px]">Check Out Location</TableHead>
-                  <TableHead className="min-w-[250px]">Daily Summary</TableHead>
+                  <TableHead className="min-w-[300px]">Daily Summary</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,13 +207,39 @@ export const AttendanceTable = () => {
                         <span className="text-muted-foreground text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-[300px]">
                       {record.notes ? (
-                        <div className="max-w-[250px]">
-                          <p className="text-sm line-clamp-2" title={record.notes}>
-                            {record.notes}
-                          </p>
-                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="text-left w-full group">
+                              <div className="max-w-[350px]">
+                                <p className="text-sm line-clamp-3 text-foreground group-hover:text-primary transition-colors">
+                                  {record.notes}
+                                </p>
+                                {record.notes.length > 150 && (
+                                  <span className="text-xs text-primary mt-1 inline-block font-medium">
+                                    View full summary →
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[500px] max-w-[90vw] p-4" align="start">
+                            <div className="space-y-3">
+                              <div>
+                                <h4 className="font-semibold text-sm mb-1">Daily Summary</h4>
+                                <div className="text-xs text-muted-foreground">
+                                  {format(new Date(record.date), 'EEEE, MMMM dd, yyyy')}
+                                </div>
+                              </div>
+                              <div className="max-h-[400px] overflow-y-auto">
+                                <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                                  {record.notes}
+                                </p>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       ) : (
                         <span className="text-muted-foreground text-sm">-</span>
                       )}
