@@ -107,19 +107,19 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent 
-          className="p-0" 
-          align="start" 
+        <PopoverContent
+          className="p-0"
+          align="start"
           sideOffset={4}
-          style={{ 
+          style={{
             width: width ? `${width}px` : 'auto',
             padding: 0,
           }}
         >
-          <div 
+          <div
             ref={scrollContainerRef}
             className="max-h-[300px] overflow-y-auto overflow-x-hidden"
-            style={{ 
+            style={{
               maxHeight: '300px',
               overflowY: 'auto',
               overflowX: 'hidden',
