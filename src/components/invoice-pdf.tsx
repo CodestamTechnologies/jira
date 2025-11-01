@@ -198,7 +198,7 @@ const InvoicePDF: React.FC<InvoiceData> = ({
               {filteredItems.map((item) => (
                 <Text key={item.id}>
                   <Text style={styles.key}>DESCRIPTION : </Text><Text style={styles.value}>{item.description || 'Service'}{"\n"}</Text>
-                  <Text style={styles.key}>AMOUNT     : </Text><Text style={styles.value}>${item.price.toFixed(2)}{"\n"}</Text>
+                  <Text style={styles.key}>AMOUNT     : </Text><Text style={styles.value}>₹{item.price.toFixed(2)}{"\n"}</Text>
                 </Text>
               ))}
             </View>
@@ -210,7 +210,7 @@ const InvoicePDF: React.FC<InvoiceData> = ({
         <View style={{ marginTop: 6, marginBottom: 6 }}>
           <Text>
             <Text style={{ ...styles.key, fontWeight: 'bold' }}>TOTAL       : </Text>
-            <Text style={{ ...styles.value, fontWeight: 'bold' }}>${total.toFixed(2)}{"\n"}</Text>
+            <Text style={{ ...styles.value, fontWeight: 'bold' }}>₹{total.toFixed(2)}{"\n"}</Text>
           </Text>
         </View>
 

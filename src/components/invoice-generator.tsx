@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { FileText, Download, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,6 +83,7 @@ export const InvoiceGenerator = () => {
 
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
   const total = subtotal;
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const getInvoiceData = (): InvoiceData => ({
     companyName: COMPANY_INFO.name,
@@ -110,6 +111,28 @@ export const InvoiceGenerator = () => {
     upi: BANK_DETAILS.UPI,
   });
 
+  const handleDownloadPDF = async () => {
+    setIsGenerating(true);
+    try {
+      const invoiceData = getInvoiceData();
+      const doc = <InvoicePDF {...invoiceData} />;
+      const asPdf = pdf(doc);
+      const blob = await asPdf.toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceNumber || '001'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <Card className="border">
       <CardHeader>
@@ -121,38 +144,36 @@ export const InvoiceGenerator = () => {
             </CardTitle>
             <CardDescription>Create and download invoices for your clients</CardDescription>
           </div>
-          <PDFDownloadLink
-            document={<InvoicePDF {...getInvoiceData()} />}
-            fileName={`invoice-${invoiceNumber || '001'}.pdf`}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleDownloadPDF}
+            disabled={isGenerating}
           >
-            {({ loading }) => (
-              <Button variant="primary" size="sm" disabled={loading}>
-                {loading ? (
-                  <>
-                    <svg
-                      className="animate-spin mr-2 h-4 w-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    <span>Generating PDF...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="mr-2 size-4" />
-                    Generate PDF
-                  </>
-                )}
-              </Button>
+            {isGenerating ? (
+              <>
+                <svg
+                  className="animate-spin mr-2 h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span>Generating PDF...</span>
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 size-4" />
+                Generate PDF
+              </>
             )}
-          </PDFDownloadLink>
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -242,7 +263,7 @@ export const InvoiceGenerator = () => {
                   />
                 </div>
                 <div className="col-span-10 md:col-span-3 space-y-2">
-                  <Label className="text-xs">Amount ($)</Label>
+                  <Label className="text-xs">Amount (₹)</Label>
                   <Input
                     type="number"
                     min="0"
@@ -275,7 +296,7 @@ export const InvoiceGenerator = () => {
         <div className="space-y-2">
           <div className="flex justify-between text-lg font-semibold">
             <span>Total:</span>
-            <span>${total.toFixed(2)}</span>
+            <span>₹{total.toFixed(2)}</span>
           </div>
         </div>
 
