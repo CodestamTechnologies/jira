@@ -5,4 +5,7 @@ export type Project = Models.Document & {
   imageId?: string;
   imageUrl?: string;
   workspaceId: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  clientPhone?: string;
 };

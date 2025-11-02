@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Download, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
@@ -9,9 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DottedSeparator } from './dotted-separator';
 import InvoicePDF, { InvoiceData } from './invoice-pdf';
+import { useCreateInvoice } from '@/features/invoices/api/use-create-invoice';
+import { useGetNextInvoiceNumber } from '@/features/invoices/api/use-get-next-invoice-number';
+import { useGetProjects } from '@/features/projects/api/use-get-projects';
+import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import type { Invoice } from '@/features/invoices/types';
 
 interface InvoiceItem {
   id: string;
@@ -21,7 +27,7 @@ interface InvoiceItem {
 
 // Hardcoded Company Information
 const COMPANY_INFO = {
-  name: 'Codestam Technologies',
+  name: 'Kbyte Techbuilder Pvt. Ltd.',
   address: 'Ranchi, Jharkhand - 835103',
   email: 'codestamtechnologies@gmail.com',
   phone: '+918228840065',
@@ -50,15 +56,33 @@ const TERMS_AND_CONDITIONS = `
 `;
 
 export const InvoiceGenerator = () => {
+  const workspaceId = useWorkspaceId();
+  const { data: projectsData, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
+  const { data: nextInvoiceData, refetch: refetchNextInvoiceNumber } = useGetNextInvoiceNumber();
+  const { mutate: createInvoice, isPending: isCreatingInvoice } = useCreateInvoice();
+
   // Invoice Information
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientAddress, setClientAddress] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [items, setItems] = useState<InvoiceItem[]>([
     { id: '1', description: '', price: 0 },
   ]);
   const [notes, setNotes] = useState('');
+
+  // Auto-generated invoice number
+  const invoiceNumber = nextInvoiceData?.invoiceNumber || '';
+
+  // Refetch next invoice number when component mounts or when invoice is created
+  useEffect(() => {
+    refetchNextInvoiceNumber();
+  }, [refetchNextInvoiceNumber]);
+
+  const selectedProject = projectsData?.documents?.find((p) => p.$id === selectedProjectId);
+
+  // Auto-fill client data from project
+  const clientName = selectedProject?.name || '';
+  const clientEmail = selectedProject?.clientEmail || '';
+  const clientAddress = selectedProject?.clientAddress || '';
+  const clientPhone = selectedProject?.clientPhone || '';
 
   const addItem = () => {
     setItems([
@@ -82,8 +106,12 @@ export const InvoiceGenerator = () => {
   };
 
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
-  const total = subtotal;
+  const taxRate = 0; // Tax rate is 0%
+  const taxAmount = Math.round((subtotal * taxRate) / 100 * 100) / 100; // Calculate tax (0% = 0)
+  const total = Math.round((subtotal + taxAmount) * 100) / 100;
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const isGeneratingOrCreating = isGenerating || isCreatingInvoice;
 
   const getInvoiceData = (): InvoiceData => ({
     companyName: COMPANY_INFO.name,
@@ -93,13 +121,16 @@ export const InvoiceGenerator = () => {
     companyWebsite: COMPANY_INFO.website,
     logoUrl: COMPANY_INFO.logo,
     udyamRegistrationNumber: COMPANY_INFO.udyam_registration_number,
-    invoiceNumber: invoiceNumber || 'INV-001',
+    invoiceNumber: invoiceNumber || 'CS/0000/00/00/00',
     invoiceDate: format(new Date(), 'MMM dd, yyyy'),
     clientName,
     clientEmail,
     clientAddress,
+    clientPhone,
     items,
     subtotal,
+    taxRate,
+    taxAmount,
     total,
     notes: notes || undefined,
     termsAndConditions: TERMS_AND_CONDITIONS,
@@ -112,23 +143,85 @@ export const InvoiceGenerator = () => {
   });
 
   const handleDownloadPDF = async () => {
+    if (!selectedProjectId) {
+      alert('Please select a project first.');
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const invoiceData = getInvoiceData();
-      const doc = <InvoicePDF {...invoiceData} />;
-      const asPdf = pdf(doc);
-      const blob = await asPdf.toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `invoice-${invoiceNumber || '001'}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+
+      // Save invoice to database
+      const filteredItems = items.filter((item) => item.description.trim() !== '');
+
+      createInvoice(
+        {
+          json: {
+            // Invoice number is always server-generated (security)
+            // subtotal and total are recalculated server-side (security)
+            projectId: selectedProjectId,
+            workspaceId,
+            items: filteredItems.map((item) => ({
+              description: item.description.trim(),
+              price: item.price,
+            })),
+            notes: notes?.trim() || undefined,
+          },
+        },
+        {
+          onSuccess: (response) => {
+            // Type assertion: response.data contains the invoice
+            const invoice = response.data as Invoice;
+
+            // Use the invoice number from the response (server-generated)
+            const finalInvoiceNumber = invoice.invoiceNumber || invoiceNumber;
+
+            // Update invoice data with the final invoice number and server-calculated totals
+            const serverSubtotal = invoice.subtotal || subtotal;
+            const serverTaxRate = 0; // Tax rate is 0%
+            const serverTaxAmount = 0; // Tax is 0%
+            const serverTotal = invoice.total || total;
+
+            const finalInvoiceData = {
+              ...invoiceData,
+              invoiceNumber: finalInvoiceNumber,
+              subtotal: serverSubtotal,
+              taxRate: serverTaxRate,
+              taxAmount: serverTaxAmount,
+              total: serverTotal,
+            };
+
+            // Generate and download PDF after saving
+            const doc = <InvoicePDF {...finalInvoiceData} />;
+            pdf(doc)
+              .toBlob()
+              .then((blob) => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `invoice-${finalInvoiceNumber.replace(/\//g, '-')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                setIsGenerating(false);
+
+                // Refetch next invoice number for next invoice
+                refetchNextInvoiceNumber();
+              })
+              .catch((error) => {
+                console.error('Error generating PDF:', error);
+                setIsGenerating(false);
+              });
+          },
+          onError: () => {
+            setIsGenerating(false);
+          },
+        },
+      );
     } catch (error) {
       console.error('Error generating PDF:', error);
-    } finally {
       setIsGenerating(false);
     }
   };
@@ -148,10 +241,10 @@ export const InvoiceGenerator = () => {
             variant="primary"
             size="sm"
             onClick={handleDownloadPDF}
-            disabled={isGenerating}
+            disabled={isGeneratingOrCreating || !selectedProjectId}
             className="w-full sm:w-auto"
           >
-            {isGenerating ? (
+            {isGeneratingOrCreating ? (
               <>
                 <svg
                   className="animate-spin mr-2 h-4 w-4"
@@ -181,12 +274,14 @@ export const InvoiceGenerator = () => {
         {/* Invoice Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="invoiceNumber">Invoice Number</Label>
+            <Label htmlFor="invoiceNumber">Invoice Number (Auto-generated)</Label>
             <Input
               id="invoiceNumber"
-              placeholder="INV-001"
+              placeholder="Loading..."
               value={invoiceNumber}
-              onChange={(e) => setInvoiceNumber(e.target.value)}
+              disabled
+              className="bg-muted font-mono"
+              title="Invoice number is automatically generated in format: CS/YYYY/MM/DD/NN"
             />
           </div>
           <div className="space-y-2">
@@ -202,41 +297,61 @@ export const InvoiceGenerator = () => {
 
         <DottedSeparator />
 
-        {/* Client Information */}
+        {/* Project Selection */}
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Client Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="clientName">Client Name</Label>
-              <Input
-                id="clientName"
-                placeholder="John Doe"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="clientEmail">Client Email</Label>
-              <Input
-                id="clientEmail"
-                type="email"
-                placeholder="john@example.com"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="clientAddress">Client Address</Label>
-              <Textarea
-                id="clientAddress"
-                placeholder="123 Main St, City, State, ZIP"
-                value={clientAddress}
-                onChange={(e) => setClientAddress(e.target.value)}
-                rows={2}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="project">Select Project (Client)</Label>
+            <Select
+              value={selectedProjectId}
+              onValueChange={setSelectedProjectId}
+              disabled={isLoadingProjects}
+            >
+              <SelectTrigger id="project">
+                <SelectValue placeholder={isLoadingProjects ? 'Loading projects...' : 'Select a project'} />
+              </SelectTrigger>
+              <SelectContent>
+                {projectsData?.documents?.map((project) => (
+                  <SelectItem key={project.$id} value={project.$id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
+
+        {/* Client Information - Auto-filled from project */}
+        {selectedProject && (
+          <>
+            <DottedSeparator />
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold">Client Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Client Name</Label>
+                  <Input value={clientName} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Client Email</Label>
+                  <Input value={clientEmail || 'Not set'} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Client Phone</Label>
+                  <Input value={clientPhone || 'Not set'} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Client Address</Label>
+                  <Textarea value={clientAddress || 'Not set'} disabled className="bg-muted" rows={2} />
+                </div>
+              </div>
+              {(!clientEmail || !clientAddress || !clientPhone) && (
+                <p className="text-sm text-muted-foreground">
+                  Note: Some client information is missing. Please update the project settings.
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
         <DottedSeparator />
 
@@ -266,12 +381,10 @@ export const InvoiceGenerator = () => {
                 <div className="col-span-9 sm:col-span-3 space-y-2">
                   <Label className="text-xs">Amount (₹)</Label>
                   <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    type="text"
                     placeholder="0.00"
                     value={item.price}
-                    onChange={(e) => updateItem(item.id, 'price', Number(e.target.value) || 0)}
+                    onChange={(e) => updateItem(item.id, 'price', Number(e.target.value))}
                   />
                 </div>
                 <div className="col-span-3 sm:col-span-1 flex items-end justify-end">

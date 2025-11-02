@@ -6,6 +6,9 @@ export const createProjectSchema = z.object({
   workspaceId: z.string({
     message: 'Workspace id is required.',
   }),
+  clientEmail: z.string().email('Invalid email address.').optional().or(z.literal('')),
+  clientAddress: z.string().optional(),
+  clientPhone: z.string().optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -14,4 +17,7 @@ export const updateProjectSchema = z.object({
   workspaceId: z.string({
     message: 'Workspace id is required.',
   }),
+  clientEmail: z.string().email('Invalid email address.').optional().or(z.literal('')),
+  clientAddress: z.string().optional(),
+  clientPhone: z.string().optional(),
 });

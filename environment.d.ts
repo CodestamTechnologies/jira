@@ -1,5 +1,5 @@
 // This file is needed to support autocomplete for process.env
-export {};
+export { };
 
 declare global {
   namespace NodeJS {
@@ -20,6 +20,10 @@ declare global {
       NEXT_PUBLIC_APPWRITE_TASKS_ID: string;
       NEXT_PUBLIC_APPWRITE_WORKSPACES_ID: string;
       NEXT_PUBLIC_APPWRITE_COMMENTS_ID: string;
+      NEXT_PUBLIC_APPWRITE_INVOICES_ID: string;
+
+      // Optional: Explicitly set app environment (defaults to NODE_ENV)
+      NEXT_PUBLIC_APP_ENV?: string;
     }
   }
 }

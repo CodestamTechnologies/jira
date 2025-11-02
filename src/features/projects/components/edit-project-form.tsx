@@ -41,6 +41,9 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
     defaultValues: {
       ...initialValues,
       image: initialValues.imageUrl ?? '',
+      clientEmail: initialValues.clientEmail ?? '',
+      clientAddress: initialValues.clientAddress ?? '',
+      clientPhone: initialValues.clientPhone ?? '',
     },
   });
 
@@ -201,6 +204,57 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                     </div>
                   )}
                 />
+
+                <DottedSeparator />
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold">Client Information (for Invoicing)</h3>
+
+                  <FormField
+                    disabled={isPending}
+                    control={updateProjectForm.control}
+                    name="clientEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" placeholder="client@example.com" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    disabled={isPending}
+                    control={updateProjectForm.control}
+                    name="clientPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client Phone</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="tel" placeholder="+1234567890" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    disabled={isPending}
+                    control={updateProjectForm.control}
+                    name="clientAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Client Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="text" placeholder="123 Main St, City, State, ZIP" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <DottedSeparator className="py-7" />

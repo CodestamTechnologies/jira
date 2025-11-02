@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { useAdminStatus } from '@/features/attendance/hooks/use-admin-status';
+import { InvoiceGenerator } from '@/components/invoice-generator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { InvoiceList } from '@/features/invoices/components/invoice-list';
-import { Plus, AlertCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import { AlertCircle } from 'lucide-react';
 
-export function InvoicePageClient() {
+export function InvoiceCreatePageClient() {
   const workspaceId = useWorkspaceId();
   const { data: isAdmin, isLoading } = useAdminStatus();
 
@@ -33,7 +34,7 @@ export function InvoicePageClient() {
             Access Denied
           </CardTitle>
           <CardDescription>
-            You do not have permission to access this page. Only administrators can view invoices.
+            You do not have permission to access this page. Only administrators can generate invoices.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -42,16 +43,14 @@ export function InvoicePageClient() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <Button asChild>
-          <Link href={`/workspaces/${workspaceId}/invoices/create`}>
-            <Plus className="mr-2 size-4" />
-            Create New Invoice
-          </Link>
-        </Button>
-      </div>
+      <Button variant="secondary" asChild>
+        <Link href={`/workspaces/${workspaceId}/invoices`}>
+          <ArrowLeft className="mr-2 size-4" />
+          Back to All Invoices
+        </Link>
+      </Button>
 
-      <InvoiceList />
+      <InvoiceGenerator />
     </div>
   );
 }

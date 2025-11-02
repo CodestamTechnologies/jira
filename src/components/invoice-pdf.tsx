@@ -69,6 +69,7 @@ export interface InvoiceData {
   clientName: string;
   clientEmail: string;
   clientAddress: string;
+  clientPhone?: string;
 
   // Items
   items: Array<{
@@ -79,6 +80,8 @@ export interface InvoiceData {
 
   // Summary
   subtotal: number;
+  taxRate: number;
+  taxAmount: number;
   total: number;
 
   // Notes and Terms
@@ -107,8 +110,11 @@ const InvoicePDF: React.FC<InvoiceData> = ({
   clientName,
   clientEmail,
   clientAddress,
+  clientPhone,
   items,
   subtotal,
+  taxRate,
+  taxAmount,
   total,
   notes,
   termsAndConditions,
@@ -183,7 +189,8 @@ const InvoicePDF: React.FC<InvoiceData> = ({
           </View>
           <View style={{ flexDirection: 'column', flex: 1 }}>
             <Text>
-              <Text style={styles.key}>ADDRESS     : </Text><Text style={styles.value}>{clientAddress || 'N/A'}{"\n"}</Text>
+              <Text style={styles.key}>PHONE        : </Text><Text style={styles.value}>{clientPhone || 'N/A'}{"\n"}</Text>
+              <Text style={styles.key}>ADDRESS      : </Text><Text style={styles.value}>{clientAddress || 'N/A'}{"\n"}</Text>
             </Text>
           </View>
         </View>
@@ -198,7 +205,7 @@ const InvoicePDF: React.FC<InvoiceData> = ({
               {filteredItems.map((item) => (
                 <Text key={item.id}>
                   <Text style={styles.key}>DESCRIPTION : </Text><Text style={styles.value}>{item.description || 'Service'}{"\n"}</Text>
-                  <Text style={styles.key}>AMOUNT     : </Text><Text style={styles.value}>₹{item.price.toFixed(2)}{"\n"}</Text>
+                  <Text style={styles.key}>AMOUNT      : </Text><Text style={styles.value}>Rs.{item.price.toFixed(2)}{"\n"}</Text>
                 </Text>
               ))}
             </View>
@@ -209,12 +216,18 @@ const InvoicePDF: React.FC<InvoiceData> = ({
         {/* Summary */}
         <View style={{ marginTop: 6, marginBottom: 6 }}>
           <Text>
+            <Text style={styles.key}>SUBTOTAL    : </Text>
+            <Text style={styles.value}>₹{subtotal.toFixed(2)}{"\n"}</Text>
+            <Text style={styles.key}>TAX ({taxRate}%)    : </Text>
+            <Text style={styles.value}>₹{taxAmount.toFixed(2)}{"\n"}</Text>
             <Text style={{ ...styles.key, fontWeight: 'bold' }}>TOTAL       : </Text>
-            <Text style={{ ...styles.value, fontWeight: 'bold' }}>₹{total.toFixed(2)}{"\n"}</Text>
+            <Text style={{ ...styles.value, fontWeight: 'bold' }}>Rs.{total.toFixed(2)}{"\n"}</Text>
           </Text>
         </View>
 
-        <Text>----------------------------------------------------------------------------{"\n"}</Text>
+        {notes && (
+          <Text>----------------------------------------------------------------------------{"\n"}</Text>
+        )}
 
         {/* Notes */}
         {notes && (

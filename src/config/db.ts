@@ -5,5 +5,11 @@ export const TASKS_ID = process.env.NEXT_PUBLIC_APPWRITE_TASKS_ID!;
 export const WORKSPACES_ID = process.env.NEXT_PUBLIC_APPWRITE_WORKSPACES_ID!;
 export const COMMENTS_ID = process.env.NEXT_PUBLIC_APPWRITE_COMMENTS_ID!;
 export const ATTENDANCE_ID = process.env.NEXT_PUBLIC_APPWRITE_ATTENDANCE_ID!;
+export const INVOICES_ID = process.env.NEXT_PUBLIC_APPWRITE_INVOICES_ID || '';
+
+// Validate critical IDs
+if (!INVOICES_ID) {
+  console.error('NEXT_PUBLIC_APPWRITE_INVOICES_ID is not set in environment variables');
+}
 
 export const IMAGES_BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_IMAGES_BUCKET_ID!;

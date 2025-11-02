@@ -8,16 +8,7 @@ import { PageLoader } from '@/components/page-loader';
 
 export default function AttendancePage() {
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
-          <p className="text-muted-foreground">
-            Track your daily attendance and view your history
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       <Suspense fallback={<PageLoader />}>
         {/* Attendance Card - Responsive */}
         <div className="flex justify-center">
