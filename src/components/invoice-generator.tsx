@@ -135,20 +135,21 @@ export const InvoiceGenerator = () => {
 
   return (
     <Card className="border">
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="size-5" />
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <FileText className="size-4 sm:size-5" />
               Invoice Generator
             </CardTitle>
-            <CardDescription>Create and download invoices for your clients</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Create and download invoices for your clients</CardDescription>
           </div>
           <Button
             variant="primary"
             size="sm"
             onClick={handleDownloadPDF}
             disabled={isGenerating}
+            className="w-full sm:w-auto"
           >
             {isGenerating ? (
               <>
@@ -176,7 +177,7 @@ export const InvoiceGenerator = () => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 p-4 sm:space-y-6 sm:p-6">
         {/* Invoice Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -241,9 +242,9 @@ export const InvoiceGenerator = () => {
 
         {/* Services */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-sm font-semibold">Services</h3>
-            <Button onClick={addItem} variant="outline" size="sm">
+            <Button onClick={addItem} variant="outline" size="sm" className="w-full sm:w-auto">
               <Plus className="mr-2 size-4" />
               Add Service
             </Button>
@@ -254,7 +255,7 @@ export const InvoiceGenerator = () => {
                 key={item.id}
                 className="grid grid-cols-12 gap-3 items-start p-3 rounded-lg border bg-card"
               >
-                <div className="col-span-12 md:col-span-8 space-y-2">
+                <div className="col-span-12 sm:col-span-8 space-y-2">
                   <Label className="text-xs">Service Description</Label>
                   <Input
                     placeholder="Service description"
@@ -262,7 +263,7 @@ export const InvoiceGenerator = () => {
                     onChange={(e) => updateItem(item.id, 'description', e.target.value)}
                   />
                 </div>
-                <div className="col-span-10 md:col-span-3 space-y-2">
+                <div className="col-span-9 sm:col-span-3 space-y-2">
                   <Label className="text-xs">Amount (₹)</Label>
                   <Input
                     type="number"
@@ -273,7 +274,7 @@ export const InvoiceGenerator = () => {
                     onChange={(e) => updateItem(item.id, 'price', Number(e.target.value) || 0)}
                   />
                 </div>
-                <div className="col-span-2 flex items-end">
+                <div className="col-span-3 sm:col-span-1 flex items-end justify-end">
                   {items.length > 1 && (
                     <Button
                       onClick={() => removeItem(item.id)}
@@ -294,7 +295,7 @@ export const InvoiceGenerator = () => {
 
         {/* Summary */}
         <div className="space-y-2">
-          <div className="flex justify-between text-lg font-semibold">
+          <div className="flex justify-between text-base sm:text-lg font-semibold">
             <span>Total:</span>
             <span>₹{total.toFixed(2)}</span>
           </div>
