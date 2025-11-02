@@ -122,12 +122,31 @@ export const MembersList = () => {
 
                 <DropdownMenuContent side="bottom" align="end">
                   {isAdmin && !isAdminLoading && (
+                    <>
+                      <DropdownMenuItem
+                        className="font-medium"
+                        asChild
+                      >
+                        <Link href={`/workspaces/${workspaceId}/members/${member.userId}`}>
+                          View Profile
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        asChild
+                      >
+                        <Link href={`/workspaces/${workspaceId}/members/${member.userId}/attendance`}>
+                          View Attendance
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {!isAdmin && (
                     <DropdownMenuItem
                       className="font-medium"
                       asChild
                     >
-                      <Link href={`/workspaces/${workspaceId}/members/${member.userId}/attendance`}>
-                        View Attendance
+                      <Link href={`/workspaces/${workspaceId}/members/${member.userId}`}>
+                        View Profile
                       </Link>
                     </DropdownMenuItem>
                   )}

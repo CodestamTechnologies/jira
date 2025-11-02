@@ -23,12 +23,12 @@ export const useSendNDA = () => {
       const response = await client.api.nda.send.$post({ json: data })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await response.json() as { error?: string }
         throw new Error(error.error || 'Failed to send NDA')
       }
 
       const result = await response.json()
-      return result.data as SendNDAResponse
+      return (result as { data?: SendNDAResponse }).data || (result as SendNDAResponse)
     },
   })
 }

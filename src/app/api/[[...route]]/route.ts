@@ -9,6 +9,7 @@ import projects from '@/features/projects/server/route';
 import tasks from '@/features/tasks/server/route';
 import workspaces from '@/features/workspaces/server/route';
 import nda from '@/features/nda/server/route';
+import salarySlip from '@/features/salary-slip/server/route';
 
 export const runtime = 'nodejs';
 
@@ -22,7 +23,8 @@ const routes = app
   .route('/projects', projects)
   .route('/tasks', tasks)
   .route('/workspaces', workspaces)
-  .route('/nda', nda);
+  .route('/nda', nda)
+  .route('/salary-slip', salarySlip);
 
 export type AppType = typeof routes;
 

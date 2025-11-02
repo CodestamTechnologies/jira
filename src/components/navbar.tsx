@@ -20,9 +20,10 @@ const pathnameMap = {
     title: 'All Invoices',
     description: 'View and manage all invoices for your workspace',
   },
-  nda: {
-    title: 'Generate Employee NDA',
-    description: 'Generate and download Non-Disclosure Agreement PDF for employees',
+  // Remove standalone NDA and Joining Letter routes - now integrated in member pages
+  members: {
+    title: 'Members',
+    description: 'View and manage workspace members',
   },
   attendance: {
     title: 'Attendance',
@@ -48,6 +49,25 @@ export const Navbar = () => {
         <div className="hidden flex-col lg:flex">
           <h1 className="text-2xl font-semibold">Create Invoice</h1>
           <p className="text-muted-foreground">Generate and download invoices for your clients</p>
+        </div>
+
+        <MobileSidebar />
+
+        <div className="flex items-center gap-x-2.5">
+          <ModeToggle />
+          <UserButton />
+        </div>
+      </nav>
+    );
+  }
+
+  // Handle member detail pages
+  if (pathnameKey === 'members' && pathnameParts[4]) {
+    return (
+      <nav className="flex items-center justify-between px-6 pt-4">
+        <div className="hidden flex-col lg:flex">
+          <h1 className="text-2xl font-semibold">Member Profile</h1>
+          <p className="text-muted-foreground">View member details and generate documents</p>
         </div>
 
         <MobileSidebar />
