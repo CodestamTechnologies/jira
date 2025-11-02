@@ -20,6 +20,10 @@ const pathnameMap = {
     title: 'All Invoices',
     description: 'View and manage all invoices for your workspace',
   },
+  nda: {
+    title: 'Generate Employee NDA',
+    description: 'Generate and download Non-Disclosure Agreement PDF for employees',
+  },
   attendance: {
     title: 'Attendance',
     description: 'Track your daily attendance and view your history',

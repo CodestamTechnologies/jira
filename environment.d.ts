@@ -24,6 +24,9 @@ declare global {
 
       // Optional: Explicitly set app environment (defaults to NODE_ENV)
       NEXT_PUBLIC_APP_ENV?: string;
+
+      // Resend API key for email sending
+      RESEND_API_KEY: string;
     }
   }
 }

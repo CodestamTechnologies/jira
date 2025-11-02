@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, UsersIcon, Clock, FileText } from 'lucide-react';
+import { Settings, UsersIcon, Clock, FileText, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GoCheckCircle, GoCheckCircleFill, GoHome, GoHomeFill } from 'react-icons/go';
@@ -45,6 +45,13 @@ const routes = [
     href: '/invoices',
     icon: FileText,
     activeIcon: FileText,
+    adminOnly: true,
+  },
+  {
+    label: 'Send NDA',
+    href: '/nda',
+    icon: ShieldCheck,
+    activeIcon: ShieldCheck,
     adminOnly: true,
   },
 ];
