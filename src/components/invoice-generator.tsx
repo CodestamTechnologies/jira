@@ -17,6 +17,7 @@ import { useCreateInvoice } from '@/features/invoices/api/use-create-invoice';
 import { useGetNextInvoiceNumber } from '@/features/invoices/api/use-get-next-invoice-number';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import { COMPANY_INFO, BANK_DETAILS, TERMS_AND_CONDITIONS } from '@/lib/pdf/constants';
 import type { Invoice } from '@/features/invoices/types';
 
 interface InvoiceItem {
@@ -24,36 +25,6 @@ interface InvoiceItem {
   description: string;
   price: number;
 }
-
-// Hardcoded Company Information
-const COMPANY_INFO = {
-  name: 'Kbyte Techbuilder Pvt. Ltd.',
-  address: 'Ranchi, Jharkhand - 835103',
-  email: 'codestamtechnologies@gmail.com',
-  phone: '+918228840065',
-  website: 'https://www.codestam.com',
-  logo: 'https://store.codestam.com/codestam_logo.png',
-  udyam_registration_number: '214014001053',
-};
-
-// Hardcoded Bank Details
-const BANK_DETAILS = {
-  bankName: 'HDFC Bank',
-  accountName: 'Priyanshu Kushwaha',
-  accountNumber: '57100718608692',
-  ifsc: 'HDFC0005866',
-  branch: 'BIT MESRA',
-  UPI: 'kushwaha.priyanshu@ptyes',
-};
-
-// Terms and Conditions
-const TERMS_AND_CONDITIONS = `
-1. Payment Terms: Payment is due within 30 days of invoice date.
-2. Late Payment: A late fee of 1.5% per month will be applied to overdue accounts.
-3. Disputes: Any disputes must be submitted in writing within 15 days of invoice date.
-4. Liability: Our liability is limited to the amount paid for the services.
-5. Governing Law: This invoice is governed by the laws of the jurisdiction where services were provided.
-`;
 
 export const InvoiceGenerator = () => {
   const workspaceId = useWorkspaceId();
@@ -114,13 +85,13 @@ export const InvoiceGenerator = () => {
   const isGeneratingOrCreating = isGenerating || isCreatingInvoice;
 
   const getInvoiceData = (): InvoiceData => ({
-    companyName: COMPANY_INFO.name,
+    companyName: COMPANY_INFO.legalName,
     companyAddress: COMPANY_INFO.address,
     companyEmail: COMPANY_INFO.email,
     companyPhone: COMPANY_INFO.phone,
     companyWebsite: COMPANY_INFO.website,
-    logoUrl: COMPANY_INFO.logo,
-    udyamRegistrationNumber: COMPANY_INFO.udyam_registration_number,
+    logoUrl: COMPANY_INFO.logoUrl,
+    udyamRegistrationNumber: COMPANY_INFO.udyamRegistrationNumber,
     invoiceNumber: invoiceNumber || 'CS/0000/00/00/00',
     invoiceDate: format(new Date(), 'MMM dd, yyyy'),
     clientName,
@@ -139,7 +110,7 @@ export const InvoiceGenerator = () => {
     accountNumber: BANK_DETAILS.accountNumber,
     ifsc: BANK_DETAILS.ifsc,
     branch: BANK_DETAILS.branch,
-    upi: BANK_DETAILS.UPI,
+    upi: BANK_DETAILS.upi,
   });
 
   const handleDownloadPDF = async () => {
