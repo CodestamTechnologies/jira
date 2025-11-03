@@ -2,6 +2,7 @@ import { zValidator } from '@hono/zod-validator';
 import { startOfDay, endOfDay } from 'date-fns';
 import { Hono } from 'hono';
 import { ID, Query } from 'node-appwrite';
+import { Resend } from 'resend';
 import { z } from 'zod';
 
 import { DATABASE_ID, INVOICES_ID, PROJECTS_ID } from '@/config/db';
@@ -11,6 +12,15 @@ import type { Invoice } from '@/features/invoices/types';
 import type { Project } from '@/features/projects/types';
 import { generateInvoiceNumberPattern, getEnvironmentPrefix, parseInvoiceNumber } from '@/features/invoices/utils/invoice-number';
 import { sessionMiddleware } from '@/lib/session-middleware';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const sendInvoiceSchema = z.object({
+  invoiceNumber: z.string().trim().min(1, 'Invoice number is required'),
+  clientName: z.string().trim().min(1, 'Client name is required'),
+  clientEmail: z.string().email('Valid email is required'),
+  pdfBase64: z.string().min(1, 'PDF data is required'),
+});
 
 // Get current environment
 const CURRENT_ENV = process.env.NODE_ENV || process.env.NEXT_PUBLIC_APP_ENV || 'production';
@@ -245,6 +255,59 @@ const app = new Hono()
       invoices.total = invoices.documents.length;
 
       return ctx.json({ data: invoices });
+    },
+  )
+  .post(
+    '/send',
+    sessionMiddleware,
+    zValidator('json', sendInvoiceSchema),
+    async (ctx) => {
+      if (!process.env.RESEND_API_KEY) {
+        return ctx.json({ error: 'Email service is not configured.' }, 500);
+      }
+
+      const { invoiceNumber, clientName, clientEmail, pdfBase64 } = ctx.req.valid('json');
+
+      try {
+        const filename = `invoice-${invoiceNumber.replace(/\//g, '-')}.pdf`;
+
+        // Send email with PDF attachment
+        const emailResult = await resend.emails.send({
+          from: 'Codestam Technologies <noreply@manyblogs.blog>',
+          to: clientEmail,
+          subject: `Invoice ${invoiceNumber} from Codestam Technologies`,
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <h2>Invoice ${invoiceNumber}</h2>
+              <p>Dear ${clientName},</p>
+              <p>Please find attached invoice ${invoiceNumber} from Codestam Technologies.</p>
+              <p>Please review the invoice and process payment as per the payment terms.</p>
+              <p>If you have any questions or concerns, please don't hesitate to contact us.</p>
+              <p>Best regards,<br/>Codestam Technologies</p>
+            </div>
+          `,
+          attachments: [
+            {
+              filename,
+              content: pdfBase64,
+            },
+          ],
+        });
+
+        if (emailResult.error) {
+          console.error('Resend API error:', emailResult.error);
+          return ctx.json({ error: 'Failed to send email. Please try again later.' }, 500);
+        }
+
+        return ctx.json({
+          success: true,
+          message: 'Invoice sent successfully to client email.',
+          emailId: emailResult.data?.id,
+        });
+      } catch (error) {
+        console.error('Error sending invoice:', error);
+        return ctx.json({ error: 'An error occurred while sending the invoice.' }, 500);
+      }
     },
   );
 

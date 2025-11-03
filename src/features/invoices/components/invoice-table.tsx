@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Loader2, FileText } from 'lucide-react';
 
 import { DataTable } from '@/features/tasks/components/data-table';
@@ -8,8 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useGetInvoices } from '@/features/invoices/api/use-get-invoices';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { createInvoiceColumns } from '@/features/invoices/components/invoice-columns';
+import { SendInvoiceDialog } from '@/features/invoices/components/send-invoice-dialog';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useDownloadInvoice } from '@/features/invoices/hooks/use-download-invoice';
+import { useSendInvoice } from '@/features/invoices/api/use-send-invoice';
+import { pdfBlobToBase64 } from '@/lib/pdf/utils';
 import { toast } from 'sonner';
 import type { Invoice } from '@/features/invoices/types';
 import type { Project } from '@/features/projects/types';
@@ -26,7 +29,10 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
   const workspaceId = useWorkspaceId();
   const { data: invoicesData, isLoading: isLoadingInvoices } = useGetInvoices({ workspaceId, projectId });
   const { data: projectsData } = useGetProjects({ workspaceId });
-  const { downloadInvoice, isDownloading } = useDownloadInvoice();
+  const { downloadInvoice, generateInvoicePDF, isDownloading } = useDownloadInvoice();
+  const { mutate: sendInvoice, isPending: isSending } = useSendInvoice();
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<{ invoice: Invoice; project: Project | null } | null>(null);
 
   // Create a map of project IDs to project names for quick lookup
   const projectMap = useMemo(() => {
@@ -64,15 +70,75 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
     [downloadInvoice],
   );
 
+  const handleSendClick = useCallback(
+    (invoice: Invoice, project: Project | null) => {
+      if (!project) {
+        toast.error('Project information not available');
+        return;
+      }
+      setSelectedInvoice({ invoice, project });
+      setSendDialogOpen(true);
+    },
+    [],
+  );
+
+  const handleSendInvoice = useCallback(
+    async (email: string) => {
+      if (!selectedInvoice) return;
+
+      const { invoice, project } = selectedInvoice;
+
+      if (!project) {
+        toast.error('Project information not available');
+        return;
+      }
+
+      try {
+        // Generate PDF
+        const { pdfBlob, invoiceData } = await generateInvoicePDF({ invoice, project });
+
+        // Convert to base64
+        const pdfBase64 = await pdfBlobToBase64(pdfBlob);
+
+        // Send invoice
+        sendInvoice(
+          {
+            invoiceNumber: invoice.invoiceNumber,
+            clientName: project.name,
+            clientEmail: email,
+            pdfBase64,
+          },
+          {
+            onSuccess: () => {
+              toast.success('Invoice sent successfully');
+              setSendDialogOpen(false);
+              setSelectedInvoice(null);
+            },
+            onError: (error) => {
+              const errorMessage = error instanceof Error ? error.message : 'Failed to send invoice. Please try again.';
+              toast.error(errorMessage);
+            },
+          },
+        );
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to generate invoice. Please try again.';
+        toast.error(errorMessage);
+      }
+    },
+    [selectedInvoice, generateInvoicePDF, sendInvoice],
+  );
+
   const columns = useMemo(
     () =>
       createInvoiceColumns({
         projectMap,
         projectsMap,
         onDownload: handleDownload,
+        onSend: handleSendClick,
         isDownloading,
+        isSending,
       }),
-    [projectMap, projectsMap, handleDownload, isDownloading],
+    [projectMap, projectsMap, handleDownload, handleSendClick, isDownloading, isSending],
   );
 
   if (isLoading) {
@@ -98,5 +164,19 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
     );
   }
 
-  return <DataTable columns={columns} data={invoicesWithProjects} />;
+  return (
+    <>
+      <DataTable columns={columns} data={invoicesWithProjects} />
+      {selectedInvoice && (
+        <SendInvoiceDialog
+          open={sendDialogOpen}
+          onOpenChange={setSendDialogOpen}
+          onSend={handleSendInvoice}
+          isSending={isSending}
+          invoiceNumber={selectedInvoice.invoice.invoiceNumber}
+          defaultEmail={selectedInvoice.project?.clientEmail || ''}
+        />
+      )}
+    </>
+  );
 };

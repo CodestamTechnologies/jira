@@ -1,7 +1,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, Download, Loader2 } from 'lucide-react';
+import { ArrowUpDown, Download, Loader2, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -16,14 +16,18 @@ interface CreateInvoiceColumnsProps {
   projectMap: Map<string, string>;
   projectsMap: Map<string, Project>;
   onDownload: (invoice: Invoice, project: Project | null) => void;
+  onSend: (invoice: Invoice, project: Project | null) => void;
   isDownloading?: boolean;
+  isSending?: boolean;
 }
 
 export const createInvoiceColumns = ({
   projectMap,
   projectsMap,
   onDownload,
+  onSend,
   isDownloading = false,
+  isSending = false,
 }: CreateInvoiceColumnsProps): ColumnDef<InvoiceWithProject>[] => [
     {
       accessorKey: 'invoiceNumber',
@@ -117,23 +121,42 @@ export const createInvoiceColumns = ({
         const invoice = row.original;
         const project = projectsMap.get(invoice.projectId) || null;
         const isCurrentlyDownloading = isDownloading;
+        const isCurrentlySending = isSending;
+        const isDisabled = isCurrentlyDownloading || isCurrentlySending || !project;
 
         return (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDownload(invoice, project)}
-            disabled={isCurrentlyDownloading || !project}
-            className="h-8 px-2"
-            title={!project ? 'Project information not available' : 'Download invoice PDF'}
-          >
-            {isCurrentlyDownloading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Download className="h-3 w-3" />
-            )}
-            <span className="hidden sm:inline ml-1">Download</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDownload(invoice, project)}
+              disabled={isDisabled}
+              className="h-8 px-2"
+              title={!project ? 'Project information not available' : 'Download invoice PDF'}
+            >
+              {isCurrentlyDownloading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Download className="h-3 w-3" />
+              )}
+              <span className="hidden sm:inline ml-1">Download</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onSend(invoice, project)}
+              disabled={isDisabled}
+              className="h-8 px-2"
+              title={!project ? 'Project information not available' : 'Send invoice via email'}
+            >
+              {isCurrentlySending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Mail className="h-3 w-3" />
+              )}
+              <span className="hidden sm:inline ml-1">Send</span>
+            </Button>
+          </div>
         );
       },
     },
