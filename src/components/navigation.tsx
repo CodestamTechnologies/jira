@@ -45,6 +45,12 @@ const routes = [
 // Admin-only routes (grouped together)
 const adminRoutes = [
   {
+    label: 'Team Attendance',
+    href: '/attendance/team',
+    icon: Clock,
+    activeIcon: Clock,
+  },
+  {
     label: 'Invoices',
     href: '/invoices',
     icon: FileText,

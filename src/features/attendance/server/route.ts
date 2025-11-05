@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { Query } from 'node-appwrite';
 
-import { createSessionClient } from '@/lib/appwrite';
+import { createSessionClient, createAdminClient } from '@/lib/appwrite';
 import { ATTENDANCE_ID, DATABASE_ID, MEMBERS_ID } from '@/config/db';
 import { createAttendanceSchema, updateAttendanceSchema, attendanceFiltersSchema } from '../schema';
 import { getCurrent } from '@/features/auth/queries';
@@ -476,6 +476,118 @@ app.get('/stats', async (c) => {
     } catch (error) {
       console.error('Error fetching today\'s attendance stats:', error);
       return c.json({ error: 'Failed to fetch today\'s attendance stats' }, 500);
+    }
+  })
+  .get('/team', async (c) => {
+    try {
+      const user = await getCurrent();
+      if (!user) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+
+      const { searchParams } = new URL(c.req.url);
+      const workspaceId = searchParams.get('workspaceId');
+      const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
+
+      if (!workspaceId) {
+        return c.json({ error: 'Workspace ID is required' }, 400);
+      }
+
+      if (!workspaceId.trim()) {
+        return c.json({ error: 'Invalid workspace ID' }, 400);
+      }
+
+      // Check if user is admin
+      const { databases } = await createSessionClient();
+      const membersResponse = await databases.listDocuments(
+        DATABASE_ID,
+        MEMBERS_ID,
+        [
+          Query.equal('workspaceId', workspaceId.trim()),
+          Query.equal('userId', user.$id)
+        ]
+      );
+
+      if (membersResponse.documents.length === 0) {
+        return c.json({ error: 'Unauthorized' }, 401);
+      }
+
+      const member = membersResponse.documents[0];
+      if (member.role !== 'ADMIN') {
+        return c.json({ error: 'Unauthorized: Only admins can view team attendance' }, 403);
+      }
+
+      // Get all members in the workspace
+      const allMembers = await databases.listDocuments(
+        DATABASE_ID,
+        MEMBERS_ID,
+        [
+          Query.equal('workspaceId', workspaceId.trim())
+        ]
+      );
+
+      const memberIds = allMembers.documents.map((m) => m.userId);
+
+      // Get attendance for the specified date for all members
+      const attendanceResponse = await databases.listDocuments(
+        DATABASE_ID,
+        ATTENDANCE_ID,
+        [
+          Query.equal('workspaceId', workspaceId.trim()),
+          Query.equal('date', date)
+        ]
+      );
+
+      // Populate members with user info
+      const { users } = await createAdminClient();
+      const populatedMembers = await Promise.all(
+        allMembers.documents.map(async (member) => {
+          const user = await users.get(member.userId);
+          return { ...member, name: user.name, email: user.email };
+        })
+      );
+
+      // Create a map of userId -> attendance record
+      const attendanceMap = new Map();
+      attendanceResponse.documents.forEach((record) => {
+        if (memberIds.includes(record.userId)) {
+          attendanceMap.set(record.userId, record);
+        }
+      });
+
+      // Combine members with their attendance records
+      const teamAttendance = populatedMembers.map((member: any) => {
+        const attendance = attendanceMap.get(member.userId) || null;
+        return {
+          member: {
+            $id: member.$id,
+            userId: member.userId,
+            name: member.name,
+            email: member.email,
+            role: member.role,
+          },
+          attendance: attendance ? {
+            $id: attendance.$id,
+            date: attendance.date,
+            checkInTime: attendance.checkInTime,
+            checkOutTime: attendance.checkOutTime,
+            checkInLatitude: attendance.checkInLatitude,
+            checkInLongitude: attendance.checkInLongitude,
+            checkInAddress: attendance.checkInAddress,
+            checkOutLatitude: attendance.checkOutLatitude,
+            checkOutLongitude: attendance.checkOutLongitude,
+            checkOutAddress: attendance.checkOutAddress,
+            totalHours: attendance.totalHours,
+            status: attendance.status,
+            notes: attendance.notes,
+          } : null,
+        };
+      });
+
+      return c.json(teamAttendance);
+    } catch (error) {
+      console.error('Error fetching team attendance:', error);
+      return c.json({ error: 'Failed to fetch team attendance' }, 500);
     }
   });
 

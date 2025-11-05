@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, Calendar, Clock, MapPin, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, CheckCircle, XCircle, AlertCircle, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useGetAttendance } from '@/features/attendance/api/use-get-attendance';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { Attendance } from '@/features/attendance/types';
@@ -283,9 +284,52 @@ export const MemberAttendanceClient = ({ workspaceId, userId }: MemberAttendance
                   </div>
 
                   {/* Notes */}
-                  {record.notes && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      <span className="font-medium">Notes:</span> {record.notes}
+                  {record.notes ? (
+                    <div className="mt-4 pt-4 border-t">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="text-left w-full group">
+                            <div className="flex items-start gap-2">
+                              <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <div className="font-medium text-sm mb-1 text-foreground">Daily Summary</div>
+                                <div className="max-w-full">
+                                  <p className="text-sm line-clamp-3 text-foreground group-hover:text-primary transition-colors">
+                                    {record.notes}
+                                  </p>
+                                  {record.notes.length > 150 && (
+                                    <span className="text-xs text-primary mt-1 inline-block font-medium">
+                                      View full summary →
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[500px] max-w-[90vw] p-4" align="start">
+                          <div className="space-y-3">
+                            <div>
+                              <h4 className="font-semibold text-sm mb-1">Daily Summary</h4>
+                              <div className="text-xs text-muted-foreground">
+                                {format(new Date(record.date), 'EEEE, MMMM dd, yyyy')}
+                              </div>
+                            </div>
+                            <div className="max-h-[400px] overflow-y-auto">
+                              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                                {record.notes}
+                              </p>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  ) : (
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <FileText className="h-4 w-4" />
+                        <span>No daily summary available</span>
+                      </div>
                     </div>
                   )}
                 </div>

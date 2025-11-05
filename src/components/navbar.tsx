@@ -29,6 +29,10 @@ const pathnameMap = {
     title: 'Attendance',
     description: 'Track your daily attendance and view your history',
   },
+  'attendance/team': {
+    title: 'Team Attendance',
+    description: 'View attendance for all team members on a specific day',
+  },
 };
 
 const defaultMap = {
