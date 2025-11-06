@@ -1,18 +1,19 @@
 'use client';
 
-import { ArrowLeft, MoreVertical, Shield } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Shield, UserX, UserCheck } from 'lucide-react';
 import Link from 'next/link';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { useDeleteMember } from '@/features/members/api/use-delete-member';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useUpdateMember } from '@/features/members/api/use-update-member';
+import { useUpdateMemberStatus } from '@/features/members/api/use-update-member-status';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { MemberRole } from '@/features/members/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
@@ -25,12 +26,13 @@ export const MembersList = () => {
   const { data: user } = useCurrent();
   const { data: isAdmin, isLoading: isAdminLoading } = useAdminStatus();
   const [ConfirmDialog, confirm] = useConfirm('Remove member', 'This member will be removed from this workspace.', 'destructive');
+  const [showInactive, setShowInactive] = useState(false);
 
-
-
-  const { data: members } = useGetMembers({ workspaceId });
+  // Always fetch all members (including inactive) to know the count and be able to show/hide them
+  const { data: allMembers } = useGetMembers({ workspaceId, includeInactive: 'true' });
   const { mutate: deleteMember, isPending: isDeletingMember } = useDeleteMember();
   const { mutate: updateMember, isPending: isUpdatingMember } = useUpdateMember();
+  const { mutate: updateMemberStatus, isPending: isUpdatingStatus } = useUpdateMemberStatus();
 
   const handleDeleteMember = async (memberId: string) => {
     const ok = await confirm();
@@ -54,7 +56,21 @@ export const MembersList = () => {
     });
   };
 
-  const isPending = isDeletingMember || isUpdatingMember || members?.documents.length === 1;
+  const handleToggleMemberStatus = (memberId: string, currentStatus: boolean) => {
+    updateMemberStatus({
+      json: { isActive: !currentStatus },
+      param: { memberId },
+    });
+  };
+
+  const isPending = isDeletingMember || isUpdatingMember || isUpdatingStatus || allMembers?.documents.length === 1;
+
+  // Separate active and inactive members for display
+  const activeMembers = allMembers?.documents.filter(m => m.isActive !== false) || [];
+  const inactiveMembers = allMembers?.documents.filter(m => m.isActive === false) || [];
+
+  // Use all members for total count
+  const members = allMembers;
 
   return (
     <Card className="size-full border-none shadow-none">
@@ -79,18 +95,36 @@ export const MembersList = () => {
         {/* Admin Summary */}
         {members?.documents && (
           <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Total Members: {members.documents.length}
-              </span>
-              <span className="text-muted-foreground">
-                Admins: {members.documents.filter(m => m.role === 'ADMIN').length}
-              </span>
+            <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="text-muted-foreground">
+                  Active: {activeMembers.length}
+                </span>
+                {inactiveMembers.length > 0 && (
+                  <span className="text-muted-foreground">
+                    Inactive: {inactiveMembers.length}
+                  </span>
+                )}
+                <span className="text-muted-foreground">
+                  Admins: {members.documents.filter(m => m.role === 'ADMIN').length}
+                </span>
+              </div>
+              {inactiveMembers.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowInactive(!showInactive)}
+                  className="text-xs"
+                >
+                  {showInactive ? 'Hide' : 'Show'} Inactive
+                </Button>
+              )}
             </div>
           </div>
         )}
 
-        {members?.documents.map((member, i) => (
+        {/* Active Members */}
+        {activeMembers.map((member, i) => (
           <Fragment key={member.$id}>
             <div className="flex items-center gap-2">
               <MemberAvatar name={member.name} className="size-10" fallbackClassName="text-lg" />
@@ -167,8 +201,21 @@ export const MembersList = () => {
                     Set as Member
                   </DropdownMenuItem>
 
+                  <DropdownMenuSeparator />
+
+                  {isAdmin && !isAdminLoading && (
+                    <DropdownMenuItem
+                      className="font-medium text-orange-600"
+                      onClick={() => handleToggleMemberStatus(member.$id, member.isActive !== false)}
+                      disabled={isPending}
+                    >
+                      <UserX className="h-4 w-4 mr-2" />
+                      Mark as Inactive
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuItem
-                    className="font-medium text-warning"
+                    className="font-medium text-destructive"
                     onClick={() => handleDeleteMember(member.$id)}
                     disabled={isPending}
                   >
@@ -178,9 +225,75 @@ export const MembersList = () => {
               </DropdownMenu>
             </div>
 
-            {i < members.documents.length - 1 && <Separator className="my-2.5" />}
+            {i < activeMembers.length - 1 && <Separator className="my-2.5" />}
           </Fragment>
         ))}
+
+        {/* Inactive Members Section */}
+        {showInactive && inactiveMembers.length > 0 && (
+          <>
+            <Separator className="my-4" />
+            <div className="mb-2">
+              <p className="text-sm font-semibold text-muted-foreground">Inactive Members</p>
+            </div>
+            {inactiveMembers.map((member, i) => (
+              <Fragment key={member.$id}>
+                <div className="flex items-center gap-2 opacity-60">
+                  <MemberAvatar name={member.name} className="size-10" fallbackClassName="text-lg" />
+
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">{member.name}</p>
+                      <Badge variant="outline" className="text-xs border-orange-500 text-orange-600">
+                        <UserX className="h-3 w-3 mr-1" />
+                        Inactive
+                      </Badge>
+                      {member.role === 'ADMIN' && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Admin
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                  </div>
+
+                  {isAdmin && !isAdminLoading && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger disabled={isPending} asChild>
+                        <Button title="View options" className="ml-auto" variant="secondary" size="icon">
+                          <MoreVertical className="size-4 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+
+                      <DropdownMenuContent side="bottom" align="end">
+                        <DropdownMenuItem
+                          className="font-medium"
+                          asChild
+                        >
+                          <Link href={`/workspaces/${workspaceId}/members/${member.userId}`}>
+                            View Profile
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="font-medium text-green-600"
+                          onClick={() => handleToggleMemberStatus(member.$id, false)}
+                          disabled={isPending}
+                        >
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Mark as Active
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+
+                {i < inactiveMembers.length - 1 && <Separator className="my-2.5" />}
+              </Fragment>
+            ))}
+          </>
+        )}
       </CardContent>
     </Card>
   );

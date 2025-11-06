@@ -28,10 +28,17 @@ export const EditTaskFormWrapper = ({ id, onCancel }: EditTaskFormWrapperProps) 
     imageUrl: project.imageUrl,
   }));
 
-  const memberOptions = members?.documents.map((member) => ({
-    id: member.$id,
-    name: member.name,
-  }));
+  // Filter out inactive members for task assignment, but include currently assigned members even if inactive
+  const currentAssigneeIds = initialValues?.assigneeIds || [];
+  const memberOptions = members?.documents
+    .filter((member) => {
+      // Include active members or members who are currently assigned to this task
+      return member.isActive !== false || currentAssigneeIds.includes(member.$id);
+    })
+    .map((member) => ({
+      id: member.$id,
+      name: member.name,
+    })) || [];
 
   const isLoading = isLoadingTask || isLoadingMembers || isLoadingProjects;
 

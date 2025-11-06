@@ -11,6 +11,7 @@ export type Member = Models.Document & {
   name: string
   email: string
   role: MemberRole
+  isActive?: boolean // Defaults to true, false for inactive/former members
   // Additional information fields
   position?: string
   address?: string

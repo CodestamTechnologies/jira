@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeft, FileText, Download, ShieldCheck, User, Calendar, Mail as MailIcon, MapPin, Briefcase, Hash, IndianRupee } from 'lucide-react'
+import { ArrowLeft, FileText, Download, ShieldCheck, User, Calendar, Mail as MailIcon, MapPin, Briefcase, Hash, IndianRupee, UserX, UserCheck } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { pdf } from '@react-pdf/renderer'
@@ -18,6 +18,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useGetMemberDetail } from '@/features/members/api/use-get-member-detail'
 import { useUpdateMemberInfo } from '@/features/members/api/use-update-member-info'
+import { useUpdateMemberStatus } from '@/features/members/api/use-update-member-status'
 import { useAdminStatus } from '@/features/attendance/hooks/use-admin-status'
 import { MemberAvatar } from '@/features/members/components/member-avatar'
 import { cn } from '@/lib/utils'
@@ -43,6 +44,7 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
   const { mutate: sendNDA, isPending: isSendingNDA } = useSendNDA()
   const { mutate: sendSalarySlip, isPending: isSendingSalarySlip } = useSendSalarySlip()
   const { mutate: updateMemberInfo, isPending: isUpdatingInfo } = useUpdateMemberInfo()
+  const { mutate: updateMemberStatus, isPending: isUpdatingStatus } = useUpdateMemberStatus()
 
   // Extract member from detail
   const member = memberDetail
@@ -395,12 +397,46 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
             <h1 className="text-3xl font-bold tracking-tight">{memberDetail.name}</h1>
             <p className="text-muted-foreground">{memberDetail.email}</p>
           </div>
-          {memberDetail.role === 'ADMIN' && (
-            <Badge variant="secondary">
-              <ShieldCheck className="h-3 w-3 mr-1" />
-              Admin
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {memberDetail.role === 'ADMIN' && (
+              <Badge variant="secondary">
+                <ShieldCheck className="h-3 w-3 mr-1" />
+                Admin
+              </Badge>
+            )}
+            {memberDetail.isActive === false && (
+              <Badge variant="outline" className="border-orange-500 text-orange-600">
+                <UserX className="h-3 w-3 mr-1" />
+                Inactive
+              </Badge>
+            )}
+            {isAdmin && memberDetail.$id && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  updateMemberStatus({
+                    json: { isActive: memberDetail.isActive !== false ? false : true },
+                    param: { memberId: memberDetail.$id },
+                  });
+                }}
+                disabled={isUpdatingStatus}
+                className={memberDetail.isActive === false ? 'text-green-600 border-green-500' : 'text-orange-600 border-orange-500'}
+              >
+                {memberDetail.isActive === false ? (
+                  <>
+                    <UserCheck className="h-3 w-3 mr-1" />
+                    Mark as Active
+                  </>
+                ) : (
+                  <>
+                    <UserX className="h-3 w-3 mr-1" />
+                    Mark as Inactive
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -444,6 +480,19 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
                   <div>
                     <Label className="text-xs text-muted-foreground">Role</Label>
                     <p className="font-medium">{memberDetail.role}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {memberDetail.isActive === false ? (
+                    <UserX className="h-4 w-4 text-orange-500" />
+                  ) : (
+                    <UserCheck className="h-4 w-4 text-green-500" />
+                  )}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Status</Label>
+                    <Badge variant={memberDetail.isActive === false ? 'outline' : 'default'} className={memberDetail.isActive === false ? 'border-orange-500 text-orange-600' : ''}>
+                      {memberDetail.isActive === false ? 'Inactive' : 'Active'}
+                    </Badge>
                   </div>
                 </div>
               </div>

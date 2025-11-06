@@ -26,6 +26,7 @@ const updateMemberInfoSchema = z.object({
   bankName: z.string().optional(),
   phoneNumber: z.string().optional(),
   dateOfJoining: z.string().optional(),
+  isActive: z.boolean().optional(),
 })
 
 const app = new Hono()
@@ -36,13 +37,14 @@ const app = new Hono()
       'query',
       z.object({
         workspaceId: z.string(),
+        includeInactive: z.string().optional(), // 'true' to include inactive members
       }),
     ),
     async (ctx) => {
       const { users } = await createAdminClient()
       const databases = ctx.get('databases')
       const user = ctx.get('user')
-      const { workspaceId } = ctx.req.valid('query')
+      const { workspaceId, includeInactive } = ctx.req.valid('query')
 
       const member = await getMember({
         databases,
@@ -54,13 +56,36 @@ const app = new Hono()
         return ctx.json({ error: 'Unauthorized.' }, 401)
       }
 
-      const members = await databases.listDocuments<Member>(DATABASE_ID, MEMBERS_ID, [Query.equal('workspaceId', workspaceId)])
+      // Build query - by default, only show active members (isActive !== false)
+      // If includeInactive is 'true', show all members
+      const queries = [Query.equal('workspaceId', workspaceId)]
+      
+      if (includeInactive !== 'true') {
+        // Only show active members (isActive is true or undefined/null)
+        // We need to filter for members where isActive is not false
+        // Appwrite doesn't support "not equal" directly, so we'll filter in memory
+        // or use a workaround: query for isActive = true OR isActive doesn't exist
+      }
+
+      const members = await databases.listDocuments<Member>(DATABASE_ID, MEMBERS_ID, queries)
+
+      // Filter inactive members if includeInactive is not 'true'
+      let filteredMembers = members.documents
+      if (includeInactive !== 'true') {
+        filteredMembers = members.documents.filter((m) => m.isActive !== false)
+      }
 
       const populatedMembers = await Promise.all(
-        members.documents.map(async (member) => {
+        filteredMembers.map(async (member) => {
           const user = await users.get(member.userId)
 
-          return { ...member, name: user.name, email: user.email }
+          return { 
+            ...member, 
+            name: user.name, 
+            email: user.email,
+            // Ensure isActive defaults to true for backward compatibility
+            isActive: member.isActive !== false 
+          }
         }),
       )
 
@@ -68,6 +93,7 @@ const app = new Hono()
         data: {
           ...members,
           documents: populatedMembers,
+          total: populatedMembers.length,
         },
       })
     },
@@ -213,6 +239,46 @@ const app = new Hono()
 
       const updatedMember = await databases.updateDocument(DATABASE_ID, MEMBERS_ID, memberId, {
         role,
+      })
+
+      return ctx.json({
+        data: updatedMember,
+      })
+    },
+  )
+  .patch(
+    '/:memberId/status',
+    sessionMiddleware,
+    zValidator(
+      'json',
+      z.object({
+        isActive: z.boolean(),
+      }),
+    ),
+    async (ctx) => {
+      const databases = ctx.get('databases')
+      const user = ctx.get('user')
+      const { memberId } = ctx.req.param()
+      const { isActive } = ctx.req.valid('json')
+
+      const member = await databases.getDocument<Member>(DATABASE_ID, MEMBERS_ID, memberId)
+
+      if (!member) {
+        return ctx.json({ error: 'Member not found.' }, 404)
+      }
+
+      const requesterMember = await getMember({
+        databases,
+        workspaceId: member.workspaceId,
+        userId: user.$id,
+      })
+
+      if (!requesterMember || requesterMember.role !== MemberRole.ADMIN) {
+        return ctx.json({ error: 'Unauthorized.' }, 401)
+      }
+
+      const updatedMember = await databases.updateDocument(DATABASE_ID, MEMBERS_ID, memberId, {
+        isActive,
       })
 
       return ctx.json({

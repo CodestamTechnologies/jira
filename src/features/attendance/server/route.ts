@@ -517,8 +517,8 @@ app.get('/stats', async (c) => {
         return c.json({ error: 'Unauthorized: Only admins can view team attendance' }, 403);
       }
 
-      // Get all members in the workspace
-      const allMembers = await databases.listDocuments(
+      // Get all active members in the workspace (exclude inactive)
+      const allMembersResponse = await databases.listDocuments(
         DATABASE_ID,
         MEMBERS_ID,
         [
@@ -526,7 +526,10 @@ app.get('/stats', async (c) => {
         ]
       );
 
-      const memberIds = allMembers.documents.map((m) => m.userId);
+      // Filter out inactive members
+      const allMembers = allMembersResponse.documents.filter((m: any) => m.isActive !== false);
+
+      const memberIds = allMembers.map((m: any) => m.userId);
 
       // Get attendance for the specified date for all members
       const attendanceResponse = await databases.listDocuments(
@@ -541,7 +544,7 @@ app.get('/stats', async (c) => {
       // Populate members with user info
       const { users } = await createAdminClient();
       const populatedMembers = await Promise.all(
-        allMembers.documents.map(async (member) => {
+        allMembers.map(async (member: any) => {
           const user = await users.get(member.userId);
           return { ...member, name: user.name, email: user.email };
         })

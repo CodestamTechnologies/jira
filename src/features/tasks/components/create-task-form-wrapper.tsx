@@ -26,10 +26,13 @@ export const CreateTaskFormWrapper = ({ initialStatus, initialProjectId, onCance
     imageUrl: project.imageUrl,
   }));
 
-  const memberOptions = members?.documents.map((member) => ({
-    id: member.$id,
-    name: member.name,
-  }));
+  // Filter out inactive members for task assignment
+  const memberOptions = members?.documents
+    .filter((member) => member.isActive !== false)
+    .map((member) => ({
+      id: member.$id,
+      name: member.name,
+    })) || [];
 
   const isLoading = isLoadingMembers || isLoadingProjects;
 

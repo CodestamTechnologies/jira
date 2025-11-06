@@ -102,14 +102,15 @@ const app = new Hono()
       databases,
       workspaceId,
       userId: user.$id,
+      checkActive: true, // Block inactive members from accessing workspace
     });
 
     if (!member) {
       return ctx.json(
         {
-          error: 'Unauthorized.',
+          error: 'Unauthorized. Your account is inactive in this workspace.',
         },
-        401,
+        403,
       );
     }
 

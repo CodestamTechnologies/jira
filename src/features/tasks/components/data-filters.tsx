@@ -25,10 +25,13 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
     label: project.name,
   }));
 
-  const memberOptions = members?.documents.map((member) => ({
-    value: member.$id,
-    label: member.name,
-  }));
+  // Filter out inactive members from task filters
+  const memberOptions = members?.documents
+    .filter((member) => member.isActive !== false)
+    .map((member) => ({
+      value: member.$id,
+      label: member.name,
+    })) || [];
 
   const [{ status, assigneeId, projectId, dueDate }, setFilters] = useTaskFilters();
 

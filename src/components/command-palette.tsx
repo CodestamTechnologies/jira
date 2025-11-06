@@ -130,7 +130,8 @@ export const CommandPalette = () => {
   }
 
   const tasks = (tasksData?.documents || []).slice(0, 50)
-  const members = (membersData?.documents || []).slice(0, 50)
+  // Filter out inactive members from command palette
+  const members = (membersData?.documents || []).filter(m => m.isActive !== false).slice(0, 50)
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen} title="Command Palette" description="Search for pages, tasks, members, and navigate quickly">

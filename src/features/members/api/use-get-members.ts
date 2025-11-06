@@ -4,13 +4,19 @@ import { client } from '@/lib/hono';
 
 interface UseGetMembersProps {
   workspaceId: string;
+  includeInactive?: string; // 'true' to include inactive members
 }
 
-export const useGetMembers = ({ workspaceId }: UseGetMembersProps) => {
+export const useGetMembers = ({ workspaceId, includeInactive }: UseGetMembersProps) => {
   const query = useQuery({
-    queryKey: ['members', workspaceId],
+    queryKey: ['members', workspaceId, includeInactive],
     queryFn: async () => {
-      const response = await client.api.members.$get({ query: { workspaceId } });
+      const response = await client.api.members.$get({ 
+        query: { 
+          workspaceId,
+          ...(includeInactive && { includeInactive }),
+        } 
+      });
 
       if (!response.ok) throw new Error('Failed to fetch members.');
 
