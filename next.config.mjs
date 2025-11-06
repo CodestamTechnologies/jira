@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@react-pdf/renderer'],
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
   webpack: (config, { isServer }) => {
     // Handle ESM packages
     config.resolve.extensionAlias = {

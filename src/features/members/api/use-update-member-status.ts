@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { InferRequestType } from 'hono';
+import { InferRequestType, InferResponseType } from 'hono';
 
 import { client } from '@/lib/hono';
 import { toast } from 'sonner';
 
-type ResponseType = InferRequestType<(typeof client.api.members)[':memberId']['status']['$patch']>['response'];
+type ResponseType = InferResponseType<(typeof client.api.members)[':memberId']['status']['$patch'], 200>;
 type RequestType = InferRequestType<(typeof client.api.members)[':memberId']['status']['$patch']>;
 
 export const useUpdateMemberStatus = () => {
