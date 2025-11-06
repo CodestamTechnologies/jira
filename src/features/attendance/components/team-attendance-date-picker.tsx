@@ -25,7 +25,7 @@ export const TeamAttendanceDatePicker = ({
           type="date"
           value={selectedDate}
           onChange={(e) => onDateChange(e.target.value)}
-          className="max-w-xs"
+          className="w-full md:max-w-xs"
         />
       </CardContent>
     </Card>

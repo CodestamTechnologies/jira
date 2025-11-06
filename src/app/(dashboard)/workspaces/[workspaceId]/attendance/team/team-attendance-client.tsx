@@ -12,6 +12,7 @@ import { calculateTeamAttendanceStats } from '@/features/attendance/utils/team-a
 import { TeamAttendanceDatePicker } from '@/features/attendance/components/team-attendance-date-picker';
 import { TeamAttendanceSummaryCards } from '@/features/attendance/components/team-attendance-summary-cards';
 import { TeamAttendanceTable } from '@/features/attendance/components/team-attendance-table';
+import { MobileTeamAttendanceCard } from '@/features/attendance/components/mobile-team-attendance-card';
 
 export const TeamAttendanceClient = () => {
   const workspaceId = useWorkspaceId();
@@ -54,12 +55,12 @@ export const TeamAttendanceClient = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Team Attendance</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Team Attendance</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             View attendance for all team members on a specific day
           </p>
         </div>
@@ -67,9 +68,15 @@ export const TeamAttendanceClient = () => {
           onClick={handleDownloadPDF}
           disabled={isDownloading || !teamAttendance || teamAttendance.length === 0}
           variant="outline"
+          className="w-full md:w-auto shrink-0"
         >
           <Download className="mr-2 h-4 w-4" />
-          {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+          <span className="hidden sm:inline">
+            {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+          </span>
+          <span className="sm:hidden">
+            {isDownloading ? 'Generating...' : 'Download'}
+          </span>
         </Button>
       </div>
 
@@ -82,12 +89,21 @@ export const TeamAttendanceClient = () => {
       {/* Summary Cards */}
       <TeamAttendanceSummaryCards stats={stats} />
 
-      {/* Team Attendance Table */}
-      <TeamAttendanceTable
-        teamAttendance={teamAttendance || []}
-        selectedDate={selectedDate}
-        isLoading={isLoading}
-      />
+      {/* Team Attendance - Desktop Table / Mobile Cards */}
+      <div className="hidden md:block">
+        <TeamAttendanceTable
+          teamAttendance={teamAttendance || []}
+          selectedDate={selectedDate}
+          isLoading={isLoading}
+        />
+      </div>
+      <div className="md:hidden">
+        <MobileTeamAttendanceCard
+          teamAttendance={teamAttendance || []}
+          selectedDate={selectedDate}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 };
