@@ -4,6 +4,10 @@ import { Query } from 'node-appwrite'
 import { z } from 'zod'
 
 import { DATABASE_ID, MEMBERS_ID } from '@/config/db'
+import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types'
+import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info'
+import { logActivity, getChangedFields } from '@/features/activity-logs/utils/log-activity'
+import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata'
 import { type Member, MemberRole } from '@/features/members/types'
 import { getMember } from '@/features/members/utils'
 import { createAdminClient } from '@/lib/appwrite'
@@ -176,6 +180,34 @@ const app = new Hono()
       // Update member info
       const updatedMember = await databases.updateDocument(DATABASE_ID, MEMBERS_ID, memberId, updateData)
 
+      // Log activity - only log changed fields
+      const changedFields = getChangedFields(member, updatedMember)
+      if (Object.keys(changedFields).length > 0) {
+        const userInfo = getUserInfoForLogging(user)
+        // Build old values object with only changed fields
+        const oldValues: Record<string, unknown> = {}
+        for (const key in changedFields) {
+          oldValues[key] = member[key as keyof Member]
+        }
+
+        const metadata = getRequestMetadata(ctx)
+        await logActivity({
+          databases,
+          action: ActivityAction.UPDATE,
+          entityType: ActivityEntityType.MEMBER,
+          entityId: updatedMember.$id,
+          workspaceId: member.workspaceId,
+          userId: userInfo.userId,
+          username: userInfo.username,
+          userEmail: userInfo.userEmail,
+          changes: {
+            old: oldValues,
+            new: changedFields,
+          },
+          metadata,
+        })
+      }
+
       return ctx.json({
         data: updatedMember,
       })
@@ -203,6 +235,22 @@ const app = new Hono()
     }
 
     await databases.deleteDocument(DATABASE_ID, MEMBERS_ID, memberId)
+
+    // Log activity
+    const userInfo = getUserInfoForLogging(user)
+    const metadata = getRequestMetadata(ctx)
+    await logActivity({
+      databases,
+      action: ActivityAction.DELETE,
+      entityType: ActivityEntityType.MEMBER,
+      entityId: member.$id,
+      workspaceId: member.workspaceId,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { old: member },
+      metadata,
+    })
 
     return ctx.json({ data: { success: true } })
   })
@@ -239,6 +287,25 @@ const app = new Hono()
 
       const updatedMember = await databases.updateDocument(DATABASE_ID, MEMBERS_ID, memberId, {
         role,
+      })
+
+      // Log activity
+      const userInfo = getUserInfoForLogging(user)
+      const metadata = getRequestMetadata(ctx)
+      await logActivity({
+        databases,
+        action: ActivityAction.UPDATE,
+        entityType: ActivityEntityType.MEMBER,
+        entityId: updatedMember.$id,
+        workspaceId: member.workspaceId,
+        userId: userInfo.userId,
+        username: userInfo.username,
+        userEmail: userInfo.userEmail,
+        changes: {
+          old: { role: member.role },
+          new: { role },
+        },
+        metadata,
       })
 
       return ctx.json({
@@ -279,6 +346,25 @@ const app = new Hono()
 
       const updatedMember = await databases.updateDocument(DATABASE_ID, MEMBERS_ID, memberId, {
         isActive,
+      })
+
+      // Log activity
+      const userInfo = getUserInfoForLogging(user)
+      const metadata = getRequestMetadata(ctx)
+      await logActivity({
+        databases,
+        action: ActivityAction.UPDATE,
+        entityType: ActivityEntityType.MEMBER,
+        entityId: updatedMember.$id,
+        workspaceId: member.workspaceId,
+        userId: userInfo.userId,
+        username: userInfo.username,
+        userEmail: userInfo.userEmail,
+        changes: {
+          old: { isActive: member.isActive },
+          new: { isActive },
+        },
+        metadata,
       })
 
       return ctx.json({

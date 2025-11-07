@@ -5,6 +5,10 @@ import { ID, type Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
 import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID, WORKSPACES_ID } from '@/config/db';
+import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
+import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
+import { logActivity, getChangedFields } from '@/features/activity-logs/utils/log-activity';
+import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { type Member, MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
@@ -88,6 +92,22 @@ const app = new Hono()
       userId: user.$id,
       workspaceId: workspace.$id,
       role: MemberRole.ADMIN,
+    });
+
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(ctx);
+    await logActivity({
+      databases,
+      action: ActivityAction.CREATE,
+      entityType: ActivityEntityType.WORKSPACE,
+      entityId: workspace.$id,
+      workspaceId: workspace.$id,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { new: workspace },
+      metadata,
     });
 
     return ctx.json({ data: workspace });
@@ -191,6 +211,34 @@ const app = new Hono()
       imageId: uploadedImageId,
     });
 
+    // Log activity - only log changed fields
+    const changedFields = getChangedFields(existingWorkspace, workspace);
+    if (Object.keys(changedFields).length > 0) {
+      const userInfo = getUserInfoForLogging(user);
+      // Build old values object with only changed fields
+      const oldValues: Record<string, unknown> = {};
+      for (const key in changedFields) {
+        oldValues[key] = existingWorkspace[key as keyof Workspace];
+      }
+
+      const metadata = getRequestMetadata(ctx);
+      await logActivity({
+        databases,
+        action: ActivityAction.UPDATE,
+        entityType: ActivityEntityType.WORKSPACE,
+        entityId: workspace.$id,
+        workspaceId: workspace.$id,
+        userId: userInfo.userId,
+        username: userInfo.username,
+        userEmail: userInfo.userEmail,
+        changes: {
+          old: oldValues,
+          new: changedFields,
+        },
+        metadata,
+      });
+    }
+
     return ctx.json({ data: workspace });
   })
   .delete('/:workspaceId', sessionMiddleware, async (ctx) => {
@@ -237,6 +285,22 @@ const app = new Hono()
     if (existingWorkspace.imageId) storage.deleteFile(IMAGES_BUCKET_ID, existingWorkspace.imageId);
 
     await databases.deleteDocument(DATABASE_ID, WORKSPACES_ID, workspaceId);
+
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(ctx);
+    await logActivity({
+      databases,
+      action: ActivityAction.DELETE,
+      entityType: ActivityEntityType.WORKSPACE,
+      entityId: existingWorkspace.$id,
+      workspaceId: existingWorkspace.$id,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { old: existingWorkspace },
+      metadata,
+    });
 
     return ctx.json({ data: { $id: workspaceId } });
   })

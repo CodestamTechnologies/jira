@@ -4,6 +4,11 @@ import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
 import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
+import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
+import { logActivity } from '@/features/activity-logs/utils/log-activity';
+import { getChangedFields } from '@/features/activity-logs/utils/log-activity';
+import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
@@ -271,6 +276,23 @@ const app = new Hono()
       position: newPosition,
     });
 
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(ctx);
+    await logActivity({
+      databases,
+      action: ActivityAction.CREATE,
+      entityType: ActivityEntityType.TASK,
+      entityId: task.$id,
+      workspaceId,
+      projectId: projectId || undefined,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { new: task },
+      metadata,
+    });
+
     return ctx.json({ data: task });
   })
   .patch('/:taskId', sessionMiddleware, zValidator('json', createTaskSchema.partial()), async (ctx) => {
@@ -305,6 +327,35 @@ const app = new Hono()
     }
 
     const task = await databases.updateDocument(DATABASE_ID, TASKS_ID, taskId, updateData);
+
+    // Log activity - only log changed fields
+    const changedFields = getChangedFields(existingTask, task);
+    if (Object.keys(changedFields).length > 0) {
+      const userInfo = getUserInfoForLogging(user);
+      // Build old values object with only changed fields
+      const oldValues: Record<string, unknown> = {};
+      for (const key in changedFields) {
+        oldValues[key] = existingTask[key as keyof Task];
+      }
+      
+      const metadata = getRequestMetadata(ctx);
+      await logActivity({
+        databases,
+        action: ActivityAction.UPDATE,
+        entityType: ActivityEntityType.TASK,
+        entityId: task.$id,
+        workspaceId: existingTask.workspaceId,
+        projectId: existingTask.projectId || undefined,
+        userId: userInfo.userId,
+        username: userInfo.username,
+        userEmail: userInfo.userEmail,
+        changes: {
+          old: oldValues,
+          new: changedFields,
+        },
+        metadata,
+      });
+    }
 
     return ctx.json({ data: task });
   })
@@ -383,6 +434,23 @@ const app = new Hono()
     }
 
     await databases.deleteDocument(DATABASE_ID, TASKS_ID, taskId);
+
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(ctx);
+    await logActivity({
+      databases,
+      action: ActivityAction.DELETE,
+      entityType: ActivityEntityType.TASK,
+      entityId: task.$id,
+      workspaceId: task.workspaceId,
+      projectId: task.projectId || undefined,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { old: task },
+      metadata,
+    });
 
     return ctx.json({ data: task });
   });

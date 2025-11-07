@@ -1,6 +1,6 @@
 'use client'
 
-import { Settings, UsersIcon, Clock, FileText } from 'lucide-react'
+import { Settings, UsersIcon, Clock, FileText, History } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { GoCheckCircle, GoCheckCircleFill, GoHome, GoHomeFill } from 'react-icons/go'
@@ -55,6 +55,12 @@ const adminRoutes = [
     href: '/invoices',
     icon: FileText,
     activeIcon: FileText,
+  },
+  {
+    label: 'Activity Log',
+    href: '/activity',
+    icon: History,
+    activeIcon: History,
   },
 ]
 

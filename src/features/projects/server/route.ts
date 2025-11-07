@@ -5,6 +5,10 @@ import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
 import { DATABASE_ID, IMAGES_BUCKET_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
+import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
+import { logActivity, getChangedFields } from '@/features/activity-logs/utils/log-activity';
+import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import { createProjectSchema, updateProjectSchema } from '@/features/projects/schema';
@@ -65,6 +69,22 @@ const app = new Hono()
       position: 1000,
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
       description: 'Update project metadata including favicon and other branding elements.',
+    });
+
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(ctx);
+    await logActivity({
+      databases,
+      action: ActivityAction.CREATE,
+      entityType: ActivityEntityType.PROJECT,
+      entityId: project.$id,
+      workspaceId,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { new: project },
+      metadata,
     });
 
     return ctx.json({ data: project });
@@ -268,6 +288,34 @@ const app = new Hono()
 
     const project = await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, updateData);
 
+    // Log activity - only log changed fields
+    const changedFields = getChangedFields(existingProject, project);
+    if (Object.keys(changedFields).length > 0) {
+      const userInfo = getUserInfoForLogging(user);
+      // Build old values object with only changed fields
+      const oldValues: Record<string, unknown> = {};
+      for (const key in changedFields) {
+        oldValues[key] = existingProject[key as keyof Project];
+      }
+
+      const metadata = getRequestMetadata(ctx);
+      await logActivity({
+        databases,
+        action: ActivityAction.UPDATE,
+        entityType: ActivityEntityType.PROJECT,
+        entityId: project.$id,
+        workspaceId: existingProject.workspaceId,
+        userId: userInfo.userId,
+        username: userInfo.username,
+        userEmail: userInfo.userEmail,
+        changes: {
+          old: oldValues,
+          new: changedFields,
+        },
+        metadata,
+      });
+    }
+
     return ctx.json({ data: project });
   })
   .delete('/:projectId', sessionMiddleware, async (ctx) => {
@@ -299,6 +347,22 @@ const app = new Hono()
     if (existingProject.imageId) await storage.deleteFile(IMAGES_BUCKET_ID, existingProject.imageId);
 
     await databases.deleteDocument(DATABASE_ID, PROJECTS_ID, projectId);
+
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(ctx);
+    await logActivity({
+      databases,
+      action: ActivityAction.DELETE,
+      entityType: ActivityEntityType.PROJECT,
+      entityId: existingProject.$id,
+      workspaceId: existingProject.workspaceId,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { old: existingProject },
+      metadata,
+    });
 
     return ctx.json({ data: { $id: existingProject.$id, workspaceId: existingProject.workspaceId } });
   })
