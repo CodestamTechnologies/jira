@@ -19,11 +19,15 @@ import NDAPDF, { type NDAData } from '@/components/nda-pdf'
 import { toast } from 'sonner'
 
 import { COMPANY_INFO } from '@/lib/pdf/constants'
-import { pdfBlobToBase64, downloadPDF, generateSafeFilename } from '@/lib/pdf/utils'
+import { pdfBlobToBase64, generateSafeFilename } from '@/lib/pdf/utils'
+import { useDownloadWithLogging } from '@/lib/pdf/use-download-with-logging'
+import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id'
 
 export function NDAPageClient() {
+  const workspaceId = useWorkspaceId()
   const { data: isAdmin, isLoading } = useAdminStatus()
   const { mutate: sendNDA, isPending } = useSendNDA()
+  const { downloadWithLogging } = useDownloadWithLogging()
 
   const [employeeName, setEmployeeName] = useState('')
   const [employeeEmail, setEmployeeEmail] = useState('')
@@ -69,9 +73,16 @@ export function NDAPageClient() {
       const doc = <NDAPDF {...ndaData} />
       const pdfBlob = await pdf(doc).toBlob()
       
-      // Download PDF
+      // Download PDF with logging
       const filename = generateSafeFilename(`NDA-${employeeName}`, 'pdf')
-      downloadPDF(pdfBlob, filename)
+      await downloadWithLogging({
+        documentType: 'NDA',
+        blob: pdfBlob,
+        filename,
+        documentName: `NDA-${employeeName}`,
+        employeeName,
+        workspaceId,
+      })
 
       toast.success('NDA PDF downloaded successfully')
     } catch (error) {
@@ -122,6 +133,7 @@ export function NDAPageClient() {
           employeeAadhar,
           effectiveDate: formattedDate,
           pdfBase64,
+          workspaceId,
         },
         {
           onSuccess: () => {

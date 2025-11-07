@@ -3,6 +3,12 @@ import { Hono } from 'hono'
 import { Resend } from 'resend'
 import { z } from 'zod'
 
+import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types'
+import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info'
+import { logActivity } from '@/features/activity-logs/utils/log-activity'
+import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata'
+import { getMember } from '@/features/members/utils'
+import { DATABASE_ID } from '@/config/db'
 import { sessionMiddleware } from '@/lib/session-middleware'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -14,6 +20,7 @@ const sendNDASchema = z.object({
   employeeAadhar: z.string().trim().min(12, 'Aadhar number must be 12 digits').max(12, 'Aadhar number must be 12 digits'),
   effectiveDate: z.string().trim().min(1, 'Effective date is required'),
   pdfBase64: z.string().min(1, 'PDF data is required'),
+  workspaceId: z.string().trim().min(1, 'Workspace ID is required'),
 })
 
 const app = new Hono()
@@ -27,7 +34,8 @@ const app = new Hono()
       }
 
       const user = ctx.get('user')
-      const { employeeName, employeeEmail, employeeAddress, employeeAadhar, effectiveDate, pdfBase64 } = ctx.req.valid('json')
+      const databases = ctx.get('databases')
+      const { employeeName, employeeEmail, employeeAddress, employeeAadhar, effectiveDate, pdfBase64, workspaceId } = ctx.req.valid('json')
 
       try {
         const filename = `NDA-${employeeName.replace(/\s+/g, '-')}.pdf`
@@ -58,6 +66,33 @@ const app = new Hono()
           console.error('Resend API error:', emailResult.error)
           return ctx.json({ error: 'Failed to send email. Please try again later.' }, 500)
         }
+
+        // Log activity
+        const userInfo = getUserInfoForLogging(user)
+        const metadata = getRequestMetadata(ctx)
+        await logActivity({
+          databases,
+          action: ActivityAction.SEND_EMAIL,
+          entityType: ActivityEntityType.DOCUMENT_NDA,
+          entityId: `email-${emailResult.data?.id || Date.now()}`,
+          workspaceId,
+          userId: userInfo.userId,
+          username: userInfo.username,
+          userEmail: userInfo.userEmail,
+          changes: {
+            new: {
+              recipientEmail: employeeEmail,
+              recipientName: employeeName,
+              documentType: 'NDA',
+              emailId: emailResult.data?.id,
+            },
+          },
+          metadata: {
+            ...metadata,
+            emailId: emailResult.data?.id,
+            recipientEmail: employeeEmail,
+          },
+        })
 
         return ctx.json({
           success: true,

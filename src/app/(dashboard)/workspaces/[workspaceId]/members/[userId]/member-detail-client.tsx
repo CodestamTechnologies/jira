@@ -25,7 +25,8 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 import { COMPANY_INFO, BANK_DETAILS } from '@/lib/pdf/constants'
-import { pdfBlobToBase64, downloadPDF, generateSafeFilename } from '@/lib/pdf/utils'
+import { pdfBlobToBase64, generateSafeFilename } from '@/lib/pdf/utils'
+import { useDownloadWithLogging } from '@/lib/pdf/use-download-with-logging'
 import NDAPDF, { type NDAData } from '@/components/nda-pdf'
 import JoiningLetterPDF, { type JoiningLetterData } from '@/components/joining-letter-pdf'
 import SalarySlipPDF, { type SalarySlipData } from '@/components/salary-slip-pdf'
@@ -45,6 +46,7 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
   const { mutate: sendSalarySlip, isPending: isSendingSalarySlip } = useSendSalarySlip()
   const { mutate: updateMemberInfo, isPending: isUpdatingInfo } = useUpdateMemberInfo()
   const { mutate: updateMemberStatus, isPending: isUpdatingStatus } = useUpdateMemberStatus()
+  const { downloadWithLogging } = useDownloadWithLogging()
 
   // Extract member from detail
   const member = memberDetail
@@ -155,6 +157,7 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
             employeeAadhar: memberInfo.aadhar,
             effectiveDate: formattedDate,
             pdfBase64,
+            workspaceId,
           },
           {
             onSuccess: () => {
@@ -167,7 +170,14 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
         )
       } else {
         const filename = generateSafeFilename(`NDA-${member.name}`, 'pdf')
-        downloadPDF(pdfBlob, filename)
+        await downloadWithLogging({
+          documentType: 'NDA',
+          blob: pdfBlob,
+          filename,
+          documentName: `NDA-${member.name}`,
+          employeeName: member.name,
+          workspaceId,
+        })
         toast.success('NDA PDF downloaded successfully')
       }
     } catch (error) {
@@ -203,7 +213,14 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
       const pdfBlob = await pdf(doc).toBlob()
 
       const filename = generateSafeFilename(`Joining-Letter-${memberDetail.name}`, 'pdf')
-      downloadPDF(pdfBlob, filename)
+      await downloadWithLogging({
+        documentType: 'JOINING_LETTER',
+        blob: pdfBlob,
+        filename,
+        documentName: `Joining-Letter-${memberDetail.name}`,
+        employeeName: memberDetail.name,
+        workspaceId,
+      })
       toast.success('Joining Letter PDF downloaded successfully')
     } catch (error) {
       console.error('Error generating joining letter:', error)
@@ -328,6 +345,7 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
             month: salarySlipMonth,
             year: salarySlipYear,
             pdfBase64,
+            workspaceId,
           },
           {
             onSuccess: () => {
@@ -340,7 +358,16 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
         )
       } else {
         const filename = generateSafeFilename(`Salary-Slip-${memberDetail.name}-${salarySlipMonth}-${salarySlipYear}`, 'pdf')
-        downloadPDF(pdfBlob, filename)
+        await downloadWithLogging({
+          documentType: 'SALARY_SLIP',
+          blob: pdfBlob,
+          filename,
+          documentName: `Salary-Slip-${memberDetail.name}-${salarySlipMonth}-${salarySlipYear}`,
+          employeeName: memberDetail.name,
+          month: salarySlipMonth,
+          year: salarySlipYear,
+          workspaceId,
+        })
         toast.success('Salary slip PDF downloaded successfully')
       }
     } catch (error) {

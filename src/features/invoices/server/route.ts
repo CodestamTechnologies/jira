@@ -6,6 +6,10 @@ import { Resend } from 'resend';
 import { z } from 'zod';
 
 import { DATABASE_ID, INVOICES_ID, PROJECTS_ID } from '@/config/db';
+import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
+import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
+import { logActivity } from '@/features/activity-logs/utils/log-activity';
+import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { getMember } from '@/features/members/utils';
 import { createInvoiceSchema } from '@/features/invoices/schema';
 import type { Invoice } from '@/features/invoices/types';
@@ -180,6 +184,23 @@ const app = new Hono()
       items: typeof invoice.items === 'string' ? JSON.parse(invoice.items) : invoice.items,
     };
 
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(ctx);
+    await logActivity({
+      databases,
+      action: ActivityAction.CREATE,
+      entityType: ActivityEntityType.INVOICE,
+      entityId: invoice.$id,
+      workspaceId,
+      projectId: projectId || undefined,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { new: invoiceResponse },
+      metadata,
+    });
+
     return ctx.json({ data: invoiceResponse });
   })
   .get(
@@ -266,7 +287,23 @@ const app = new Hono()
         return ctx.json({ error: 'Email service is not configured.' }, 500);
       }
 
+      const user = ctx.get('user');
+      const databases = ctx.get('databases');
       const { invoiceNumber, clientName, clientEmail, pdfBase64 } = ctx.req.valid('json');
+
+      // Get invoice to fetch workspaceId
+      let workspaceId: string | undefined;
+      try {
+        const invoices = await databases.listDocuments<Invoice>(DATABASE_ID, INVOICES_ID, [
+          Query.equal('invoiceNumber', invoiceNumber),
+          Query.limit(1),
+        ]);
+        if (invoices.documents.length > 0) {
+          workspaceId = invoices.documents[0].workspaceId;
+        }
+      } catch (error) {
+        console.error('Error fetching invoice for logging:', error);
+      }
 
       try {
         const filename = `invoice-${invoiceNumber.replace(/\//g, '-')}.pdf`;
@@ -297,6 +334,36 @@ const app = new Hono()
         if (emailResult.error) {
           console.error('Resend API error:', emailResult.error);
           return ctx.json({ error: 'Failed to send email. Please try again later.' }, 500);
+        }
+
+        // Log activity
+        if (workspaceId) {
+          const userInfo = getUserInfoForLogging(user);
+          const metadata = getRequestMetadata(ctx);
+          await logActivity({
+            databases,
+            action: ActivityAction.SEND_EMAIL,
+            entityType: ActivityEntityType.DOCUMENT_INVOICE,
+            entityId: `email-${emailResult.data?.id || Date.now()}`,
+            workspaceId,
+            userId: userInfo.userId,
+            username: userInfo.username,
+            userEmail: userInfo.userEmail,
+            changes: {
+              new: {
+                recipientEmail: clientEmail,
+                recipientName: clientName,
+                documentType: 'Invoice',
+                invoiceNumber,
+                emailId: emailResult.data?.id,
+              },
+            },
+            metadata: {
+              ...metadata,
+              emailId: emailResult.data?.id,
+              recipientEmail: clientEmail,
+            },
+          });
         }
 
         return ctx.json({

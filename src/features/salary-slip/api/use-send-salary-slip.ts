@@ -8,6 +8,7 @@ type SendSalarySlipRequest = {
   month: string
   year: string
   pdfBase64: string
+  workspaceId: string
 }
 
 type SendSalarySlipResponse = {

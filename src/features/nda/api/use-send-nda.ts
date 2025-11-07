@@ -9,6 +9,7 @@ type SendNDARequest = {
   employeeAadhar: string
   effectiveDate: string
   pdfBase64: string
+  workspaceId: string
 }
 
 type SendNDAResponse = {

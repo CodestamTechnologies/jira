@@ -3,6 +3,10 @@ import { Hono } from 'hono'
 import { Resend } from 'resend'
 import { z } from 'zod'
 
+import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types'
+import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info'
+import { logActivity } from '@/features/activity-logs/utils/log-activity'
+import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata'
 import { sessionMiddleware } from '@/lib/session-middleware'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -13,6 +17,7 @@ const sendSalarySlipSchema = z.object({
   month: z.string().trim().min(1, 'Month is required'),
   year: z.string().trim().min(1, 'Year is required'),
   pdfBase64: z.string().min(1, 'PDF data is required'),
+  workspaceId: z.string().trim().min(1, 'Workspace ID is required'),
 })
 
 const app = new Hono()
@@ -26,7 +31,8 @@ const app = new Hono()
       }
 
       const user = ctx.get('user')
-      const { employeeName, employeeEmail, month, year, pdfBase64 } = ctx.req.valid('json')
+      const databases = ctx.get('databases')
+      const { employeeName, employeeEmail, month, year, pdfBase64, workspaceId } = ctx.req.valid('json')
 
       try {
         const filename = `Salary-Slip-${employeeName.replace(/\s+/g, '-')}-${month}-${year}.pdf`
@@ -56,6 +62,35 @@ const app = new Hono()
           console.error('Resend API error:', emailResult.error)
           return ctx.json({ error: 'Failed to send email. Please try again later.' }, 500)
         }
+
+        // Log activity
+        const userInfo = getUserInfoForLogging(user)
+        const metadata = getRequestMetadata(ctx)
+        await logActivity({
+          databases,
+          action: ActivityAction.SEND_EMAIL,
+          entityType: ActivityEntityType.DOCUMENT_SALARY_SLIP,
+          entityId: `email-${emailResult.data?.id || Date.now()}`,
+          workspaceId,
+          userId: userInfo.userId,
+          username: userInfo.username,
+          userEmail: userInfo.userEmail,
+          changes: {
+            new: {
+              recipientEmail: employeeEmail,
+              recipientName: employeeName,
+              documentType: 'Salary Slip',
+              month,
+              year,
+              emailId: emailResult.data?.id,
+            },
+          },
+          metadata: {
+            ...metadata,
+            emailId: emailResult.data?.id,
+            recipientEmail: employeeEmail,
+          },
+        })
 
         return ctx.json({
           success: true,

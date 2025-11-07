@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowRight, CheckCircle2, ChevronDown, ChevronUp, FileText, Folder, MessageSquare, Trash2, User, Users } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronDown, ChevronUp, Download, FileText, Folder, Mail, MessageSquare, Trash2, User, Users } from 'lucide-react';
 import { useState } from 'react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -43,6 +43,30 @@ const getActionConfig = (action: ActivityAction) => {
         borderColor: 'border-red-200 dark:border-red-800',
         badge: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800',
       };
+    case ActivityAction.DOWNLOAD:
+      return {
+        icon: Download,
+        color: 'text-purple-600 dark:text-purple-400',
+        bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+        borderColor: 'border-purple-200 dark:border-purple-800',
+        badge: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-800',
+      };
+    case ActivityAction.SEND_EMAIL:
+      return {
+        icon: Mail,
+        color: 'text-orange-600 dark:text-orange-400',
+        bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+        borderColor: 'border-orange-200 dark:border-orange-800',
+        badge: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-800',
+      };
+    default:
+      return {
+        icon: FileText,
+        color: 'text-gray-600 dark:text-gray-400',
+        bgColor: 'bg-gray-50 dark:bg-gray-950/30',
+        borderColor: 'border-gray-200 dark:border-gray-800',
+        badge: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/50 dark:text-gray-300 dark:border-gray-800',
+      };
   }
 };
 
@@ -62,11 +86,18 @@ const getEntityIcon = (entityType: ActivityEntityType) => {
       return FileText;
     case ActivityEntityType.ATTENDANCE:
       return Users;
+    case ActivityEntityType.DOCUMENT_NDA:
+    case ActivityEntityType.DOCUMENT_JOINING_LETTER:
+    case ActivityEntityType.DOCUMENT_SALARY_SLIP:
+    case ActivityEntityType.DOCUMENT_INVOICE:
+      return FileText;
+    default:
+      return FileText;
   }
 };
 
 const getActionText = (action: ActivityAction, entityType: ActivityEntityType) => {
-  const entityName = entityType.toLowerCase();
+  const entityName = entityType.toLowerCase().replace(/_/g, ' ');
   switch (action) {
     case ActivityAction.CREATE:
       return `created ${entityName}`;
@@ -74,6 +105,12 @@ const getActionText = (action: ActivityAction, entityType: ActivityEntityType) =
       return `updated ${entityName}`;
     case ActivityAction.DELETE:
       return `deleted ${entityName}`;
+    case ActivityAction.DOWNLOAD:
+      return `downloaded ${entityName}`;
+    case ActivityAction.SEND_EMAIL:
+      return `sent ${entityName} via email`;
+    default:
+      return `${String(action).toLowerCase()} ${entityName}`;
   }
 };
 

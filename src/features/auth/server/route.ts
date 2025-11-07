@@ -4,8 +4,9 @@ import { deleteCookie, setCookie } from 'hono/cookie';
 import { ID } from 'node-appwrite';
 import { z } from 'zod';
 
+import { IMAGES_BUCKET_ID } from '@/config/db';
 import { AUTH_COOKIE } from '@/features/auth/constants';
-import { signInFormSchema, signUpFormSchema } from '@/features/auth/schema';
+import { signInFormSchema, signUpFormSchema, updateProfileSchema } from '@/features/auth/schema';
 import { createAdminClient } from '@/lib/appwrite';
 import { sessionMiddleware } from '@/lib/session-middleware';
 
@@ -36,10 +37,28 @@ const app = new Hono()
       return ctx.redirect(process.env.NEXT_PUBLIC_APP_BASE_URL);
     },
   )
-  .get('/current', sessionMiddleware, (ctx) => {
+  .get('/current', sessionMiddleware, async (ctx) => {
     const user = ctx.get('user');
+    const storage = ctx.get('storage');
 
-    return ctx.json({ data: user });
+    // Get image URL if exists
+    let imageUrl: string | undefined = undefined;
+    const imageId = (user.prefs as { imageId?: string })?.imageId;
+    if (imageId) {
+      try {
+        const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, imageId);
+        imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+      } catch (error) {
+        // Ignore error if file doesn't exist
+      }
+    }
+
+    return ctx.json({
+      data: {
+        ...user,
+        imageUrl,
+      },
+    });
   })
   .post('/login', zValidator('json', signInFormSchema), async (ctx) => {
     const { email, password } = ctx.req.valid('json');
@@ -84,6 +103,75 @@ const app = new Hono()
     await account.deleteSession('current');
 
     return ctx.json({ success: true });
+  })
+  .patch('/profile', sessionMiddleware, zValidator('form', updateProfileSchema), async (ctx) => {
+    const account = ctx.get('account');
+    const storage = ctx.get('storage');
+    const user = ctx.get('user');
+
+    const { name, image } = ctx.req.valid('form');
+
+    let uploadedImageId: string | undefined = undefined;
+
+    // Handle image upload
+    if (image instanceof File) {
+      const fileExt = image.name.split('.').at(-1) ?? 'png';
+      const fileName = `${ID.unique()}.${fileExt}`;
+
+      const renamedImage = new File([image], fileName, {
+        type: image.type,
+      });
+
+      const file = await storage.createFile(IMAGES_BUCKET_ID, ID.unique(), renamedImage);
+
+      // Delete old user image if exists
+      const currentImageId = (user.prefs as { imageId?: string })?.imageId;
+      if (currentImageId) {
+        try {
+          await storage.deleteFile(IMAGES_BUCKET_ID, currentImageId);
+        } catch (error) {
+          // Ignore error if file doesn't exist
+        }
+      }
+
+      uploadedImageId = file.$id;
+    }
+
+    // Update user name if provided
+    if (name !== undefined) {
+      await account.updateName(name);
+    }
+
+    // Update user prefs with imageId if provided
+    if (uploadedImageId !== undefined) {
+      const currentPrefs = (user.prefs as Record<string, unknown>) || {};
+      await account.updatePrefs({
+        ...currentPrefs,
+        imageId: uploadedImageId,
+      });
+    }
+
+    // Get updated user
+    const updatedUser = await account.get();
+
+    // Get image URL if exists
+    let imageUrl: string | undefined = undefined;
+    const imageId = (updatedUser.prefs as { imageId?: string })?.imageId;
+    if (imageId) {
+      try {
+        const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, imageId);
+        imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+      } catch (error) {
+        // Ignore error if file doesn't exist
+      }
+    }
+
+    return ctx.json({
+      data: {
+        ...updatedUser,
+        imageUrl,
+      },
+    });
   });
 
 export default app;

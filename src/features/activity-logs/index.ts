@@ -4,6 +4,7 @@ export * from './types';
 // API Hooks
 export { useGetActivityLogs } from './api/use-get-activity-logs';
 export { useExportActivityLogs } from './api/use-export-activity-logs';
+export { useLogDownload } from './api/use-log-download';
 
 // Utils
 export { logActivity, parseActivityChanges, parseActivityMetadata, getChangedFields } from './utils/log-activity';

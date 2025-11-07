@@ -17,11 +17,15 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 import { COMPANY_INFO } from '@/lib/pdf/constants'
-import { pdfBlobToBase64, downloadPDF, generateSafeFilename } from '@/lib/pdf/utils'
+import { pdfBlobToBase64, generateSafeFilename } from '@/lib/pdf/utils'
+import { useDownloadWithLogging } from '@/lib/pdf/use-download-with-logging'
+import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id'
 import JoiningLetterPDF, { type JoiningLetterData } from '@/components/joining-letter-pdf'
 
 export function JoiningLetterPageClient() {
+  const workspaceId = useWorkspaceId()
   const { data: isAdmin, isLoading } = useAdminStatus()
+  const { downloadWithLogging } = useDownloadWithLogging()
 
   const [employeeName, setEmployeeName] = useState('')
   const [employeeEmail, setEmployeeEmail] = useState('')
@@ -84,9 +88,16 @@ export function JoiningLetterPageClient() {
       const doc = <JoiningLetterPDF {...letterData} />
       const pdfBlob = await pdf(doc).toBlob()
       
-      // Download PDF
+      // Download PDF with logging
       const filename = generateSafeFilename(`Joining-Letter-${employeeName}`, 'pdf')
-      downloadPDF(pdfBlob, filename)
+      await downloadWithLogging({
+        documentType: 'JOINING_LETTER',
+        blob: pdfBlob,
+        filename,
+        documentName: `Joining-Letter-${employeeName}`,
+        employeeName,
+        workspaceId,
+      })
 
       toast.success('Joining Letter PDF downloaded successfully')
     } catch (error) {

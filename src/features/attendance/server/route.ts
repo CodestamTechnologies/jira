@@ -5,6 +5,10 @@ import { Query } from 'node-appwrite';
 
 import { createSessionClient, createAdminClient } from '@/lib/appwrite';
 import { ATTENDANCE_ID, DATABASE_ID, MEMBERS_ID } from '@/config/db';
+import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
+import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
+import { logActivity, getChangedFields } from '@/features/activity-logs/utils/log-activity';
+import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { createAttendanceSchema, updateAttendanceSchema, attendanceFiltersSchema } from '../schema';
 import { getCurrent } from '@/features/auth/queries';
 import { Attendance } from '../types';
@@ -221,6 +225,22 @@ app.post('/check-in', zValidator('json', createAttendanceSchema), async (c) => {
       }
     );
 
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(c);
+    await logActivity({
+      databases,
+      action: ActivityAction.CREATE,
+      entityType: ActivityEntityType.ATTENDANCE,
+      entityId: attendance.$id,
+      workspaceId,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: { new: attendance },
+      metadata,
+    });
+
     return c.json(attendance);
   } catch (error) {
     console.error('Error checking in:', error);
@@ -292,6 +312,32 @@ app.put('/check-out', zValidator('json', updateAttendanceSchema), async (c) => {
         notes,
       }
     );
+
+    // Log activity - only log changed fields
+    const changedFields = getChangedFields(attendanceRecord, updatedAttendance);
+    if (Object.keys(changedFields).length > 0) {
+      const userInfo = getUserInfoForLogging(user);
+      const oldValues: Record<string, unknown> = {};
+      for (const key in changedFields) {
+        oldValues[key] = attendanceRecord[key as keyof Attendance];
+      }
+      const metadata = getRequestMetadata(c);
+      await logActivity({
+        databases,
+        action: ActivityAction.UPDATE,
+        entityType: ActivityEntityType.ATTENDANCE,
+        entityId: updatedAttendance.$id,
+        workspaceId: attendanceRecord.workspaceId,
+        userId: userInfo.userId,
+        username: userInfo.username,
+        userEmail: userInfo.userEmail,
+        changes: {
+          old: oldValues,
+          new: changedFields,
+        },
+        metadata,
+      });
+    }
 
     return c.json(updatedAttendance);
   } catch (error) {

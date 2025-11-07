@@ -11,6 +11,7 @@ import workspaces from '@/features/workspaces/server/route';
 import nda from '@/features/nda/server/route';
 import salarySlip from '@/features/salary-slip/server/route';
 import activityLogs from '@/features/activity-logs/server/route';
+import logDownload from '@/features/activity-logs/server/log-download';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +27,8 @@ const routes = app
   .route('/workspaces', workspaces)
   .route('/nda', nda)
   .route('/salary-slip', salarySlip)
-  .route('/activity-logs', activityLogs);
+  .route('/activity-logs', activityLogs)
+  .route('/activity-logs/download', logDownload);
 
 export type AppType = typeof routes;
 

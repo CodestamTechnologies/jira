@@ -1,7 +1,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, CheckCircle2, Eye, FileText, Folder, MessageSquare, MoreVertical, Trash2, User, Users } from 'lucide-react';
+import { ArrowUpDown, CheckCircle2, Download, Eye, FileText, Folder, Mail, MessageSquare, MoreVertical, Trash2, User, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -37,6 +37,21 @@ const getActionConfig = (action: ActivityAction) => {
         icon: Trash2,
         badge: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800',
       };
+    case ActivityAction.DOWNLOAD:
+      return {
+        icon: Download,
+        badge: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-800',
+      };
+    case ActivityAction.SEND_EMAIL:
+      return {
+        icon: Mail,
+        badge: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-800',
+      };
+    default:
+      return {
+        icon: FileText,
+        badge: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/50 dark:text-gray-300 dark:border-gray-800',
+      };
   }
 };
 
@@ -56,11 +71,18 @@ const getEntityIcon = (entityType: ActivityEntityType) => {
       return FileText;
     case ActivityEntityType.ATTENDANCE:
       return Users;
+    case ActivityEntityType.DOCUMENT_NDA:
+    case ActivityEntityType.DOCUMENT_JOINING_LETTER:
+    case ActivityEntityType.DOCUMENT_SALARY_SLIP:
+    case ActivityEntityType.DOCUMENT_INVOICE:
+      return FileText;
+    default:
+      return FileText;
   }
 };
 
 const getActionText = (action: ActivityAction, entityType: ActivityEntityType) => {
-  const entityName = entityType.toLowerCase();
+  const entityName = entityType.toLowerCase().replace(/_/g, ' ');
   switch (action) {
     case ActivityAction.CREATE:
       return `Created ${entityName}`;
@@ -68,6 +90,12 @@ const getActionText = (action: ActivityAction, entityType: ActivityEntityType) =
       return `Updated ${entityName}`;
     case ActivityAction.DELETE:
       return `Deleted ${entityName}`;
+    case ActivityAction.DOWNLOAD:
+      return `Downloaded ${entityName}`;
+    case ActivityAction.SEND_EMAIL:
+      return `Sent ${entityName} via email`;
+    default:
+      return `${String(action)} ${entityName}`;
   }
 };
 

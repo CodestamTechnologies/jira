@@ -18,6 +18,8 @@ import { useGetNextInvoiceNumber } from '@/features/invoices/api/use-get-next-in
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { COMPANY_INFO, BANK_DETAILS, TERMS_AND_CONDITIONS } from '@/lib/pdf/constants';
+import { useDownloadWithLogging } from '@/lib/pdf/use-download-with-logging';
+import { generateSafeFilename } from '@/lib/pdf/utils';
 import type { Invoice } from '@/features/invoices/types';
 
 interface InvoiceItem {
@@ -31,6 +33,7 @@ export const InvoiceGenerator = () => {
   const { data: projectsData, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: nextInvoiceData, refetch: refetchNextInvoiceNumber } = useGetNextInvoiceNumber();
   const { mutate: createInvoice, isPending: isCreatingInvoice } = useCreateInvoice();
+  const { downloadWithLogging } = useDownloadWithLogging();
 
   // Invoice Information
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -167,15 +170,16 @@ export const InvoiceGenerator = () => {
             const doc = <InvoicePDF {...finalInvoiceData} />;
             pdf(doc)
               .toBlob()
-              .then((blob) => {
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `invoice-${finalInvoiceNumber.replace(/\//g, '-')}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+              .then(async (blob) => {
+                const filename = generateSafeFilename(`invoice-${finalInvoiceNumber.replace(/\//g, '-')}`, 'pdf');
+                await downloadWithLogging({
+                  documentType: 'INVOICE',
+                  blob,
+                  filename,
+                  documentName: `invoice-${finalInvoiceNumber}`,
+                  invoiceNumber: finalInvoiceNumber,
+                  workspaceId,
+                });
                 setIsGenerating(false);
 
                 // Refetch next invoice number for next invoice

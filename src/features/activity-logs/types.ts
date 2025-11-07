@@ -4,6 +4,8 @@ export enum ActivityAction {
   CREATE = 'CREATE',
   UPDATE = 'UPDATE',
   DELETE = 'DELETE',
+  DOWNLOAD = 'DOWNLOAD',
+  SEND_EMAIL = 'SEND_EMAIL',
 }
 
 export enum ActivityEntityType {
@@ -14,6 +16,10 @@ export enum ActivityEntityType {
   COMMENT = 'COMMENT',
   INVOICE = 'INVOICE',
   ATTENDANCE = 'ATTENDANCE',
+  DOCUMENT_NDA = 'DOCUMENT_NDA',
+  DOCUMENT_JOINING_LETTER = 'DOCUMENT_JOINING_LETTER',
+  DOCUMENT_SALARY_SLIP = 'DOCUMENT_SALARY_SLIP',
+  DOCUMENT_INVOICE = 'DOCUMENT_INVOICE',
 }
 
 export type ActivityChanges = {

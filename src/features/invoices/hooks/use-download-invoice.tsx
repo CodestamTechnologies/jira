@@ -6,7 +6,8 @@ import { pdf } from '@react-pdf/renderer'
 
 import InvoicePDF, { type InvoiceData } from '@/components/invoice-pdf'
 import { COMPANY_INFO, BANK_DETAILS, TERMS_AND_CONDITIONS } from '@/lib/pdf/constants'
-import { downloadPDF, generateSafeFilename, pdfBlobToBase64 } from '@/lib/pdf/utils'
+import { generateSafeFilename, pdfBlobToBase64 } from '@/lib/pdf/utils'
+import { useDownloadWithLogging } from '@/lib/pdf/use-download-with-logging'
 import type { Invoice } from '@/features/invoices/types'
 import type { Project } from '@/features/projects/types'
 
@@ -17,6 +18,7 @@ interface UseDownloadInvoiceProps {
 
 export const useDownloadInvoice = () => {
   const [isDownloading, setIsDownloading] = useState(false)
+  const { downloadWithLogging } = useDownloadWithLogging()
 
   const generateInvoicePDF = async ({ invoice, project }: UseDownloadInvoiceProps) => {
     if (!project) {
@@ -107,9 +109,16 @@ export const useDownloadInvoice = () => {
     try {
       const { pdfBlob } = await generateInvoicePDF({ invoice, project })
 
-      // Download PDF using utility function
+      // Download PDF with logging
       const filename = generateSafeFilename(`invoice-${invoice.invoiceNumber.replace(/\//g, '-')}`, 'pdf')
-      downloadPDF(pdfBlob, filename)
+      await downloadWithLogging({
+        documentType: 'INVOICE',
+        blob: pdfBlob,
+        filename,
+        documentName: `invoice-${invoice.invoiceNumber}`,
+        invoiceNumber: invoice.invoiceNumber,
+        workspaceId: invoice.workspaceId,
+      })
     } catch (error) {
       console.error('Error downloading invoice:', error)
       throw error

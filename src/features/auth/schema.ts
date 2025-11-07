@@ -16,3 +16,8 @@ export const signUpFormSchema = z.object({
   }),
   password: z.string().min(8, 'Password must be atleast 8 characters.').max(256, 'Password cannot exceed 256 characters.'),
 });
+
+export const updateProfileSchema = z.object({
+  name: z.string().trim().min(1, 'Full name is required.').optional(),
+  image: z.union([z.instanceof(File), z.string()]).optional(),
+});
