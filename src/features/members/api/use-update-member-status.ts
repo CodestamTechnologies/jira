@@ -26,7 +26,7 @@ export const useUpdateMemberStatus = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['members'] });
       queryClient.invalidateQueries({ queryKey: ['member-detail', variables.param.memberId] });
-      
+
       const status = variables.json.isActive ? 'active' : 'inactive';
       toast.success(`Member marked as ${status}`);
     },
@@ -35,4 +35,3 @@ export const useUpdateMemberStatus = () => {
     },
   });
 };
-

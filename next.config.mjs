@@ -9,7 +9,7 @@ const nextConfig = {
     config.resolve.extensionAlias = {
       '.js': ['.js', '.ts', '.tsx'],
     };
-    
+
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -20,10 +20,10 @@ const nextConfig = {
         util: false,
       };
     }
-    
+
     // Ensure @react-pdf/renderer is resolved correctly
     config.externals = config.externals || [];
-    
+
     return config;
   },
 };
