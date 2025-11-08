@@ -257,6 +257,7 @@ app.put('/check-out', zValidator('json', updateAttendanceSchema), async (c) => {
     }
 
     const body = await c.req.json();
+    // Notes are already normalized by the schema transform
     const { checkOutLatitude, checkOutLongitude, checkOutAddress, notes } = body;
 
     const today = new Date().toISOString().split('T')[0];

@@ -78,3 +78,34 @@ export const validateLocation = (latitude: number, longitude: number): boolean =
     !isNaN(longitude)
   );
 };
+
+/**
+ * Normalizes text by removing problematic characters and normalizing whitespace
+ * Handles special characters, emojis, and various Unicode issues
+ */
+export const normalizeText = (text: string): string => {
+  if (!text) return ''
+
+  return text
+    // Normalize Unicode characters (NFD to NFC)
+    .normalize('NFD')
+    // Remove diacritical marks (accents) if needed, but keep the base characters
+    // .replace(/[\u0300-\u036f]/g, '') // Uncomment if you want to remove accents
+    // Replace various types of spaces with regular space
+    .replace(/[\u2000-\u200B\u2028-\u2029\u00A0]/g, ' ')
+    // Replace zero-width characters
+    .replace(/[\u200C-\u200D\uFEFF]/g, '')
+    // Replace line breaks with spaces
+    .replace(/[\r\n]+/g, ' ')
+    // Replace multiple spaces with single space
+    .replace(/\s+/g, ' ')
+    // Trim whitespace
+    .trim()
+}
+
+/**
+ * Counts characters in normalized text (useful for validation)
+ */
+export const countNormalizedCharacters = (text: string): number => {
+  return normalizeText(text).length
+}

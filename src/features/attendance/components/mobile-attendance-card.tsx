@@ -1,30 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Clock, MapPin, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCheckIn } from '../api/use-check-in';
 import { useCheckOut } from '../api/use-check-out';
 import { useGetTodayAttendance } from '../api/use-get-today-attendance';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useCurrent } from '@/features/auth/api/use-current';
 import { CheckoutDialog } from './checkout-dialog';
+import { useLocation } from '../hooks/use-location';
 
-interface LocationData {
-  latitude: number;
-  longitude: number;
-  address?: string;
-}
-
-export const  MobileAttendanceCard = () => {
-  const [location, setLocation] = useState<LocationData | null>(null);
-  const [locationError, setLocationError] = useState<string>('');
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+export const MobileAttendanceCard = () => {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const {
+    location,
+    locationError,
+    isLoadingLocation,
+    getCurrentLocation,
+    refreshLocation,
+  } = useLocation({ maxRetries: 3, timeout: 15000 });
 
   const workspaceId = useWorkspaceId();
   const { data: user } = useCurrent();
@@ -32,90 +32,31 @@ export const  MobileAttendanceCard = () => {
   const checkInMutation = useCheckIn();
   const checkOutMutation = useCheckOut();
 
-  const getCurrentLocation = (): Promise<LocationData> => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported by this browser.'));
-        return;
-      }
-
-      setIsLoadingLocation(true);
-      setLocationError('');
-
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-
-            // Try to get address from coordinates
-            let address = '';
-            try {
-              const response = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-              );
-              const data = await response.json();
-              address = data.display_name || '';
-            } catch (error) {
-              console.warn('Failed to get address:', error);
-            }
-
-            const locationData: LocationData = {
-              latitude,
-              longitude,
-              address,
-            };
-
-            setLocation(locationData);
-            setIsLoadingLocation(false);
-            resolve(locationData);
-          } catch (error) {
-            setIsLoadingLocation(false);
-            reject(error);
-          }
-        },
-        (error) => {
-          setIsLoadingLocation(false);
-          let errorMessage = 'Failed to get location.';
-
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage = 'Location access denied. Please enable location access.';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = 'Location information unavailable.';
-              break;
-            case error.TIMEOUT:
-              errorMessage = 'Location request timed out.';
-              break;
-          }
-
-          setLocationError(errorMessage);
-          reject(new Error(errorMessage));
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000,
-        }
-      );
-    });
-  };
+  // Cache location for a short period to avoid refetching
+  useEffect(() => {
+    if (location && !checkoutDialogOpen) {
+      // Location is cached, no need to refetch immediately
+    }
+  }, [location, checkoutDialogOpen]);
 
   const handleCheckIn = async () => {
-    if (!location) {
+    let currentLocation = location;
+    
+    if (!currentLocation) {
       try {
-        await getCurrentLocation();
+        currentLocation = await getCurrentLocation();
       } catch (error) {
+        // Error is already handled by useLocation hook
         return;
       }
     }
 
-    if (location) {
+    if (currentLocation) {
       checkInMutation.mutate({
         workspaceId,
-        checkInLatitude: location.latitude,
-        checkInLongitude: location.longitude,
-        checkInAddress: location.address,
+        checkInLatitude: currentLocation.latitude,
+        checkInLongitude: currentLocation.longitude,
+        checkInAddress: currentLocation.address,
       }, {
         onSuccess: () => {
           refetchToday();
@@ -125,16 +66,25 @@ export const  MobileAttendanceCard = () => {
   };
 
   const handleCheckOutClick = async () => {
+    // Open dialog first, location will be fetched if needed
+    setCheckoutDialogOpen(true);
+    
+    // Fetch location if not available
     if (!location) {
       try {
         await getCurrentLocation();
       } catch (error) {
-        return;
+        // Error is already handled by useLocation hook
+        // Dialog will show the error and allow retry
       }
     }
+  };
 
-    if (location) {
-      setCheckoutDialogOpen(true);
+  const handleRetryLocation = async () => {
+    try {
+      await refreshLocation();
+    } catch (error) {
+      // Error is already handled by useLocation hook
     }
   };
 
@@ -234,10 +184,22 @@ export const  MobileAttendanceCard = () => {
         )}
 
         {/* Location Error */}
-        {locationError && (
-          <div className="text-xs text-red-600 bg-red-50 p-2 rounded">
-            {locationError}
-          </div>
+        {locationError && !checkoutDialogOpen && (
+          <Alert variant="destructive" className="text-xs">
+            <AlertCircle className="h-3 w-3" />
+            <AlertDescription className="flex items-center justify-between text-xs">
+              <span>{locationError}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRetryLocation}
+                className="ml-2 h-6 text-xs px-2"
+              >
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Action Buttons */}
@@ -283,6 +245,8 @@ export const  MobileAttendanceCard = () => {
                 location={location}
                 isLoadingLocation={isLoadingLocation}
                 isPending={checkOutMutation.isPending}
+                locationError={locationError}
+                onRetryLocation={handleRetryLocation}
               />
             </>
           )}

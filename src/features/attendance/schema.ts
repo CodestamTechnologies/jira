@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeText, countNormalizedCharacters } from './utils';
 
 export const createAttendanceSchema = z.object({
   workspaceId: z.string().min(1, 'Workspace ID is required'),
@@ -12,7 +13,28 @@ export const updateAttendanceSchema = z.object({
   checkOutLatitude: z.number().min(-90).max(90, 'Invalid latitude'),
   checkOutLongitude: z.number().min(-180).max(180, 'Invalid longitude'),
   checkOutAddress: z.string().optional(),
-  notes: z.string().min(10, 'Daily summary must be at least 10 characters').max(1000, 'Daily summary cannot exceed 1000 characters'),
+  notes: z
+    .string()
+    .min(1, 'Daily summary is required')
+    .refine(
+      (val) => {
+        const normalized = normalizeText(val);
+        return countNormalizedCharacters(normalized) >= 10;
+      },
+      {
+        message: 'Daily summary must be at least 10 characters (after removing special formatting)',
+      }
+    )
+    .refine(
+      (val) => {
+        const normalized = normalizeText(val);
+        return countNormalizedCharacters(normalized) <= 1000;
+      },
+      {
+        message: 'Daily summary cannot exceed 1000 characters',
+      }
+    )
+    .transform((val) => normalizeText(val)), // Normalize before storing
 });
 
 export const attendanceFiltersSchema = z.object({
