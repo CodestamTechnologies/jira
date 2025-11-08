@@ -47,7 +47,7 @@ const app = new Hono()
       // For invoices, try to get invoice ID
       let entityId = `download-${Date.now()}`;
       let projectId: string | undefined;
-      
+
       if (documentType === 'INVOICE' && invoiceNumber) {
         try {
           const invoices = await databases.listDocuments<Invoice>(DATABASE_ID, INVOICES_ID, [

@@ -48,7 +48,7 @@ export function JoiningLetterPageClient() {
     const day = date.getDate()
     const month = date.toLocaleString('default', { month: 'long' })
     const year = date.getFullYear()
-    
+
     const getOrdinal = (n: number): string => {
       if (n > 3 && n < 21) return `${n}th`
       switch (n % 10) {
@@ -58,7 +58,7 @@ export function JoiningLetterPageClient() {
         default: return `${n}th`
       }
     }
-    
+
     return `${getOrdinal(day)} ${month}, ${year}`
   }
 
@@ -71,7 +71,7 @@ export function JoiningLetterPageClient() {
     setIsGenerating(true)
     try {
       const formattedDate = formatDateWithOrdinal(date)
-      
+
       const letterData: JoiningLetterData = {
         employeeName,
         employeeEmail,
@@ -87,7 +87,7 @@ export function JoiningLetterPageClient() {
       // Generate PDF on client
       const doc = <JoiningLetterPDF {...letterData} />
       const pdfBlob = await pdf(doc).toBlob()
-      
+
       // Download PDF with logging
       const filename = generateSafeFilename(`Joining-Letter-${employeeName}`, 'pdf')
       await downloadWithLogging({

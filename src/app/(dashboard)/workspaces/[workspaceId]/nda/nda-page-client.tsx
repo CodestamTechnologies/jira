@@ -57,7 +57,7 @@ export function NDAPageClient() {
     setIsGenerating(true)
     try {
       const formattedDate = format(effectiveDate, 'MMM dd, yyyy')
-      
+
       const ndaData: NDAData = {
         companyName: COMPANY_INFO.legalName,
         companyAddress: COMPANY_INFO.address,
@@ -72,7 +72,7 @@ export function NDAPageClient() {
       // Generate PDF on client
       const doc = <NDAPDF {...ndaData} />
       const pdfBlob = await pdf(doc).toBlob()
-      
+
       // Download PDF with logging
       const filename = generateSafeFilename(`NDA-${employeeName}`, 'pdf')
       await downloadWithLogging({
@@ -109,7 +109,7 @@ export function NDAPageClient() {
     setIsGenerating(true)
     try {
       const formattedDate = format(effectiveDate, 'MMM dd, yyyy')
-      
+
       const ndaData: NDAData = {
         companyName: COMPANY_INFO.legalName,
         companyAddress: COMPANY_INFO.address,

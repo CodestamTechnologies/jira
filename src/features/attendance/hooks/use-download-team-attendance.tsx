@@ -63,6 +63,10 @@ export const useDownloadTeamAttendance = () => {
                 status: item.attendance.status,
                 checkInAddress: item.attendance.checkInAddress,
                 checkOutAddress: item.attendance.checkOutAddress,
+                checkInLatitude: item.attendance.checkInLatitude,
+                checkInLongitude: item.attendance.checkInLongitude,
+                checkOutLatitude: item.attendance.checkOutLatitude,
+                checkOutLongitude: item.attendance.checkOutLongitude,
                 notes: item.attendance.notes,
               }
             : null,

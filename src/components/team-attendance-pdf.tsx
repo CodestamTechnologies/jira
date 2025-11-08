@@ -6,6 +6,7 @@ import {
   View,
   Image,
   StyleSheet,
+  Link,
 } from '@react-pdf/renderer';
 
 import { registerPDFFonts } from '@/lib/pdf/fonts';
@@ -96,6 +97,10 @@ interface TeamAttendanceItem {
     status: string;
     checkInAddress?: string;
     checkOutAddress?: string;
+    checkInLatitude?: number;
+    checkInLongitude?: number;
+    checkOutLatitude?: number;
+    checkOutLongitude?: number;
     notes?: string;
   } | null;
 }
@@ -225,18 +230,40 @@ const TeamAttendancePDF: React.FC<TeamAttendancePDFData> = ({
                   </Text>
                 </View>
                 <View style={[tableStyles.tableCellTime]}>
-                  <Text style={{ fontSize: 8 }}>
-                    {item.attendance?.checkInTime
-                      ? format(new Date(item.attendance.checkInTime), 'HH:mm')
-                      : '-'}
-                  </Text>
+                  {item.attendance?.checkInTime ? (
+                    item.attendance.checkInLatitude && item.attendance.checkInLongitude ? (
+                      <Link
+                        src={`https://www.google.com/maps?q=${item.attendance.checkInLatitude},${item.attendance.checkInLongitude}`}
+                        style={{ fontSize: 8, color: '#0066cc', textDecoration: 'underline' }}
+                      >
+                        {format(new Date(item.attendance.checkInTime), 'HH:mm')}
+                      </Link>
+                    ) : (
+                      <Text style={{ fontSize: 8 }}>
+                        {format(new Date(item.attendance.checkInTime), 'HH:mm')}
+                      </Text>
+                    )
+                  ) : (
+                    <Text style={{ fontSize: 8 }}>-</Text>
+                  )}
                 </View>
                 <View style={[tableStyles.tableCellTime]}>
-                  <Text style={{ fontSize: 8 }}>
-                    {item.attendance?.checkOutTime
-                      ? format(new Date(item.attendance.checkOutTime), 'HH:mm')
-                      : '-'}
-                  </Text>
+                  {item.attendance?.checkOutTime ? (
+                    item.attendance.checkOutLatitude && item.attendance.checkOutLongitude ? (
+                      <Link
+                        src={`https://www.google.com/maps?q=${item.attendance.checkOutLatitude},${item.attendance.checkOutLongitude}`}
+                        style={{ fontSize: 8, color: '#0066cc', textDecoration: 'underline' }}
+                      >
+                        {format(new Date(item.attendance.checkOutTime), 'HH:mm')}
+                      </Link>
+                    ) : (
+                      <Text style={{ fontSize: 8 }}>
+                        {format(new Date(item.attendance.checkOutTime), 'HH:mm')}
+                      </Text>
+                    )
+                  ) : (
+                    <Text style={{ fontSize: 8 }}>-</Text>
+                  )}
                 </View>
                 <View style={[tableStyles.tableCellHours]}>
                   <Text style={{ fontSize: 8 }}>
