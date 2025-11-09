@@ -13,6 +13,7 @@ import { useGetTodayAttendance } from '@/features/attendance/api/use-get-today-a
 import { useGetTodayAttendanceStats } from '@/features/attendance/api/use-get-today-attendance-stats';
 import { useCurrent } from '@/features/auth/api/use-current';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import { formatHoursAndMinutes } from '@/features/attendance/utils';
 
 export const TodayAttendanceStats = () => {
   const workspaceId = useWorkspaceId();
@@ -132,7 +133,7 @@ export const TodayAttendanceStats = () => {
                       {userAttendance.checkOutTime && userAttendance.totalHours && (
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <Clock className="size-3 text-blue-600 dark:text-blue-400" />
-                          <span>Total: {userAttendance.totalHours.toFixed(2)}h worked</span>
+                          <span>Total: {formatHoursAndMinutes(userAttendance.totalHours)} worked</span>
                         </div>
                       )}
                     </div>

@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { getStatusIcon, getStatusColor, formatStatusLabel } from '../utils/attendance-status';
+import { formatHoursAndMinutes } from '../utils';
 
 interface TeamAttendanceItem {
   member: {
@@ -154,7 +155,7 @@ export const TeamAttendanceTable = ({
                       {item.attendance?.totalHours ? (
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                          <span>{item.attendance.totalHours.toFixed(2)}h</span>
+                          <span>{formatHoursAndMinutes(item.attendance.totalHours)}</span>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm">-</span>

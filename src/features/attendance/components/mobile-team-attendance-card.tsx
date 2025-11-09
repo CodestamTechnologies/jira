@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { getStatusIcon, getStatusColor, formatStatusLabel } from '../utils/attendance-status';
+import { formatHoursAndMinutes } from '../utils';
 
 interface TeamAttendanceItem {
   member: {
@@ -148,7 +149,7 @@ export const MobileTeamAttendanceCard = ({
                       <div>
                         <span className="text-xs text-muted-foreground">Total Hours: </span>
                         <span className="text-sm font-medium">
-                          {item.attendance.totalHours.toFixed(2)}h
+                          {formatHoursAndMinutes(item.attendance.totalHours)}
                         </span>
                       </div>
                     </div>

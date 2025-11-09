@@ -18,6 +18,7 @@ import {
 } from '@/lib/pdf/components';
 import { COMPANY_INFO } from '@/lib/pdf/constants';
 import { format } from 'date-fns';
+import { formatHoursAndMinutes } from '@/features/attendance/utils';
 
 registerPDFFonts();
 
@@ -290,7 +291,7 @@ const TeamAttendancePDF: React.FC<TeamAttendancePDFData> = ({
                 <View style={[tableStyles.tableCellHours]}>
                   <Text style={{ fontSize: 8 }}>
                     {item.attendance?.totalHours
-                      ? `${item.attendance.totalHours.toFixed(2)}h`
+                      ? formatHoursAndMinutes(item.attendance.totalHours)
                       : '-'}
                   </Text>
                 </View>

@@ -109,3 +109,33 @@ export const normalizeText = (text: string): string => {
 export const countNormalizedCharacters = (text: string): number => {
   return normalizeText(text).length
 }
+
+/**
+ * Formats decimal hours into a human-readable "x hours and y minutes" format
+ * @param totalHours - Decimal hours (e.g., 12.87)
+ * @returns Formatted string (e.g., "12 hours and 52 minutes")
+ */
+export const formatHoursAndMinutes = (totalHours: number): string => {
+  if (!totalHours || totalHours <= 0) {
+    return '0 mins'
+  }
+
+  const hours = Math.floor(totalHours)
+  const decimalPart = totalHours - hours
+  const minutes = Math.round(decimalPart * 60)
+
+  // Handle edge cases
+  if (hours === 0 && minutes === 0) {
+    return '0 mins'
+  }
+
+  if (hours === 0) {
+    return `${minutes} ${minutes === 1 ? 'min' : 'mins'}`
+  }
+
+  if (minutes === 0) {
+    return `${hours} ${hours === 1 ? 'hr' : 'hours'}`
+  }
+
+  return `${hours} ${hours === 1 ? 'hr' : 'hrs'} and ${minutes} ${minutes === 1 ? 'min' : 'mins'}`
+}

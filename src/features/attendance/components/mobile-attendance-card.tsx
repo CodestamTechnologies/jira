@@ -15,6 +15,7 @@ import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useCurrent } from '@/features/auth/api/use-current';
 import { CheckoutDialog } from './checkout-dialog';
 import { useLocation } from '../hooks/use-location';
+import { formatHoursAndMinutes } from '../utils';
 
 export const MobileAttendanceCard = () => {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
@@ -177,7 +178,7 @@ export const MobileAttendanceCard = () => {
             {todayAttendance.totalHours && (
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-blue-500" />
-                <span>Total: {todayAttendance.totalHours.toFixed(2)}h</span>
+                <span>Total: {formatHoursAndMinutes(todayAttendance.totalHours)}</span>
               </div>
             )}
           </div>

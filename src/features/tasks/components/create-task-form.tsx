@@ -284,7 +284,7 @@ export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memb
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                        <PopoverContent className="z-[100] w-[var(--radix-popover-trigger-width)] p-0" align="start">
                           <Command>
                             <CommandInput placeholder="Search projects..." />
                             <CommandList>

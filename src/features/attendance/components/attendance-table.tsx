@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useGetAttendance } from '../api/use-get-attendance';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { Attendance, AttendanceFilters } from '../types';
+import { formatHoursAndMinutes } from '../utils';
 
 export const AttendanceTable = () => {
   const [filters, setFilters] = useState<AttendanceFilters>({});
@@ -181,7 +182,7 @@ export const AttendanceTable = () => {
                       {record.totalHours ? (
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                          <span>{record.totalHours.toFixed(2)}h</span>
+                          <span>{formatHoursAndMinutes(record.totalHours)}</span>
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm">-</span>

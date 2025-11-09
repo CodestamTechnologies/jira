@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useGetAttendance } from '@/features/attendance/api/use-get-attendance';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { Attendance } from '@/features/attendance/types';
+import { formatHoursAndMinutes } from '@/features/attendance/utils';
 
 interface MemberAttendanceClientProps {
   workspaceId: string;
@@ -270,7 +271,7 @@ export const MemberAttendanceClient = ({ workspaceId, userId }: MemberAttendance
                     {record.totalHours && (
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 text-blue-500" />
-                        <span>Total: {record.totalHours.toFixed(2)}h</span>
+                        <span>Total: {formatHoursAndMinutes(record.totalHours)}</span>
                       </div>
                     )}
 
