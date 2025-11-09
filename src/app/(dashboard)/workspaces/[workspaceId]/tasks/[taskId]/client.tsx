@@ -34,6 +34,7 @@ export const TaskIdClient = () => {
       {currentUser && (
         <TaskComments
           taskId={task.$id}
+          workspaceId={task.workspaceId}
           currentUserId={currentUser.$id}
           currentUserName={currentUser.name || currentUser.email || currentUser.$id}
         />

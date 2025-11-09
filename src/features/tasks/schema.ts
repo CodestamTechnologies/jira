@@ -32,4 +32,11 @@ export const createCommentSchema = z.object({
   content: z.string().trim().min(1, 'Comment content is required.'),
   authorId: z.string().trim().min(1, 'Author id is required.'),
   username: z.string().trim().min(1, 'Username is required.'),
+  parentId: z.string().trim().optional(),
+  mentions: z.array(z.string()).optional(),
+});
+
+export const updateCommentSchema = z.object({
+  content: z.string().trim().min(1, 'Comment content is required.'),
+  mentions: z.array(z.string()).optional(),
 });
