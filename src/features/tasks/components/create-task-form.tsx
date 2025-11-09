@@ -15,10 +15,8 @@ import { Input } from '@/components/ui/input';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Check, ChevronsUpDown, AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useCreateTask } from '@/features/tasks/api/use-create-task';
@@ -39,7 +37,6 @@ interface CreateTaskFormProps {
 export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memberOptions, projectOptions }: CreateTaskFormProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
-  const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const { mutate: createTask, isPending } = useCreateTask();
@@ -256,67 +253,31 @@ export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memb
                     <FormItem>
                       <FormLabel>Project</FormLabel>
 
-                      <Popover
-                        open={projectPopoverOpen}
-                        onOpenChange={(open) => {
-                          if (!isPending) {
-                            setProjectPopoverOpen(open)
-                          }
-                        }}
-                      >
-                        <PopoverTrigger asChild disabled={isPending}>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              type="button"
-                              className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}
-                            >
-                              {selectedProject ? (
-                                <div className="flex items-center gap-x-2">
-                                  <ProjectAvatar className="size-4" name={selectedProject.name} image={selectedProject.imageUrl} />
-                                  <span>{selectedProject.name}</span>
-                                </div>
-                              ) : (
-                                <span>Select project</span>
-                              )}
-                              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="z-[100] w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search projects..." />
-                            <CommandList>
-                              <CommandEmpty>No project found.</CommandEmpty>
-                              <CommandGroup>
-                                {projectOptions.map((project) => {
-                                  const handleSelect = () => {
-                                    if (isPending) return
-                                    field.onChange(project.id)
-                                    setProjectPopoverOpen(false)
-                                  }
+                      <Select disabled={isPending || isValidating} value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            {selectedProject ? (
+                              <div className="flex items-center gap-x-2">
+                                <ProjectAvatar className="size-4" name={selectedProject.name} image={selectedProject.imageUrl} />
+                                <SelectValue>{selectedProject.name}</SelectValue>
+                              </div>
+                            ) : (
+                              <SelectValue placeholder="Select project" />
+                            )}
+                          </SelectTrigger>
+                        </FormControl>
 
-                                  return (
-                                    <CommandItem
-                                      key={project.id}
-                                      value={project.name}
-                                      onSelect={handleSelect}
-                                      onClick={handleSelect}
-                                    >
-                                      <div className="flex items-center gap-x-2">
-                                        <ProjectAvatar className="size-4" name={project.name} image={project.imageUrl} />
-                                        <span>{project.name}</span>
-                                      </div>
-                                      <Check className={cn('ml-auto size-4', field.value === project.id ? 'opacity-100' : 'opacity-0')} />
-                                    </CommandItem>
-                                  )
-                                })}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                        <SelectContent>
+                          {projectOptions.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              <div className="flex items-center gap-x-2">
+                                <ProjectAvatar className="size-4" name={project.name} image={project.imageUrl} />
+                                <span>{project.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
                       <FormMessage />
                     </FormItem>
