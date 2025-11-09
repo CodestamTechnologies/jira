@@ -4,10 +4,11 @@ import { Hono } from 'hono';
 import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
-import { DATABASE_ID, IMAGES_BUCKET_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { DATABASE_ID, IMAGES_BUCKET_ID, PROJECTS_ID, TASKS_ID, MEMBERS_ID, WORKSPACES_ID } from '@/config/db';
 import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
 import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
-import { logActivity, getChangedFields } from '@/features/activity-logs/utils/log-activity';
+import { getChangedFields } from '@/features/activity-logs/utils/log-activity';
+import { logActivityBackground } from '@/lib/activity-logs/utils/log-activity-background';
 import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
@@ -15,6 +16,8 @@ import { createProjectSchema, updateProjectSchema } from '@/features/projects/sc
 import type { Project } from '@/features/projects/types';
 import { type Task, TaskStatus } from '@/features/tasks/types';
 import { sessionMiddleware } from '@/lib/session-middleware';
+import { NotificationService } from '@/lib/email/services/notification-service';
+import type { Workspace } from '@/features/workspaces/types';
 
 const app = new Hono()
   .post('/', sessionMiddleware, zValidator('form', createProjectSchema), async (ctx) => {
@@ -71,10 +74,20 @@ const app = new Hono()
       description: 'Update project metadata including favicon and other branding elements.',
     });
 
-    // Log activity
+    // Send email notifications and log activity in background (non-blocking)
+    const workspace = await databases.getDocument<Workspace>(DATABASE_ID, WORKSPACES_ID, workspaceId);
+    const notificationService = new NotificationService(databases);
+    notificationService.notifyProjectCreated(
+      name,
+      workspaceId,
+      workspace.name,
+      user.$id,
+      user.$id // Exclude creator
+    );
+
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.CREATE,
       entityType: ActivityEntityType.PROJECT,
@@ -299,7 +312,7 @@ const app = new Hono()
       }
 
       const metadata = getRequestMetadata(ctx);
-      await logActivity({
+      logActivityBackground({
         databases,
         action: ActivityAction.UPDATE,
         entityType: ActivityEntityType.PROJECT,
@@ -351,7 +364,7 @@ const app = new Hono()
     // Log activity
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.DELETE,
       entityType: ActivityEntityType.PROJECT,

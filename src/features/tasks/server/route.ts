@@ -4,11 +4,11 @@ import { Hono } from 'hono';
 import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
-import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID, COMMENTS_ID } from '@/config/db';
+import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID, COMMENTS_ID, WORKSPACES_ID } from '@/config/db';
 import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
 import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
-import { logActivity } from '@/features/activity-logs/utils/log-activity';
 import { getChangedFields } from '@/features/activity-logs/utils/log-activity';
+import { logActivityBackground } from '@/lib/activity-logs/utils/log-activity-background';
 import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
@@ -20,6 +20,8 @@ import { sessionMiddleware } from '@/lib/session-middleware';
 import commentsRoute from './comments';
 import { validateTaskSchema } from './ai-validation';
 import { createTaskValidationService } from '@/lib/ai';
+import { NotificationService } from '@/lib/email/services/notification-service';
+import type { Workspace } from '@/features/workspaces/types';
 
 const app = new Hono()
   .get(
@@ -305,10 +307,24 @@ const app = new Hono()
       description: description && description.trim() ? description.trim() : undefined,
     });
 
-    // Log activity
+    // Send email notifications and log activity in background (non-blocking)
+    const workspace = await databases.getDocument<Workspace>(DATABASE_ID, WORKSPACES_ID, workspaceId);
+    const project = projectId ? await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId) : null;
+    const notificationService = new NotificationService(databases);
+    
+    if (assigneeIds && assigneeIds.length > 0) {
+      notificationService.notifyTaskCreated(
+        task,
+        workspace.name,
+        project?.name || 'No Project',
+        user.$id,
+        assigneeIds
+      );
+    }
+
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.CREATE,
       entityType: ActivityEntityType.TASK,
@@ -379,7 +395,44 @@ const app = new Hono()
 
     const task = await databases.updateDocument(DATABASE_ID, TASKS_ID, taskId, updateData);
 
-    // Log activity - only log changed fields
+    // Send email notifications and log activity in background (non-blocking)
+    const workspace = await databases.getDocument<Workspace>(DATABASE_ID, WORKSPACES_ID, existingTask.workspaceId);
+    const project = existingTask.projectId ? await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, existingTask.projectId) : null;
+    const notificationService = new NotificationService(databases);
+
+    // Send email notifications for status changes
+    if (status && existingTask.status !== status) {
+      const allAssigneeIds = Array.from(new Set([...(existingTask.assigneeIds || []), ...(task.assigneeIds || [])]));
+      if (allAssigneeIds.length > 0) {
+        notificationService.notifyTaskStatusChanged(
+          task as Task,
+          workspace.name,
+          project?.name || 'No Project',
+          existingTask.status,
+          status,
+          user.$id,
+          allAssigneeIds
+        );
+      }
+    }
+
+    // Send email notifications for new assignees
+    if (assigneeIds !== undefined) {
+      const existingAssigneeIds = new Set(existingTask.assigneeIds || []);
+      const newAssigneeIds = assigneeIds.filter((id) => !existingAssigneeIds.has(id));
+
+      if (newAssigneeIds.length > 0) {
+        notificationService.notifyTaskAssigned(
+          task as Task,
+          workspace.name,
+          project?.name || 'No Project',
+          user.$id,
+          newAssigneeIds
+        );
+      }
+    }
+
+    // Log activity in background - only log changed fields
     const changedFields = getChangedFields(existingTask, task);
     if (Object.keys(changedFields).length > 0) {
       const userInfo = getUserInfoForLogging(user);
@@ -390,7 +443,7 @@ const app = new Hono()
       }
 
       const metadata = getRequestMetadata(ctx);
-      await logActivity({
+      logActivityBackground({
         databases,
         action: ActivityAction.UPDATE,
         entityType: ActivityEntityType.TASK,
@@ -517,7 +570,7 @@ const app = new Hono()
     // Log activity
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.DELETE,
       entityType: ActivityEntityType.TASK,

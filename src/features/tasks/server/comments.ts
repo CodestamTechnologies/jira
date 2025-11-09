@@ -2,15 +2,18 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { ID, Query } from 'node-appwrite';
 
-import { COMMENTS_ID, DATABASE_ID, IMAGES_BUCKET_ID, TASKS_ID } from '@/config/db';
+import { COMMENTS_ID, DATABASE_ID, IMAGES_BUCKET_ID, TASKS_ID, MEMBERS_ID, WORKSPACES_ID, PROJECTS_ID } from '@/config/db';
 import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
 import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
-import { logActivity } from '@/features/activity-logs/utils/log-activity';
+import { logActivityBackground } from '@/lib/activity-logs/utils/log-activity-background';
 import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { createCommentSchema, updateCommentSchema } from '@/features/tasks/schema';
 import { type Comment, type Task, stringifyAttachments, parseAttachments } from '@/features/tasks/types';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import z from 'zod';
+import { NotificationService } from '@/lib/email/services/notification-service';
+import type { Workspace } from '@/features/workspaces/types';
+import type { Project } from '@/features/projects/types';
 
 const app = new Hono()
   // Upload file for comment
@@ -148,10 +151,64 @@ const app = new Hono()
       attachments: parseAttachments(comment.attachments),
     };
 
-    // Log activity
+    // Send email notifications and log activity in background (non-blocking)
+    const workspace = await databases.getDocument<Workspace>(DATABASE_ID, WORKSPACES_ID, task.workspaceId);
+    const project = task.projectId ? await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, task.projectId) : null;
+    const notificationService = new NotificationService(databases);
+
+    // Match mentions to members (by name or email) - exclude comment author
+    if (finalMentions && finalMentions.length > 0) {
+      const workspaceMembers = await databases.listDocuments(DATABASE_ID, MEMBERS_ID, [
+        Query.equal('workspaceId', task.workspaceId),
+      ]);
+
+      const { users } = await import('@/lib/appwrite').then(m => m.createAdminClient());
+      const mentionedMemberIds = new Set<string>();
+      for (const mention of finalMentions) {
+        for (const member of workspaceMembers.documents) {
+          // Skip if this is the comment author - they shouldn't get a mention notification
+          if (member.userId === user.$id) {
+            continue;
+          }
+          const memberUser = await users.get(member.userId);
+          if (
+            memberUser.name?.toLowerCase().includes(mention.toLowerCase()) ||
+            memberUser.email?.toLowerCase().includes(mention.toLowerCase())
+          ) {
+            mentionedMemberIds.add(member.$id);
+            break; // Found a match, move to next mention
+          }
+        }
+      }
+
+      if (mentionedMemberIds.size > 0) {
+        notificationService.notifyCommentMentioned(
+          task,
+          workspace.name,
+          project?.name || 'No Project',
+          user.$id,
+          content,
+          Array.from(mentionedMemberIds)
+        );
+      }
+    }
+
+    // Send email notifications to task assignees (if they weren't mentioned and aren't the author)
+    if (task.assigneeIds && task.assigneeIds.length > 0) {
+      notificationService.notifyCommentAdded(
+        task,
+        workspace.name,
+        project?.name || 'No Project',
+        user.$id,
+        content,
+        task.assigneeIds,
+        user.$id // Exclude comment author
+      );
+    }
+
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.CREATE,
       entityType: ActivityEntityType.COMMENT,
@@ -213,7 +270,7 @@ const app = new Hono()
     // Log activity
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.UPDATE,
       entityType: ActivityEntityType.COMMENT,
@@ -270,7 +327,7 @@ const app = new Hono()
     // Log activity
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.DELETE,
       entityType: ActivityEntityType.COMMENT,

@@ -17,6 +17,8 @@ import { createWorkspaceSchema, updateWorkspaceSchema } from '@/features/workspa
 import type { Workspace } from '@/features/workspaces/types';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import { generateInviteCode } from '@/lib/utils';
+import { NotificationService } from '@/lib/email/services/notification-service';
+import { logActivityBackground } from '@/lib/activity-logs/utils/log-activity-background';
 
 const app = new Hono()
   .get('/', sessionMiddleware, async (ctx) => {
@@ -94,10 +96,10 @@ const app = new Hono()
       role: MemberRole.ADMIN,
     });
 
-    // Log activity
+    // Log activity in background (non-blocking)
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.CREATE,
       entityType: ActivityEntityType.WORKSPACE,
@@ -222,7 +224,7 @@ const app = new Hono()
       }
 
       const metadata = getRequestMetadata(ctx);
-      await logActivity({
+      logActivityBackground({
         databases,
         action: ActivityAction.UPDATE,
         entityType: ActivityEntityType.WORKSPACE,
@@ -289,7 +291,7 @@ const app = new Hono()
     // Log activity
     const userInfo = getUserInfoForLogging(user);
     const metadata = getRequestMetadata(ctx);
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.DELETE,
       entityType: ActivityEntityType.WORKSPACE,
@@ -363,6 +365,28 @@ const app = new Hono()
         userId: user.$id,
         role: MemberRole.MEMBER,
       });
+
+      // Send email notification to the new member in background (non-blocking)
+      const { users } = await import('@/lib/appwrite').then(m => m.createAdminClient());
+      const workspaceMembers = await databases.listDocuments<Member>(DATABASE_ID, MEMBERS_ID, [
+        Query.equal('workspaceId', workspaceId),
+        Query.equal('role', MemberRole.ADMIN),
+        Query.limit(1),
+      ]);
+      
+      let inviterName = 'Administrator';
+      if (workspaceMembers.documents.length > 0) {
+        const adminUser = await users.get(workspaceMembers.documents[0].userId);
+        inviterName = adminUser.name || adminUser.email || 'Administrator';
+      }
+
+      const notificationService = new NotificationService(databases);
+      notificationService.notifyMemberAdded(
+        user.$id,
+        workspaceId,
+        workspace.name,
+        inviterName
+      );
 
       return ctx.json({ data: workspace });
     },

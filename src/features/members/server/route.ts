@@ -3,15 +3,17 @@ import { Hono } from 'hono'
 import { Query } from 'node-appwrite'
 import { z } from 'zod'
 
-import { DATABASE_ID, MEMBERS_ID } from '@/config/db'
+import { DATABASE_ID, MEMBERS_ID, WORKSPACES_ID } from '@/config/db'
 import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types'
 import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info'
-import { logActivity, getChangedFields } from '@/features/activity-logs/utils/log-activity'
+import { getChangedFields } from '@/features/activity-logs/utils/log-activity'
+import { logActivityBackground } from '@/lib/activity-logs/utils/log-activity-background'
 import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata'
 import { type Member, MemberRole } from '@/features/members/types'
 import { getMember } from '@/features/members/utils'
 import { createAdminClient } from '@/lib/appwrite'
 import { sessionMiddleware } from '@/lib/session-middleware'
+import { NotificationService } from '@/lib/email/services/notification-service'
 
 const updateMemberInfoSchema = z.object({
   position: z.string().optional(),
@@ -190,7 +192,7 @@ const app = new Hono()
       // Update member info
       const updatedMember = await databases.updateDocument(DATABASE_ID, MEMBERS_ID, memberId, updateData)
 
-      // Log activity - only log changed fields
+      // Log activity in background - only log changed fields
       const changedFields = getChangedFields(member, updatedMember)
       if (Object.keys(changedFields).length > 0) {
         const userInfo = getUserInfoForLogging(user)
@@ -201,7 +203,7 @@ const app = new Hono()
         }
 
         const metadata = getRequestMetadata(ctx)
-        await logActivity({
+        logActivityBackground({
           databases,
           action: ActivityAction.UPDATE,
           entityType: ActivityEntityType.MEMBER,
@@ -244,12 +246,25 @@ const app = new Hono()
       return ctx.json({ error: 'Unauthorized.' }, 401)
     }
 
+    // Get workspace info for email
+    const workspace = await databases.getDocument(DATABASE_ID, WORKSPACES_ID, member.workspaceId)
+    const { users } = await createAdminClient()
+    const requesterUser = await users.get(user.$id)
+
     await databases.deleteDocument(DATABASE_ID, MEMBERS_ID, memberId)
 
-    // Log activity
+    // Send email notification and log activity in background (non-blocking)
+    const notificationService = new NotificationService(databases)
+    notificationService.notifyMemberRemoved(
+      memberId,
+      member.workspaceId,
+      workspace.name,
+      requesterUser.name || requesterUser.email || 'Administrator'
+    )
+
     const userInfo = getUserInfoForLogging(user)
     const metadata = getRequestMetadata(ctx)
-    await logActivity({
+    logActivityBackground({
       databases,
       action: ActivityAction.DELETE,
       entityType: ActivityEntityType.MEMBER,
@@ -299,10 +314,24 @@ const app = new Hono()
         role,
       })
 
-      // Log activity
+      // Send email notification and log activity in background (non-blocking)
+      if (member.role !== role) {
+        const workspace = await databases.getDocument(DATABASE_ID, WORKSPACES_ID, member.workspaceId)
+        const { users } = await createAdminClient()
+        const requesterUser = await users.get(user.$id)
+        const notificationService = new NotificationService(databases)
+        notificationService.notifyMemberRoleChanged(
+          memberId,
+          member.workspaceId,
+          workspace.name,
+          role === MemberRole.ADMIN ? 'Administrator' : 'Member',
+          requesterUser.name || requesterUser.email || 'Administrator'
+        )
+      }
+
       const userInfo = getUserInfoForLogging(user)
       const metadata = getRequestMetadata(ctx)
-      await logActivity({
+      logActivityBackground({
         databases,
         action: ActivityAction.UPDATE,
         entityType: ActivityEntityType.MEMBER,
@@ -358,10 +387,24 @@ const app = new Hono()
         isActive,
       })
 
-      // Log activity
+      // Send email notification and log activity in background (non-blocking)
+      if (member.isActive !== isActive) {
+        const workspace = await databases.getDocument(DATABASE_ID, WORKSPACES_ID, member.workspaceId)
+        const { users } = await createAdminClient()
+        const requesterUser = await users.get(user.$id)
+        const notificationService = new NotificationService(databases)
+        notificationService.notifyMemberStatusChanged(
+          memberId,
+          member.workspaceId,
+          workspace.name,
+          isActive,
+          requesterUser.name || requesterUser.email || 'Administrator'
+        )
+      }
+
       const userInfo = getUserInfoForLogging(user)
       const metadata = getRequestMetadata(ctx)
-      await logActivity({
+      logActivityBackground({
         databases,
         action: ActivityAction.UPDATE,
         entityType: ActivityEntityType.MEMBER,
