@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useOptimistic, startTransition } from 'react'
 import { useGetComments } from '../api/use-get-comments'
 import { useCreateComment } from '../api/use-create-comment'
 import { useUpdateComment } from '../api/use-update-comment'
@@ -25,6 +25,8 @@ import { CommentAttachments } from './comment-attachments'
 import { CommentContent } from './comment-content'
 import { MentionAutocomplete } from './mention-autocomplete'
 import { extractMentions } from '../utils/comment-utils'
+import { parseAttachments } from '../types'
+import { cn } from '@/lib/utils'
 
 interface TaskCommentsProps {
   taskId: string
@@ -42,6 +44,9 @@ interface CommentItemProps {
   replies: Comment[]
   members?: Array<{ userId: string; name: string; email: string }>
   level?: number
+  onOptimisticReply?: (reply: Comment) => void
+  onOptimisticUpdate?: (commentId: string, updatedComment: Comment) => void
+  onOptimisticDelete?: (commentId: string) => void
 }
 
 const CommentItem = ({
@@ -53,6 +58,9 @@ const CommentItem = ({
   replies,
   members,
   level = 0,
+  onOptimisticReply,
+  onOptimisticUpdate,
+  onOptimisticDelete,
 }: CommentItemProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isReplying, setIsReplying] = useState(false)
@@ -79,6 +87,25 @@ const CommentItem = ({
 
   const handleSaveEdit = useCallback(() => {
     if (!editValue.trim()) return
+
+    // Create optimistic updated comment
+    const optimisticUpdatedComment: Comment = {
+      ...comment,
+      content: editValue.trim(),
+      $updatedAt: new Date().toISOString(),
+    }
+
+    // Apply optimistic update immediately
+    if (onOptimisticUpdate) {
+      startTransition(() => {
+        onOptimisticUpdate(comment.$id, optimisticUpdatedComment)
+      })
+    }
+
+    // Exit edit mode immediately
+    setIsEditing(false)
+    setEditValue('')
+
     updateComment(
       {
         commentId: comment.$id,
@@ -87,12 +114,14 @@ const CommentItem = ({
       },
       {
         onSuccess: () => {
-          setIsEditing(false)
-          setEditValue('')
+          // Comment will be replaced by server response via query invalidation
+        },
+        onError: () => {
+          // Optimistic update will be automatically reverted by useOptimistic
         },
       }
     )
-  }, [editValue, comment.$id, taskId, updateComment])
+  }, [editValue, comment, taskId, updateComment, onOptimisticUpdate])
 
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false)
@@ -103,11 +132,18 @@ const CommentItem = ({
     const ok = await confirmDelete()
     if (!ok) return
 
+    // Apply optimistic delete immediately
+    if (onOptimisticDelete) {
+      startTransition(() => {
+        onOptimisticDelete(comment.$id)
+      })
+    }
+
     deleteComment({
       commentId: comment.$id,
       taskId,
     })
-  }, [comment.$id, taskId, deleteComment, confirmDelete])
+  }, [comment.$id, taskId, deleteComment, confirmDelete, onOptimisticDelete])
 
   const handleReply = useCallback(() => {
     setIsReplying(true)
@@ -115,6 +151,33 @@ const CommentItem = ({
 
   const handleSaveReply = useCallback(() => {
     if (!replyValue.trim()) return
+
+    // Create optimistic reply
+    const optimisticReply: Comment = {
+      $id: `temp-reply-${Date.now()}`,
+      $createdAt: new Date().toISOString(),
+      $updatedAt: new Date().toISOString(),
+      $collectionId: '',
+      $databaseId: '',
+      $permissions: [],
+      taskId,
+      content: replyValue.trim(),
+      authorId: currentUserId,
+      username: currentUserName || currentUserId,
+      parentId: comment.$id,
+    }
+
+    // Add optimistic reply immediately
+    if (onOptimisticReply) {
+      startTransition(() => {
+        onOptimisticReply(optimisticReply)
+      })
+    }
+
+    // Clear form immediately
+    setIsReplying(false)
+    setReplyValue('')
+
     addComment(
       {
         taskId,
@@ -125,12 +188,14 @@ const CommentItem = ({
       },
       {
         onSuccess: () => {
-          setIsReplying(false)
-          setReplyValue('')
+          // Reply will be replaced by server response via query invalidation
+        },
+        onError: () => {
+          // Optimistic reply will be automatically reverted by useOptimistic
         },
       }
     )
-  }, [replyValue, taskId, currentUserId, currentUserName, comment.$id, addComment])
+  }, [replyValue, taskId, currentUserId, currentUserName, comment.$id, addComment, onOptimisticReply])
 
   const handleCancelReply = useCallback(() => {
     setIsReplying(false)
@@ -169,7 +234,10 @@ const CommentItem = ({
           className="w-10 h-10 shrink-0"
         />
         <div className="flex-1 min-w-0">
-          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm px-4 py-3">
+          <div className={cn(
+            "bg-white dark:bg-zinc-900 rounded-lg shadow-sm px-4 py-3",
+            comment.$id.startsWith('temp-') && "opacity-75"
+          )}>
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="font-semibold text-primary text-sm">
@@ -265,8 +333,8 @@ const CommentItem = ({
                   content={comment.content}
                   members={members}
                 />
-                {comment.attachments && comment.attachments.length > 0 && (
-                  <CommentAttachments attachments={comment.attachments} />
+                {comment.attachments && parseAttachments(comment.attachments) && parseAttachments(comment.attachments)!.length > 0 && (
+                  <CommentAttachments attachments={parseAttachments(comment.attachments)!} />
                 )}
                 <div className="flex items-center gap-2 mt-2">
                   <Button
@@ -341,6 +409,9 @@ const CommentItem = ({
                   replies={[]}
                   members={members}
                   level={level + 1}
+                  onOptimisticReply={onOptimisticReply}
+                  onOptimisticUpdate={onOptimisticUpdate}
+                  onOptimisticDelete={onOptimisticDelete}
                 />
               ))}
             </ul>
@@ -378,12 +449,52 @@ export const TaskComments = ({
   const { mutate: addComment, isPending } = useCreateComment()
   const { mutate: uploadFile, isPending: isUploading } = useUploadCommentFile()
 
+  // Optimistic comments state
+  const [optimisticComments, optimisticAction] = useOptimistic(
+    comments,
+    (state: Comment[], action: { type: 'add' | 'update' | 'delete'; comment?: Comment; commentId?: string }) => {
+      switch (action.type) {
+        case 'add':
+          return action.comment ? [...state, action.comment] : state
+        case 'update':
+          return action.comment
+            ? state.map((c) => (c.$id === action.comment!.$id ? action.comment! : c))
+            : state
+        case 'delete':
+          return action.commentId ? state.filter((c) => c.$id !== action.commentId) : state
+        default:
+          return state
+      }
+    }
+  )
+
+  const addOptimisticComment = useCallback(
+    (comment: Comment) => {
+      optimisticAction({ type: 'add', comment })
+    },
+    [optimisticAction]
+  )
+
+  const updateOptimisticComment = useCallback(
+    (commentId: string, updatedComment: Comment) => {
+      optimisticAction({ type: 'update', comment: updatedComment })
+    },
+    [optimisticAction]
+  )
+
+  const deleteOptimisticComment = useCallback(
+    (commentId: string) => {
+      optimisticAction({ type: 'delete', commentId })
+    },
+    [optimisticAction]
+  )
+
   // Organize comments into threads (top-level comments and their replies)
   const organizedComments = useMemo(() => {
     const topLevel: Comment[] = []
     const replyMap = new Map<string, Comment[]>()
 
-    comments.forEach((comment) => {
+    optimisticComments.forEach((comment) => {
       if (!comment.parentId) {
         topLevel.push(comment)
       } else {
@@ -403,7 +514,7 @@ export const TaskComments = ({
     })
 
     return { topLevel, replyMap }
-  }, [comments])
+  }, [optimisticComments])
 
   const handleAdd = useCallback(() => {
     if (!value.trim() && attachments.length === 0) return
@@ -418,6 +529,31 @@ export const TaskComments = ({
       })
       .filter((id): id is string => !!id)
 
+    // Create optimistic comment
+    const optimisticComment: Comment = {
+      $id: `temp-${Date.now()}`,
+      $createdAt: new Date().toISOString(),
+      $updatedAt: new Date().toISOString(),
+      $collectionId: '',
+      $databaseId: '',
+      $permissions: [],
+      taskId,
+      content: value.trim(),
+      authorId: currentUserId,
+      username: currentUserName || currentUserId,
+      mentions: mentionUserIds.length > 0 ? mentionUserIds : undefined,
+      attachments: attachments.length > 0 ? JSON.stringify(attachments) : undefined,
+    }
+
+    // Add optimistic comment immediately
+    startTransition(() => {
+      addOptimisticComment(optimisticComment)
+    })
+
+    // Clear form immediately for better UX
+    setValue('')
+    setAttachments([])
+
     addComment(
       {
         taskId,
@@ -429,12 +565,14 @@ export const TaskComments = ({
       },
       {
         onSuccess: () => {
-          setValue('')
-          setAttachments([])
+          // Comment will be replaced by server response via query invalidation
+        },
+        onError: () => {
+          // Optimistic comment will be automatically reverted by useOptimistic
         },
       }
     )
-  }, [value, attachments, taskId, currentUserId, currentUserName, members, addComment])
+  }, [value, attachments, taskId, currentUserId, currentUserName, members, addComment, addOptimisticComment])
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -584,6 +722,9 @@ export const TaskComments = ({
                 name: m.name,
                 email: m.email,
               }))}
+              onOptimisticReply={addOptimisticComment}
+              onOptimisticUpdate={updateOptimisticComment}
+              onOptimisticDelete={deleteOptimisticComment}
             />
           ))}
         </ul>

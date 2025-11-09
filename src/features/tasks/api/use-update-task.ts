@@ -15,7 +15,7 @@ export const useUpdateTask = () => {
       const response = await client.api.tasks[':taskId']['$patch']({ json, param });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as { error?: string };
         const errorMessage = errorData.error || 'Failed to update task.';
         throw new Error(errorMessage);
       }

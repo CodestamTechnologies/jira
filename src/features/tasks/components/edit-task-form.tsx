@@ -45,7 +45,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
   });
 
   const selectedStatus = editTaskForm.watch('status');
-  const hasUserCommented = comments.some((comment) => comment.authorId === user?.$id);
+  const hasUserCommented = comments.some((comment: { authorId: string }) => comment.authorId === user?.$id);
   const isMovingToRestrictedStatus =
     (selectedStatus === TaskStatus.IN_REVIEW && initialValues.status !== TaskStatus.IN_REVIEW) ||
     (selectedStatus === TaskStatus.DONE && initialValues.status !== TaskStatus.DONE);

@@ -184,9 +184,9 @@ export const CheckoutDialog = ({
                         {workspaceId && (
                           <Button
                             type="button"
-                            variant="link"
+                            variant="ghost"
                             size="sm"
-                            className="h-auto p-0 text-xs"
+                            className="h-auto p-0 text-xs underline"
                             onClick={() => {
                               onOpenChange(false)
                               router.push(`/workspaces/${workspaceId}/tasks/${task.id}`)

@@ -1,21 +1,22 @@
 'use client'
 
 import { renderCommentContent } from '../utils/comment-utils'
-import type { Member } from '@/features/members/types'
+
+interface CommentMember {
+  userId: string
+  name: string
+  email: string
+}
 
 interface CommentContentProps {
   content: string
-  members?: Member[]
+  members?: CommentMember[]
 }
 
 export const CommentContent = ({ content, members }: CommentContentProps) => {
   const rendered = renderCommentContent(
     content,
-    members?.map((m) => ({
-      userId: m.userId,
-      name: m.name,
-      email: m.email,
-    }))
+    members
   )
 
   return (

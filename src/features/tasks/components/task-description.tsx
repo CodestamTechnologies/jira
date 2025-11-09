@@ -1,5 +1,5 @@
 import { Pencil, XIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useOptimistic, startTransition } from 'react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,24 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
 
   const { mutate: editTask, isPending } = useUpdateTask();
 
+  // Optimistic task state
+  const [optimisticTask, updateOptimisticTask] = useOptimistic(
+    task,
+    (state: Task, updatedDescription: string | undefined) => ({
+      ...state,
+      description: updatedDescription,
+    })
+  );
+
   const handleSave = () => {
+    // Apply optimistic update immediately
+    startTransition(() => {
+      updateOptimisticTask(value || undefined);
+    });
+
+    // Exit edit mode immediately
+    setIsEditing(false);
+
     editTask(
       {
         json: {
@@ -28,7 +45,12 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
         },
       },
       {
-        onSuccess: () => setIsEditing(false),
+        onSuccess: () => {
+          // Task will be replaced by server response via query invalidation
+        },
+        onError: () => {
+          // Optimistic update will be automatically reverted by useOptimistic
+        },
       },
     );
   };
@@ -40,7 +62,7 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
 
         <Button
           onClick={() => {
-            setValue(task.description);
+            setValue(optimisticTask.description);
             setIsEditing((prevIsEditing) => !prevIsEditing);
           }}
           size="sm"
@@ -70,7 +92,7 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
           </Button>
         </div>
       ) : (
-        <div className='text-sm'>{task.description || <span className="italic text-muted-foreground">No description set...</span>}</div>
+        <div className='text-sm'>{optimisticTask.description || <span className="italic text-muted-foreground">No description set...</span>}</div>
       )}
     </div>
   );

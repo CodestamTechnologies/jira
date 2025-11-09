@@ -15,7 +15,7 @@ export const useBulkUpdateTasks = () => {
       const response = await client.api.tasks['bulk-update']['$post']({ json });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json() as { error?: string };
         const errorMessage = errorData.error || 'Failed to update tasks.';
         throw new Error(errorMessage);
       }
