@@ -311,7 +311,7 @@ const app = new Hono()
     const workspace = await databases.getDocument<Workspace>(DATABASE_ID, WORKSPACES_ID, workspaceId);
     const project = projectId ? await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId) : null;
     const notificationService = new NotificationService(databases);
-    
+
     if (assigneeIds && assigneeIds.length > 0) {
       notificationService.notifyTaskCreated(
         task,

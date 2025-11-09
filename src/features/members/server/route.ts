@@ -65,7 +65,7 @@ const app = new Hono()
       // Build query - by default, only show active members (isActive !== false)
       // If includeInactive is 'true', show all members
       const queries = [Query.equal('workspaceId', workspaceId)]
-      
+
       if (includeInactive !== 'true') {
         // Only show active members (isActive is true or undefined/null)
         // We need to filter for members where isActive is not false
@@ -86,17 +86,17 @@ const app = new Hono()
           const user = await users.get(member.userId)
 
           // Only return safe, non-sensitive fields
-          return { 
+          return {
             $id: member.$id,
             $createdAt: member.$createdAt,
             $updatedAt: member.$updatedAt,
             workspaceId: member.workspaceId,
             userId: member.userId,
-            name: user.name, 
+            name: user.name,
             email: user.email,
             role: member.role,
             // Ensure isActive defaults to true for backward compatibility
-            isActive: member.isActive !== false 
+            isActive: member.isActive !== false
           }
         }),
       )
