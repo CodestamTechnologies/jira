@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { AlertCircle, MapPin, Loader2 } from 'lucide-react'
+import { AlertCircle, MapPin, Loader2, FileText } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -27,6 +28,11 @@ interface LocationData {
   address?: string
 }
 
+interface UncommentedTask {
+  id: string
+  name: string
+}
+
 interface CheckoutDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -36,6 +42,9 @@ interface CheckoutDialogProps {
   isPending: boolean
   locationError?: string
   onRetryLocation?: () => void
+  checkoutError?: string
+  uncommentedTasks?: UncommentedTask[]
+  workspaceId?: string
 }
 
 const checkoutFormSchema = updateAttendanceSchema.pick({
@@ -56,8 +65,12 @@ export const CheckoutDialog = ({
   isPending,
   locationError,
   onRetryLocation,
+  checkoutError,
+  uncommentedTasks = [],
+  workspaceId,
 }: CheckoutDialogProps) => {
   const [charCount, setCharCount] = useState(0)
+  const router = useRouter()
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
@@ -153,6 +166,49 @@ export const CheckoutDialog = ({
             <AlertDescription className="text-green-800">
               Location captured{location.address ? `: ${location.address}` : ''}
             </AlertDescription>
+          </Alert>
+        )}
+
+        {checkoutError && uncommentedTasks.length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-2">
+                <p className="font-semibold">{checkoutError}</p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm font-medium">Tasks that need comments:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {uncommentedTasks.map((task) => (
+                      <li key={task.id} className="flex items-center gap-2">
+                        <span>{task.name}</span>
+                        {workspaceId && (
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => {
+                              onOpenChange(false)
+                              router.push(`/workspaces/${workspaceId}/tasks/${task.id}`)
+                            }}
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            Add Comment
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {checkoutError && uncommentedTasks.length === 0 && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{checkoutError}</AlertDescription>
           </Alert>
         )}
 

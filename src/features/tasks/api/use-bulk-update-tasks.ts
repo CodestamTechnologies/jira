@@ -14,7 +14,11 @@ export const useBulkUpdateTasks = () => {
     mutationFn: async ({ json }) => {
       const response = await client.api.tasks['bulk-update']['$post']({ json });
 
-      if (!response.ok) throw new Error('Failed to update task.');
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to update tasks.';
+        throw new Error(errorMessage);
+      }
 
       return await response.json();
     },
@@ -37,7 +41,7 @@ export const useBulkUpdateTasks = () => {
     onError: (error) => {
       console.error('[BULK_UPDATE_TASKS]: ', error);
 
-      toast.error('Failed to update tasks.');
+      toast.error(error.message || 'Failed to update tasks.');
     },
   });
 

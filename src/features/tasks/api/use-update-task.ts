@@ -14,7 +14,11 @@ export const useUpdateTask = () => {
     mutationFn: async ({ json, param }) => {
       const response = await client.api.tasks[':taskId']['$patch']({ json, param });
 
-      if (!response.ok) throw new Error('Failed to update task.');
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to update task.';
+        throw new Error(errorMessage);
+      }
 
       return await response.json();
     },
@@ -41,7 +45,7 @@ export const useUpdateTask = () => {
     onError: (error) => {
       console.error('[UPDATE_TASK]: ', error);
 
-      toast.error('Failed to update task.');
+      toast.error(error.message || 'Failed to update task.');
     },
   });
 

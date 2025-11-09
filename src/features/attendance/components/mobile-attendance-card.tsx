@@ -95,8 +95,15 @@ export const MobileAttendanceCard = () => {
         refetchToday();
         setCheckoutDialogOpen(false);
       },
+      onError: () => {
+        // Error is handled by toast, but keep dialog open to show task list
+      },
     });
   };
+
+  // Extract error information from mutation error
+  const checkoutError = checkOutMutation.error?.message;
+  const uncommentedTasks = (checkOutMutation.error as any)?.uncommentedTasks || [];
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -248,6 +255,9 @@ export const MobileAttendanceCard = () => {
                 isPending={checkOutMutation.isPending}
                 locationError={locationError}
                 onRetryLocation={handleRetryLocation}
+                checkoutError={checkoutError}
+                uncommentedTasks={uncommentedTasks}
+                workspaceId={workspaceId}
               />
             </>
           )}

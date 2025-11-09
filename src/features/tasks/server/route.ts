@@ -4,7 +4,7 @@ import { Hono } from 'hono';
 import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
-import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID } from '@/config/db';
+import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, PROJECTS_ID, TASKS_ID, COMMENTS_ID } from '@/config/db';
 import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
 import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
 import { logActivity } from '@/features/activity-logs/utils/log-activity';
@@ -14,7 +14,7 @@ import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
 import { createTaskSchema } from '@/features/tasks/schema';
-import { type Task, TaskStatus } from '@/features/tasks/types';
+import { type Task, TaskStatus, type Comment } from '@/features/tasks/types';
 import { createAdminClient } from '@/lib/appwrite';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import commentsRoute from './comments';
@@ -343,6 +343,28 @@ const app = new Hono()
       return ctx.json({ error: 'Unauthorized.' }, 401);
     }
 
+    // Validate: If moving to IN_REVIEW or DONE, require a comment
+    if (
+      (status === TaskStatus.IN_REVIEW && existingTask.status !== TaskStatus.IN_REVIEW) ||
+      (status === TaskStatus.DONE && existingTask.status !== TaskStatus.DONE)
+    ) {
+      // Get comments by this user on this task
+      const userComments = await databases.listDocuments<Comment>(DATABASE_ID, COMMENTS_ID, [
+        Query.equal('taskId', taskId),
+        Query.equal('authorId', user.$id),
+      ]);
+
+      if (userComments.documents.length === 0) {
+        const statusName = status === TaskStatus.IN_REVIEW ? 'In Review' : 'Done';
+        return ctx.json(
+          {
+            error: `Please add a comment before moving task to ${statusName}.`,
+          },
+          400,
+        );
+      }
+    }
+
     const updateData: Partial<Task> = {
       name,
       status,
@@ -431,6 +453,34 @@ const app = new Hono()
 
       if (!member) {
         return ctx.json({ error: 'Unauthorized.' }, 401);
+      }
+
+      // Validate: Check if moving any task to IN_REVIEW or DONE requires a comment
+      for (const taskUpdate of tasks) {
+        const existingTask = tasksToUpdate.documents.find((t: Task) => t.$id === taskUpdate.$id);
+        if (!existingTask) continue;
+
+        // If moving to IN_REVIEW or DONE, validate comment requirement
+        if (
+          (taskUpdate.status === TaskStatus.IN_REVIEW && existingTask.status !== TaskStatus.IN_REVIEW) ||
+          (taskUpdate.status === TaskStatus.DONE && existingTask.status !== TaskStatus.DONE)
+        ) {
+          // Get comments by this user on this task
+          const userComments = await databases.listDocuments<Comment>(DATABASE_ID, COMMENTS_ID, [
+            Query.equal('taskId', existingTask.$id),
+            Query.equal('authorId', user.$id),
+          ]);
+
+          if (userComments.documents.length === 0) {
+            const statusName = taskUpdate.status === TaskStatus.IN_REVIEW ? 'In Review' : 'Done';
+            return ctx.json(
+              {
+                error: `Please add a comment before moving task "${existingTask.name}" to ${statusName}.`,
+              },
+              400,
+            );
+          }
+        }
       }
 
       const updatedTasks = await Promise.all(

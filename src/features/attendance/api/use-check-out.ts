@@ -17,9 +17,12 @@ export const useCheckOut = () => {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        console.log(error);
-        throw new Error(error.message || 'Failed to check out');
+        const errorData = await response.json();
+        console.log(errorData);
+        const errorMessage = errorData.error || errorData.message || 'Failed to check out';
+        const errorWithData = new Error(errorMessage);
+        (errorWithData as any).uncommentedTasks = errorData.uncommentedTasks;
+        throw errorWithData;
       }
 
       return response.json();
@@ -30,6 +33,11 @@ export const useCheckOut = () => {
       queryClient.invalidateQueries({ queryKey: ['attendance-stats'] });
     },
     onError: (error: Error) => {
+      const errorWithData = error as any;
+      if (errorWithData.uncommentedTasks && errorWithData.uncommentedTasks.length > 0) {
+        // Don't show toast for uncommented tasks - dialog will show details
+        return;
+      }
       toast.error(error.message || 'Failed to check out');
     },
   });

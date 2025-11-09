@@ -3,20 +3,24 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { AlertCircle, Info } from 'lucide-react';
 
 import { DatePicker } from '@/components/date-picker';
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useUpdateTask } from '@/features/tasks/api/use-update-task';
+import { useGetComments } from '@/features/tasks/api/use-get-comments';
 import { createTaskSchema } from '@/features/tasks/schema';
 import { type Task, TaskStatus } from '@/features/tasks/types';
+import { useCurrent } from '@/features/auth/api/use-current';
 import { cn } from '@/lib/utils';
 
 interface EditTaskFormProps {
@@ -28,6 +32,8 @@ interface EditTaskFormProps {
 
 export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialValues }: EditTaskFormProps) => {
   const { mutate: createTask, isPending } = useUpdateTask();
+  const { data: user } = useCurrent();
+  const { data: comments = [] } = useGetComments({ taskId: initialValues.$id });
 
   const editTaskForm = useForm<z.infer<typeof createTaskSchema>>({
     resolver: zodResolver(createTaskSchema.omit({ workspaceId: true, description: true })),
@@ -38,6 +44,12 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
     },
   });
 
+  const selectedStatus = editTaskForm.watch('status');
+  const hasUserCommented = comments.some((comment) => comment.authorId === user?.$id);
+  const isMovingToRestrictedStatus =
+    (selectedStatus === TaskStatus.IN_REVIEW && initialValues.status !== TaskStatus.IN_REVIEW) ||
+    (selectedStatus === TaskStatus.DONE && initialValues.status !== TaskStatus.DONE);
+
   const onSubmit = (values: z.infer<typeof createTaskSchema>) => {
     createTask(
       {
@@ -47,6 +59,15 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
       {
         onSuccess: () => {
           onCancel?.();
+        },
+        onError: (error: any) => {
+          // Error is handled by toast, but we can also set form error if needed
+          if (error?.message?.includes('comment')) {
+            editTaskForm.setError('status', {
+              type: 'manual',
+              message: error.message,
+            });
+          }
         },
       },
     );
@@ -145,11 +166,52 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                       <SelectContent>
                         <SelectItem value={TaskStatus.BACKLOG}>Backlog</SelectItem>
                         <SelectItem value={TaskStatus.IN_PROGRESS}>In Progress</SelectItem>
-                        <SelectItem value={TaskStatus.IN_REVIEW}>In Review</SelectItem>
+                        <SelectItem value={TaskStatus.IN_REVIEW}>
+                          <div className="flex items-center gap-2">
+                            <span>In Review</span>
+                            {!hasUserCommented && <Info className="h-3 w-3 text-muted-foreground" />}
+                          </div>
+                        </SelectItem>
                         <SelectItem value={TaskStatus.TODO}>Todo</SelectItem>
-                        <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
+                        <SelectItem value={TaskStatus.DONE}>
+                          <div className="flex items-center gap-2">
+                            <span>Done</span>
+                            {!hasUserCommented && <Info className="h-3 w-3 text-muted-foreground" />}
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
+
+                    {isMovingToRestrictedStatus && !hasUserCommented && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          <div className="space-y-1">
+                            <p className="font-semibold">Comment required</p>
+                            <p className="text-sm">
+                              You need to add a comment before moving this task to{' '}
+                              {selectedStatus === TaskStatus.IN_REVIEW ? 'In Review' : 'Done'}.
+                              Please add a comment below first.
+                            </p>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {isMovingToRestrictedStatus && hasUserCommented && (
+                      <Alert className="mt-2 border-green-200 bg-green-50">
+                        <Info className="h-4 w-4 text-green-600" />
+                        <AlertDescription className="text-green-800">
+                          <p className="text-sm">You have commented on this task. Status change is allowed.</p>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    <FormDescription className="text-xs text-muted-foreground">
+                      {selectedStatus === TaskStatus.IN_REVIEW || selectedStatus === TaskStatus.DONE
+                        ? 'A comment is required to move to this status'
+                        : ''}
+                    </FormDescription>
                   </FormItem>
                 )}
               />

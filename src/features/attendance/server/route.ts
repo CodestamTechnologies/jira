@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { Query } from 'node-appwrite';
 
 import { createSessionClient, createAdminClient } from '@/lib/appwrite';
-import { ATTENDANCE_ID, DATABASE_ID, MEMBERS_ID } from '@/config/db';
+import { ATTENDANCE_ID, DATABASE_ID, MEMBERS_ID, TASKS_ID, COMMENTS_ID } from '@/config/db';
 import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types';
 import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-info';
 import { logActivity, getChangedFields } from '@/features/activity-logs/utils/log-activity';
@@ -12,6 +12,9 @@ import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-m
 import { createAttendanceSchema, updateAttendanceSchema, attendanceFiltersSchema } from '../schema';
 import { getCurrent } from '@/features/auth/queries';
 import { Attendance } from '../types';
+import { getMember } from '@/features/members/utils';
+import { TaskStatus } from '@/features/tasks/types';
+import type { Task, Comment } from '@/features/tasks/types';
 
 // Validate environment variables
 if (!ATTENDANCE_ID) {
@@ -286,6 +289,53 @@ app.put('/check-out', zValidator('json', updateAttendanceSchema), async (c) => {
 
     if (attendanceRecord.checkOutTime) {
       return c.json({ error: 'Already checked out today' }, 400);
+    }
+
+    // Validate: Check if user has commented TODAY on all their non-DONE tasks
+    const member = await getMember({
+      databases,
+      workspaceId: attendanceRecord.workspaceId,
+      userId: user.$id,
+    });
+
+    if (member) {
+      // Get all tasks assigned to user that are not DONE
+      const userTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+        Query.equal('workspaceId', attendanceRecord.workspaceId),
+        Query.contains('assigneeIds', member.$id),
+        Query.notEqual('status', TaskStatus.DONE),
+      ]);
+
+      // Get today's date range for comments (start and end of today in UTC)
+      const now = new Date();
+      const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+      const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+
+      // Get comments by this user made TODAY
+      const todayComments = await databases.listDocuments<Comment>(DATABASE_ID, COMMENTS_ID, [
+        Query.equal('authorId', user.$id),
+        Query.greaterThanEqual('createdAt', todayStart.toISOString()),
+        Query.lessThanEqual('createdAt', todayEnd.toISOString()),
+      ]);
+
+      // Get task IDs that user has commented on TODAY
+      const commentedTaskIdsToday = new Set(todayComments.documents.map((comment) => comment.taskId));
+
+      // Find tasks without comments TODAY
+      const uncommentedTasks = userTasks.documents.filter((task) => !commentedTaskIdsToday.has(task.$id));
+
+      if (uncommentedTasks.length > 0) {
+        return c.json(
+          {
+            error: 'Cannot checkout: Please comment on all your incomplete tasks (today) before checking out.',
+            uncommentedTasks: uncommentedTasks.map((task) => ({
+              id: task.$id,
+              name: task.name,
+            })),
+          },
+          400,
+        );
+      }
     }
 
     // Calculate total hours
