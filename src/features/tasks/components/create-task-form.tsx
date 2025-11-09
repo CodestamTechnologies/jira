@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { z } from 'zod';
 
 import { DatePicker } from '@/components/date-picker';
@@ -13,6 +14,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useCreateTask } from '@/features/tasks/api/use-create-task';
@@ -32,6 +37,7 @@ interface CreateTaskFormProps {
 export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memberOptions, projectOptions }: CreateTaskFormProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
+  const [projectPopoverOpen, setProjectPopoverOpen] = useState(false);
 
   const { mutate: createTask, isPending } = useCreateTask();
 
@@ -89,10 +95,44 @@ export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memb
                     <FormLabel>Task Name</FormLabel>
 
                     <FormControl>
-                      <Input {...field} type="text" placeholder="Enter task name" />
+                      <Input
+                        {...field}
+                        type="text"
+                        placeholder="e.g., Implement user authentication system"
+                        maxLength={200}
+                      />
                     </FormControl>
 
                     <FormMessage />
+                    <p className="text-xs text-muted-foreground">
+                      Be specific and descriptive. Include what needs to be done and why.
+                    </p>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={createTaskForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Provide detailed context about the task. What needs to be done? What are the requirements? What is the expected outcome?"
+                        rows={5}
+                        maxLength={2000}
+                        disabled={isPending}
+                      />
+                    </FormControl>
+
+                    <FormMessage />
+                    <p className="text-xs text-muted-foreground">
+                      Add clear details about the task requirements, acceptance criteria, and expected outcomes.
+                    </p>
                   </FormItem>
                 )}
               />
@@ -172,30 +212,66 @@ export const CreateTaskForm = ({ initialStatus, initialProjectId, onCancel, memb
                 disabled={isPending}
                 control={createTaskForm.control}
                 name="projectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project</FormLabel>
+                render={({ field }) => {
+                  const selectedProject = projectOptions.find((p) => p.id === field.value);
 
-                    <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>{field.value ? <SelectValue placeholder="Select project" /> : 'Select project'}</SelectTrigger>
-                      </FormControl>
+                  return (
+                    <FormItem>
+                      <FormLabel>Project</FormLabel>
+
+                      <Popover open={projectPopoverOpen} onOpenChange={setProjectPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled={isPending}
+                              className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}
+                            >
+                              {selectedProject ? (
+                                <div className="flex items-center gap-x-2">
+                                  <ProjectAvatar className="size-4" name={selectedProject.name} image={selectedProject.imageUrl} />
+                                  <span>{selectedProject.name}</span>
+                                </div>
+                              ) : (
+                                <span>Select project</span>
+                              )}
+                              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search projects..." />
+                            <CommandList>
+                              <CommandEmpty>No project found.</CommandEmpty>
+                              <CommandGroup>
+                                {projectOptions.map((project) => (
+                                  <CommandItem
+                                    key={project.id}
+                                    value={project.name}
+                                    onSelect={() => {
+                                      field.onChange(project.id);
+                                      setProjectPopoverOpen(false);
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-x-2">
+                                      <ProjectAvatar className="size-4" name={project.name} image={project.imageUrl} />
+                                      <span>{project.name}</span>
+                                    </div>
+                                    <Check className={cn('ml-auto size-4', field.value === project.id ? 'opacity-100' : 'opacity-0')} />
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
 
                       <FormMessage />
-
-                      <SelectContent>
-                        {projectOptions.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            <div className="flex items-center gap-x-2">
-                              <ProjectAvatar className="size-6" name={project.name} image={project.imageUrl} />
-                              {project.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 

@@ -1,4 +1,5 @@
 import { zValidator } from '@hono/zod-validator';
+import { subDays } from 'date-fns';
 import { Hono } from 'hono';
 import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
@@ -31,6 +32,7 @@ const app = new Hono()
         status: z.nativeEnum(TaskStatus).nullish(),
         search: z.string().nullish(),
         dueDate: z.string().nullish(),
+        showAll: z.string().optional(), // 'true' to show all tasks including old done ones
       }),
     ),
     async (ctx) => {
@@ -39,7 +41,8 @@ const app = new Hono()
       const storage = ctx.get('storage');
       const user = ctx.get('user');
 
-      const { workspaceId, projectId, assigneeId, status, search, dueDate } = ctx.req.valid('query');
+      const { workspaceId, projectId, assigneeId, status, search, dueDate, showAll } =
+        ctx.req.valid('query');
 
       const member = await getMember({
         databases,
@@ -108,6 +111,23 @@ const app = new Hono()
           ...tasks,
           documents: tasks.documents.filter((task) => allowedProjectIds!.includes(task.projectId)),
           total: tasks.documents.filter((task) => allowedProjectIds!.includes(task.projectId)).length,
+        };
+      }
+
+      // Filter out tasks marked as DONE for more than 7 days when viewing all tasks (not project-specific)
+      // When viewing tasks of a specific project, show all tasks including old done ones
+      // If showAll=true, bypass this filter
+      if (!projectId && showAll !== 'true') {
+        const sevenDaysAgo = subDays(new Date(), 7).toISOString();
+        const filteredDocuments = filteredTasks.documents.filter((task) => {
+          // Keep task if it's not DONE, or if it's DONE but was updated within last 7 days
+          return task.status !== TaskStatus.DONE || task.$updatedAt >= sevenDaysAgo;
+        });
+
+        filteredTasks = {
+          ...filteredTasks,
+          documents: filteredDocuments,
+          total: filteredDocuments.length,
         };
       }
 
@@ -245,7 +265,7 @@ const app = new Hono()
     const user = ctx.get('user');
     const databases = ctx.get('databases');
 
-    const { name, status, workspaceId, projectId, dueDate, assigneeIds } = ctx.req.valid('json');
+    const { name, status, workspaceId, projectId, dueDate, assigneeIds, description } = ctx.req.valid('json');
 
     const member = await getMember({
       databases,
@@ -274,6 +294,7 @@ const app = new Hono()
       dueDate: dueDate instanceof Date ? dueDate.toISOString() : dueDate,
       assigneeIds,
       position: newPosition,
+      description: description && description.trim() ? description.trim() : undefined,
     });
 
     // Log activity
