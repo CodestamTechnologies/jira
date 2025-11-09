@@ -21,6 +21,24 @@ import { format } from 'date-fns';
 
 registerPDFFonts();
 
+// Helper function to get background color based on attendance status
+const getStatusBackgroundColor = (status: string | null): string => {
+  if (!status) return '#fef2f2' // Light red for absent
+  
+  switch (status.toLowerCase()) {
+    case 'present':
+      return '#f0fdf4' // Light green
+    case 'late':
+      return '#fffbeb' // Light amber/yellow
+    case 'half-day':
+      return '#eff6ff' // Light blue
+    case 'absent':
+      return '#fef2f2' // Light red
+    default:
+      return '#ffffff' // White for unknown
+  }
+}
+
 // Table styles for PDF
 const tableStyles = StyleSheet.create({
   table: {
@@ -215,8 +233,12 @@ const TeamAttendancePDF: React.FC<TeamAttendancePDFData> = ({
             </View>
 
             {/* Table Rows */}
-            {teamAttendance.map((item, index) => (
-              <View key={index} style={tableStyles.tableRow}>
+            {teamAttendance.map((item, index) => {
+              const status = item.attendance?.status || null
+              const backgroundColor = getStatusBackgroundColor(status)
+              
+              return (
+              <View key={index} style={[tableStyles.tableRow, { backgroundColor }]}>
                 <View style={[tableStyles.tableCellMember]}>
                   <Text style={{ fontSize: 8, fontWeight: 'bold' }}>{item.member.name}</Text>
                   <Text style={{ fontSize: 7, color: '#666' }}>{item.member.email}</Text>
@@ -278,7 +300,8 @@ const TeamAttendancePDF: React.FC<TeamAttendancePDFData> = ({
                   </Text>
                 </View>
               </View>
-            ))}
+              )
+            })}
           </View>
         </View>
 
