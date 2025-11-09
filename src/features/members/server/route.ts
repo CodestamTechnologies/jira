@@ -83,10 +83,16 @@ const app = new Hono()
         filteredMembers.map(async (member) => {
           const user = await users.get(member.userId)
 
+          // Only return safe, non-sensitive fields
           return { 
-            ...member, 
+            $id: member.$id,
+            $createdAt: member.$createdAt,
+            $updatedAt: member.$updatedAt,
+            workspaceId: member.workspaceId,
+            userId: member.userId,
             name: user.name, 
             email: user.email,
+            role: member.role,
             // Ensure isActive defaults to true for backward compatibility
             isActive: member.isActive !== false 
           }
@@ -136,6 +142,10 @@ const app = new Hono()
       // Populate with user info
       const userData = await users.get(member.userId)
 
+      // Only return safe, non-sensitive fields
+      // For member detail endpoint, return all fields but only if user is admin or viewing their own profile
+      // This endpoint is used for viewing full member details, so we return all fields
+      // but the authorization check above ensures only authorized users can access it
       return ctx.json({
         data: {
           ...member,

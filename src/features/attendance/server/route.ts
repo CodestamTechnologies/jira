@@ -593,7 +593,16 @@ app.get('/stats', async (c) => {
       const populatedMembers = await Promise.all(
         allMembers.map(async (member: any) => {
           const user = await users.get(member.userId);
-          return { ...member, name: user.name, email: user.email };
+          // Only return safe, non-sensitive fields
+          return {
+            $id: member.$id,
+            userId: member.userId,
+            workspaceId: member.workspaceId,
+            role: member.role,
+            isActive: member.isActive,
+            name: user.name,
+            email: user.email,
+          };
         })
       );
 

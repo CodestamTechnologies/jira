@@ -155,10 +155,13 @@ const app = new Hono()
         members.documents.map(async (member) => {
           const user = await users.get(member.userId);
 
+          // Only return safe, non-sensitive fields
           return {
-            ...member,
+            $id: member.$id,
+            userId: member.userId,
             name: user.name,
             email: user.email,
+            role: member.role,
           };
         }),
       );
@@ -246,10 +249,13 @@ const app = new Hono()
     const assignees = await Promise.all(
       members.map(async (member) => {
         const user = await users.get(member.userId);
+        // Only return safe, non-sensitive fields
         return {
-          ...member,
+          $id: member.$id,
+          userId: member.userId,
           name: user.name,
           email: user.email,
+          role: member.role,
         };
       }),
     );
