@@ -12,6 +12,7 @@ import nda from '@/features/nda/server/route';
 import salarySlip from '@/features/salary-slip/server/route';
 import activityLogs from '@/features/activity-logs/server/route';
 import logDownload from '@/features/activity-logs/server/log-download';
+import pdfTemplates from '@/features/pdf-templates/server/route';
 
 export const runtime = 'nodejs';
 
@@ -28,7 +29,8 @@ const routes = app
   .route('/nda', nda)
   .route('/salary-slip', salarySlip)
   .route('/activity-logs', activityLogs)
-  .route('/activity-logs/download', logDownload);
+  .route('/activity-logs/download', logDownload)
+  .route('/pdf-templates', pdfTemplates);
 
 export type AppType = typeof routes;
 
