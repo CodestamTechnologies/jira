@@ -4,7 +4,7 @@ import { InferResponseType } from 'hono'
 import { client } from '@/lib/hono'
 import type { PDFTemplateDocument } from '../types'
 
-type ResponseType = InferResponseType<(typeof client.api.pdfTemplates)['$get'], 200>
+type ResponseType = InferResponseType<(typeof client.api)['pdf-templates']['$get'], 200>
 
 interface UseGetTemplatesProps {
   workspaceId: string
@@ -21,7 +21,7 @@ export const useGetTemplates = ({ workspaceId, category }: UseGetTemplatesProps)
         params.set('category', category)
       }
 
-      const response = await client.api.pdfTemplates['$get']({
+      const response = await client.api['pdf-templates']['$get']({
         query: Object.fromEntries(params),
       })
 

@@ -62,6 +62,7 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
             rows={4}
             onChange={(e) => setValue(e.target.value)}
             disabled={isPending}
+            className='text-sm'
           />
 
           <Button size="sm" className="ml-auto w-fit" onClick={handleSave} disabled={isPending}>
@@ -69,7 +70,7 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
           </Button>
         </div>
       ) : (
-        <div>{task.description || <span className="italic text-muted-foreground">No description set...</span>}</div>
+        <div className='text-sm'>{task.description || <span className="italic text-muted-foreground">No description set...</span>}</div>
       )}
     </div>
   );

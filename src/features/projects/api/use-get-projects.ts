@@ -4,9 +4,10 @@ import { client } from '@/lib/hono';
 
 interface useGetProjectsProps {
   workspaceId: string;
+  showAll?: boolean; // Deprecated - kept for backward compatibility, always returns all projects
 }
 
-export const useGetProjects = ({ workspaceId }: useGetProjectsProps) => {
+export const useGetProjects = ({ workspaceId, showAll }: useGetProjectsProps) => {
   const query = useQuery({
     queryKey: ['projects', workspaceId],
     queryFn: async () => {

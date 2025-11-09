@@ -5,15 +5,15 @@ import { toast } from 'sonner'
 import { client } from '@/lib/hono'
 import type { PDFTemplateDocument } from '../types'
 
-type ResponseType = InferResponseType<(typeof client.api.pdfTemplates)['$post'], 200>
-type RequestType = InferRequestType<(typeof client.api.pdfTemplates)['$post']>
+type ResponseType = InferResponseType<(typeof client.api)['pdf-templates']['$post'], 200>
+type RequestType = InferRequestType<(typeof client.api)['pdf-templates']['$post']>
 
 export const useCreateTemplate = () => {
   const queryClient = useQueryClient()
 
   const mutation = useMutation<ResponseType, Error, RequestType>({
     mutationFn: async ({ json }) => {
-      const response = await client.api.pdfTemplates['$post']({ json })
+      const response = await client.api['pdf-templates']['$post']({ json })
 
       if (!response.ok) throw new Error('Failed to create template.')
 

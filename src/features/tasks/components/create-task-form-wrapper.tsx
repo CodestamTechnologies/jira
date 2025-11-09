@@ -17,7 +17,7 @@ interface CreateTaskFormWrapperProps {
 export const CreateTaskFormWrapper = ({ initialStatus, initialProjectId, onCancel }: CreateTaskFormWrapperProps) => {
   const workspaceId = useWorkspaceId();
 
-  const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId, showAll: true });
+  const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 
   const projectOptions = projects?.documents.map((project) => ({

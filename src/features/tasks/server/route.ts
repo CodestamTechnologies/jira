@@ -18,6 +18,8 @@ import { type Task, TaskStatus } from '@/features/tasks/types';
 import { createAdminClient } from '@/lib/appwrite';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import commentsRoute from './comments';
+import { validateTaskSchema } from './ai-validation';
+import { createTaskValidationService } from '@/lib/ai';
 
 const app = new Hono()
   .get(
@@ -358,7 +360,7 @@ const app = new Hono()
       for (const key in changedFields) {
         oldValues[key] = existingTask[key as keyof Task];
       }
-      
+
       const metadata = getRequestMetadata(ctx);
       await logActivity({
         databases,
@@ -474,6 +476,25 @@ const app = new Hono()
     });
 
     return ctx.json({ data: task });
+  })
+  .post('/validate', sessionMiddleware, zValidator('json', validateTaskSchema), async (ctx) => {
+    const { name, description } = ctx.req.valid('json');
+
+    try {
+      const validationService = createTaskValidationService();
+      const result = await validationService.validateTask({ name, description });
+
+      return ctx.json({ data: result });
+    } catch (error) {
+      console.error('[validateTaskHandler] Error:', error);
+
+      return ctx.json(
+        {
+          error: 'Failed to validate task. Please try again.',
+        },
+        500,
+      );
+    }
   });
 
 app.route('/:taskId/comments', commentsRoute);

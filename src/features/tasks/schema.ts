@@ -23,10 +23,6 @@ export const createTaskSchema = z.object({
     .string()
     .trim()
     .max(2000, 'Description must be less than 2000 characters.')
-    .refine(
-      (val) => val.length === 0 || val.length >= 10,
-      'Description must be at least 10 characters to provide context.',
-    )
     .optional()
     .default(''),
 });

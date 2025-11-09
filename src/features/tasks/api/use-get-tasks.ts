@@ -10,11 +10,20 @@ interface useGetTasksProps {
   search?: string | null;
   assigneeId?: string | null;
   dueDate?: string | null;
+  showAll?: boolean; // If true, shows all tasks including old done ones
 }
 
-export const useGetTasks = ({ workspaceId, projectId, status, search, assigneeId, dueDate }: useGetTasksProps) => {
+export const useGetTasks = ({
+  workspaceId,
+  projectId,
+  status,
+  search,
+  assigneeId,
+  dueDate,
+  showAll,
+}: useGetTasksProps) => {
   const query = useQuery({
-    queryKey: ['tasks', workspaceId, projectId, status, search, assigneeId, dueDate],
+    queryKey: ['tasks', workspaceId, projectId, status, search, assigneeId, dueDate, showAll],
     queryFn: async () => {
       const response = await client.api.tasks.$get({
         query: {
@@ -24,6 +33,7 @@ export const useGetTasks = ({ workspaceId, projectId, status, search, assigneeId
           search: search ?? undefined,
           assigneeId: assigneeId ?? undefined,
           dueDate: dueDate ?? undefined,
+          showAll: showAll ? 'true' : undefined,
         },
       });
 

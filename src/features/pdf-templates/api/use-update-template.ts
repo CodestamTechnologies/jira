@@ -5,15 +5,15 @@ import { toast } from 'sonner'
 import { client } from '@/lib/hono'
 import type { PDFTemplateDocument } from '../types'
 
-type ResponseType = InferResponseType<(typeof client.api.pdfTemplates)[':id']['$patch'], 200>
-type RequestType = InferRequestType<(typeof client.api.pdfTemplates)[':id']['$patch']>
+type ResponseType = InferResponseType<(typeof client.api)['pdf-templates'][':id']['$patch'], 200>
+type RequestType = InferRequestType<(typeof client.api)['pdf-templates'][':id']['$patch']>
 
 export const useUpdateTemplate = () => {
   const queryClient = useQueryClient()
 
   const mutation = useMutation<ResponseType, Error, { id: string; data: RequestType['json'] }>({
     mutationFn: async ({ id, data }) => {
-      const response = await client.api.pdfTemplates[':id']['$patch']({
+      const response = await client.api['pdf-templates'][':id']['$patch']({
         param: { id },
         json: data,
       })

@@ -181,7 +181,7 @@ export function PDFEditorPageClient() {
             </div>
           ) : (
             <div className="space-y-2">
-              {templates.map((template) => (
+              {templates.map((template: PDFTemplateDocument) => (
                 <div
                   key={template.$id}
                   className="flex items-center justify-between border rounded-lg p-4 hover:bg-muted/50"
