@@ -314,8 +314,8 @@ app.put('/check-out', zValidator('json', updateAttendanceSchema), async (c) => {
       // Get comments by this user made TODAY
       const todayComments = await databases.listDocuments<Comment>(DATABASE_ID, COMMENTS_ID, [
         Query.equal('authorId', user.$id),
-        Query.greaterThanEqual('createdAt', todayStart.toISOString()),
-        Query.lessThanEqual('createdAt', todayEnd.toISOString()),
+        Query.greaterThanEqual('$createdAt', todayStart.toISOString()),
+        Query.lessThanEqual('$createdAt', todayEnd.toISOString()),
       ]);
 
       // Get task IDs that user has commented on TODAY

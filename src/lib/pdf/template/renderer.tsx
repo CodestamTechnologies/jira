@@ -232,6 +232,3 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, da
 }
 
 export default TemplateRenderer
-
-
-

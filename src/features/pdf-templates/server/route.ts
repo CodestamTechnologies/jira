@@ -302,4 +302,3 @@ function incrementVersion(version: string): string {
 }
 
 export default app
-

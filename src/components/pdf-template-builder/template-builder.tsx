@@ -304,5 +304,3 @@ export const TemplateBuilder: React.FC<TemplateBuilderProps> = ({
     </div>
   )
 }
-
-

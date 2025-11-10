@@ -204,6 +204,3 @@ export const PDFTemplateEditor: React.FC<PDFTemplateEditorProps> = ({
     </div>
   )
 }
-
-
-
