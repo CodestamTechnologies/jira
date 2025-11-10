@@ -5,7 +5,7 @@ import { useGetComments } from '../api/use-get-comments'
 import { useCreateComment } from '../api/use-create-comment'
 import { useUpdateComment } from '../api/use-update-comment'
 import { useDeleteComment } from '../api/use-delete-comment'
-import type { Comment } from '../types'
+import type { Comment, Attachment } from '../types'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { MemberAvatar } from '@/features/members/components/member-avatar'
@@ -333,9 +333,12 @@ const CommentItem = ({
                   content={comment.content}
                   members={members}
                 />
-                {comment.attachments && parseAttachments(comment.attachments) && parseAttachments(comment.attachments)!.length > 0 && (
-                  <CommentAttachments attachments={parseAttachments(comment.attachments)!} />
-                )}
+                {(() => {
+                  const parsedAttachments = parseAttachments(comment.attachments as string | Attachment[] | undefined);
+                  return parsedAttachments && parsedAttachments.length > 0 ? (
+                    <CommentAttachments attachments={parsedAttachments} />
+                  ) : null;
+                })()}
                 <div className="flex items-center gap-2 mt-2">
                   <Button
                     onClick={handleReply}

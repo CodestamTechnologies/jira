@@ -48,9 +48,12 @@ export type Comment = Models.Document & {
   attachments?: string; // JSON string of Attachment[] (Appwrite doesn't support nested arrays)
 };
 
-// Helper to parse attachments from JSON string
-export const parseAttachments = (attachments?: string): Attachment[] | undefined => {
+// Helper to parse attachments from JSON string or return array if already parsed
+export const parseAttachments = (attachments?: string | Attachment[]): Attachment[] | undefined => {
   if (!attachments) return undefined;
+  // If already an array, return it directly
+  if (Array.isArray(attachments)) return attachments;
+  // Otherwise, try to parse as JSON string
   try {
     return JSON.parse(attachments) as Attachment[];
   } catch {

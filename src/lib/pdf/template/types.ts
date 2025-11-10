@@ -73,3 +73,5 @@ export interface TemplateConfig {
   template: PDFTemplate
   data: TemplateData
 }
+
+
