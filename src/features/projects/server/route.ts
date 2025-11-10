@@ -40,6 +40,12 @@ const app = new Hono()
     let uploadedImageId: string | undefined = undefined;
 
     if (image instanceof File) {
+      // Validate file size (max 1MB)
+      const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+      if (image.size > MAX_FILE_SIZE) {
+        return ctx.json({ error: 'Image size cannot exceed 1 MB.' }, 400);
+      }
+
       const fileExt = image.name.split('.').at(-1) ?? 'png';
       const fileName = `${ID.unique()}.${fileExt}`;
 
@@ -277,6 +283,12 @@ const app = new Hono()
     let uploadedImageId: string | undefined = undefined;
 
     if (image instanceof File) {
+      // Validate file size (max 1MB)
+      const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1MB
+      if (image.size > MAX_FILE_SIZE) {
+        return ctx.json({ error: 'Image size cannot exceed 1 MB.' }, 400);
+      }
+
       const fileExt = image.name.split('.').at(-1) ?? 'png';
       const fileName = `${ID.unique()}.${fileExt}`;
 

@@ -34,23 +34,22 @@ export const CommentAttachments = ({
           >
             {isImage ? (
               <div className="space-y-2">
-                {attachment.fileUrl ? (
-                  <img
-                    src={attachment.fileUrl}
-                    alt={attachment.fileName}
-                    className="max-w-full max-h-64 rounded-md object-contain"
-                    loading="lazy"
-                    onError={(e) => {
-                      // Fallback if base64 fails
-                      const target = e.target as HTMLImageElement;
+                <img
+                  src={attachment.fileUrl || getFileUrl(attachment.fileId)}
+                  alt={attachment.fileName}
+                  className="max-w-full max-h-64 rounded-md object-contain"
+                  loading="lazy"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    // If already using fileUrl, try the other source
+                    if (target.src.includes('data:')) {
                       target.src = getFileUrl(attachment.fileId);
-                    }}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-32 bg-muted rounded-md">
-                    <span className="text-xs text-muted-foreground">Loading image...</span>
-                  </div>
-                )}
+                    } else if (attachment.fileUrl) {
+                      target.src = attachment.fileUrl;
+                    }
+                  }}
+                />
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <ImageIcon className="w-4 h-4" />
                   <span className="truncate flex-1">{attachment.fileName}</span>

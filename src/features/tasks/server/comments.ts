@@ -145,10 +145,33 @@ const app = new Hono()
       }
     );
 
-    // Parse attachments for response
+    // Parse attachments and add image URLs for response (same as GET endpoint)
+    const parsedAttachments = parseAttachments(comment.attachments);
+    const attachmentsWithUrls = parsedAttachments
+      ? await Promise.all(
+        parsedAttachments.map(async (attachment) => {
+          if (attachment.fileType.startsWith('image/')) {
+            try {
+              const storage = ctx.get('storage');
+              const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, attachment.fileId);
+              const base64 = Buffer.from(arrayBuffer).toString('base64');
+              return {
+                ...attachment,
+                fileUrl: `data:${attachment.fileType};base64,${base64}`,
+              };
+            } catch (error) {
+              console.error(`[CREATE_COMMENT_IMAGE]: Failed to load image ${attachment.fileId}:`, error);
+              return attachment;
+            }
+          }
+          return attachment;
+        })
+      )
+      : undefined;
+
     const commentWithParsedAttachments = {
       ...comment,
-      attachments: parseAttachments(comment.attachments),
+      attachments: attachmentsWithUrls,
     };
 
     // Send email notifications and log activity in background (non-blocking)

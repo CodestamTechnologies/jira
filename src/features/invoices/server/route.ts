@@ -2,7 +2,6 @@ import { zValidator } from '@hono/zod-validator';
 import { startOfDay, endOfDay } from 'date-fns';
 import { Hono } from 'hono';
 import { ID, Query } from 'node-appwrite';
-import { Resend } from 'resend';
 import { z } from 'zod';
 
 import { DATABASE_ID, INVOICES_ID, PROJECTS_ID } from '@/config/db';
@@ -16,8 +15,7 @@ import type { Invoice } from '@/features/invoices/types';
 import type { Project } from '@/features/projects/types';
 import { generateInvoiceNumberPattern, getEnvironmentPrefix, parseInvoiceNumber } from '@/features/invoices/utils/invoice-number';
 import { sessionMiddleware } from '@/lib/session-middleware';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendEmailWithDefaults } from '@/lib/email/email-service';
 
 const sendInvoiceSchema = z.object({
   invoiceNumber: z.string().trim().min(1, 'Invoice number is required'),
@@ -308,8 +306,8 @@ const app = new Hono()
       try {
         const filename = `invoice-${invoiceNumber.replace(/\//g, '-')}.pdf`;
 
-        // Send email with PDF attachment
-        const emailResult = await resend.emails.send({
+        // Send email with PDF attachment (default CC and BCC are automatically added)
+        const emailResult = await sendEmailWithDefaults({
           from: 'Codestam Technologies <noreply@manyblogs.blog>',
           to: clientEmail,
           subject: `Invoice ${invoiceNumber} from Codestam Technologies`,

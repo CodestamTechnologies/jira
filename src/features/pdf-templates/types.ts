@@ -11,3 +11,4 @@ export type PDFTemplateDocument = Models.Document & {
   createdBy: string
   version: string
 }
+

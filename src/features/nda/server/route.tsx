@@ -1,6 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
-import { Resend } from 'resend'
 import { z } from 'zod'
 
 import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types'
@@ -10,8 +9,7 @@ import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-m
 import { getMember } from '@/features/members/utils'
 import { DATABASE_ID } from '@/config/db'
 import { sessionMiddleware } from '@/lib/session-middleware'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { sendEmailWithDefaults } from '@/lib/email/email-service'
 
 const sendNDASchema = z.object({
   employeeName: z.string().trim().min(1, 'Employee name is required'),
@@ -40,8 +38,8 @@ const app = new Hono()
       try {
         const filename = `NDA-${employeeName.replace(/\s+/g, '-')}.pdf`
 
-        // Send email with PDF attachment
-        const emailResult = await resend.emails.send({
+        // Send email with PDF attachment (default CC and BCC are automatically added)
+        const emailResult = await sendEmailWithDefaults({
           from: 'Codestam Technologies <noreply@manyblogs.blog>',
           to: employeeEmail,
           subject: 'Employee Non-Disclosure, Non-Compete, and Intellectual Property Assignment Agreement',

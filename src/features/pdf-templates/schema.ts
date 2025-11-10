@@ -17,3 +17,4 @@ export const updatePDFTemplateSchema = z.object({
   templateConfig: z.string().min(1, 'Template configuration is required').optional(),
   version: z.string().optional(),
 })
+

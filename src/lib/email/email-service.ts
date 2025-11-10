@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Export shared Resend instance to avoid multiple initializations
+export const resend = new Resend(process.env.RESEND_API_KEY)
 
 export interface EmailOptions {
   to: string
@@ -8,9 +9,43 @@ export interface EmailOptions {
   html: string
   from?: string
   cc?: string | string[]
+  bcc?: string | string[]
 }
 
 const DEFAULT_CC_EMAIL = 'codestamtechnologies@gmail.com'
+export const DEFAULT_BCC_EMAILS = ['kushwaha@codestam.com', 'souravmishra@codestam.com']
+
+/**
+ * Helper function to merge email arrays
+ */
+const mergeEmailArray = (provided: string | string[] | undefined, defaults: string[]): string[] => {
+  if (!provided) return defaults
+  const providedArray = Array.isArray(provided) ? provided : [provided]
+  return [...providedArray, ...defaults]
+}
+
+/**
+ * Wrapper around resend.emails.send() that automatically includes default CC and BCC.
+ * Use this instead of calling resend.emails.send() directly to ensure defaults are always applied.
+ * 
+ * This function accepts all the same options as resend.emails.send() (including attachments, etc.)
+ * and automatically merges default CC and BCC addresses.
+ */
+export const sendEmailWithDefaults = async (
+  options: Parameters<typeof resend.emails.send>[0]
+): Promise<ReturnType<typeof resend.emails.send>> => {
+  // Always include default CC email, merge with any provided CC
+  const ccEmails = mergeEmailArray(options.cc, [DEFAULT_CC_EMAIL])
+
+  // Always include default BCC emails, merge with any provided BCC
+  const bccEmails = mergeEmailArray(options.bcc, DEFAULT_BCC_EMAILS)
+
+  return resend.emails.send({
+    ...options,
+    cc: ccEmails,
+    bcc: bccEmails,
+  })
+}
 
 export const sendEmail = async (options: EmailOptions): Promise<{ success: boolean; error?: string; emailId?: string }> => {
   if (!process.env.RESEND_API_KEY) {
@@ -26,10 +61,18 @@ export const sendEmail = async (options: EmailOptions): Promise<{ success: boole
         ? [options.cc, DEFAULT_CC_EMAIL]
         : [DEFAULT_CC_EMAIL]
 
+    // Always include default BCC emails, merge with any provided BCC
+    const bccEmails = Array.isArray(options.bcc)
+      ? [...options.bcc, ...DEFAULT_BCC_EMAILS]
+      : options.bcc
+        ? [options.bcc, ...DEFAULT_BCC_EMAILS]
+        : DEFAULT_BCC_EMAILS
+
     const result = await resend.emails.send({
       from: options.from || 'Codestam Technologies <noreply@manyblogs.blog>',
       to: options.to,
       cc: ccEmails,
+      bcc: bccEmails,
       subject: options.subject,
       html: options.html,
     })

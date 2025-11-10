@@ -1,6 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
-import { Resend } from 'resend'
 import { z } from 'zod'
 
 import { ActivityAction, ActivityEntityType } from '@/features/activity-logs/types'
@@ -8,8 +7,7 @@ import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-i
 import { logActivity } from '@/features/activity-logs/utils/log-activity'
 import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata'
 import { sessionMiddleware } from '@/lib/session-middleware'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { sendEmailWithDefaults } from '@/lib/email/email-service'
 
 const sendSalarySlipSchema = z.object({
   employeeName: z.string().trim().min(1, 'Employee name is required'),
@@ -37,7 +35,8 @@ const app = new Hono()
       try {
         const filename = `Salary-Slip-${employeeName.replace(/\s+/g, '-')}-${month}-${year}.pdf`
 
-        const emailResult = await resend.emails.send({
+        // Send email with PDF attachment (default CC and BCC are automatically added)
+        const emailResult = await sendEmailWithDefaults({
           from: 'Codestam Technologies <noreply@codestam.com>',
           to: employeeEmail,
           subject: `Salary Slip - ${month} ${year}`,

@@ -124,3 +124,4 @@ Once basic testing passes:
 2. Create custom templates
 3. Integrate into your workflow
 4. Add to navigation menu
+
