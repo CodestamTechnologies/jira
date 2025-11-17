@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, MapPin, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Clock, MapPin, CheckCircle, XCircle, AlertCircle, Loader2, ListTodo } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -11,14 +11,22 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useCheckIn } from '../api/use-check-in';
 import { useCheckOut } from '../api/use-check-out';
 import { useGetTodayAttendance } from '../api/use-get-today-attendance';
+import { useGetPendingTasks } from '../api/use-get-pending-tasks';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useCurrent } from '@/features/auth/api/use-current';
 import { CheckoutDialog } from './checkout-dialog';
+import { PendingTasksDialog } from './pending-tasks-dialog';
 import { useLocation } from '../hooks/use-location';
 import { formatHoursAndMinutes } from '../utils';
 
+interface UncommentedTask {
+  id: string;
+  name: string;
+}
+
 export const MobileAttendanceCard = () => {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [pendingTasksDialogOpen, setPendingTasksDialogOpen] = useState(false);
   const {
     location,
     locationError,
@@ -30,6 +38,7 @@ export const MobileAttendanceCard = () => {
   const workspaceId = useWorkspaceId();
   const { data: user } = useCurrent();
   const { data: todayAttendance, refetch: refetchToday } = useGetTodayAttendance(workspaceId, user?.$id);
+  const { data: pendingTasksData, refetch: refetchPendingTasks } = useGetPendingTasks(workspaceId);
   const checkInMutation = useCheckIn();
   const checkOutMutation = useCheckOut();
 
@@ -40,9 +49,16 @@ export const MobileAttendanceCard = () => {
     }
   }, [location, checkoutDialogOpen]);
 
+  // Refetch pending tasks when dialog opens
+  useEffect(() => {
+    if (pendingTasksDialogOpen && workspaceId) {
+      refetchPendingTasks();
+    }
+  }, [pendingTasksDialogOpen, workspaceId, refetchPendingTasks]);
+
   const handleCheckIn = async () => {
     let currentLocation = location;
-    
+
     if (!currentLocation) {
       try {
         currentLocation = await getCurrentLocation();
@@ -69,7 +85,7 @@ export const MobileAttendanceCard = () => {
   const handleCheckOutClick = async () => {
     // Open dialog first, location will be fetched if needed
     setCheckoutDialogOpen(true);
-    
+
     // Fetch location if not available
     if (!location) {
       try {
@@ -93,17 +109,23 @@ export const MobileAttendanceCard = () => {
     checkOutMutation.mutate(data, {
       onSuccess: () => {
         refetchToday();
+        refetchPendingTasks();
         setCheckoutDialogOpen(false);
       },
       onError: () => {
         // Error is handled by toast, but keep dialog open to show task list
+        refetchPendingTasks();
       },
     });
   };
 
   // Extract error information from mutation error
   const checkoutError = checkOutMutation.error?.message;
-  const uncommentedTasks = (checkOutMutation.error as any)?.uncommentedTasks || [];
+  // Get uncommented tasks from checkout error or from pending tasks API
+  const errorUncommentedTasks: UncommentedTask[] = (checkOutMutation.error as any)?.uncommentedTasks || [];
+  const apiUncommentedTasks: UncommentedTask[] = pendingTasksData?.uncommentedTasks || [];
+  // Use error tasks if available (from failed checkout), otherwise use API tasks
+  const uncommentedTasks: UncommentedTask[] = errorUncommentedTasks.length > 0 ? errorUncommentedTasks : apiUncommentedTasks;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -139,102 +161,108 @@ export const MobileAttendanceCard = () => {
   const isCheckedOut = todayAttendance && todayAttendance.checkOutTime;
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Clock className="h-5 w-5" />
-          Attendance
-        </CardTitle>
-        <CardDescription className="text-sm">
-          {format(new Date(), 'EEEE, MMMM do, yyyy')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Current Status */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Status:</span>
-          {todayAttendance ? (
-            <Badge className={getStatusColor(todayAttendance.status)}>
-              <div className="flex items-center gap-1">
-                {getStatusIcon(todayAttendance.status)}
-                <span className="text-xs">
-                  {todayAttendance.status.charAt(0).toUpperCase() + todayAttendance.status.slice(1)}
-                </span>
-              </div>
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-xs">Ready to Check In</Badge>
-          )}
-        </div>
+    <div className="w-full space-y-4">
+      {/* Pending Tasks Button */}
+      {uncommentedTasks.length > 0 && (
+        <Button
+          variant="outline"
+          className="w-full h-12 text-base"
+          onClick={() => {
+            setPendingTasksDialogOpen(true);
+            refetchPendingTasks();
+          }}
+        >
+          <ListTodo className="h-4 w-4 mr-2" />
+          Pending Tasks ({uncommentedTasks.length})
+        </Button>
+      )}
 
-        {/* Check In/Out Times */}
-        {todayAttendance && (
-          <div className="space-y-2 text-sm">
-            {todayAttendance.checkInTime && (
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>In: {format(new Date(todayAttendance.checkInTime), 'HH:mm')}</span>
-              </div>
-            )}
-            {todayAttendance.checkOutTime && (
-              <div className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-red-500" />
-                <span>Out: {format(new Date(todayAttendance.checkOutTime), 'HH:mm')}</span>
-              </div>
-            )}
-            {todayAttendance.totalHours && (
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-blue-500" />
-                <span>Total: {formatHoursAndMinutes(todayAttendance.totalHours)}</span>
-              </div>
+      {/* Pending Tasks Dialog */}
+      <PendingTasksDialog
+        open={pendingTasksDialogOpen}
+        onOpenChange={setPendingTasksDialogOpen}
+        uncommentedTasks={uncommentedTasks}
+        checkoutError={checkoutError}
+        workspaceId={workspaceId}
+      />
+
+      <Card className="w-full">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Clock className="h-5 w-5" />
+            Attendance
+          </CardTitle>
+          <CardDescription className="text-sm">
+            {format(new Date(), 'EEEE, MMMM do, yyyy')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Current Status */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">Status:</span>
+            {todayAttendance ? (
+              <Badge className={getStatusColor(todayAttendance.status)}>
+                <div className="flex items-center gap-1">
+                  {getStatusIcon(todayAttendance.status)}
+                  <span className="text-xs">
+                    {todayAttendance.status.charAt(0).toUpperCase() + todayAttendance.status.slice(1)}
+                  </span>
+                </div>
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs">Ready to Check In</Badge>
             )}
           </div>
-        )}
 
-        {/* Location Error */}
-        {locationError && !checkoutDialogOpen && (
-          <Alert variant="destructive" className="text-xs">
-            <AlertCircle className="h-3 w-3" />
-            <AlertDescription className="flex items-center justify-between text-xs">
-              <span>{locationError}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleRetryLocation}
-                className="ml-2 h-6 text-xs px-2"
-              >
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Action Buttons */}
-        <div className="space-y-2">
-          {!todayAttendance && (
-            <Button
-              onClick={handleCheckIn}
-              disabled={checkInMutation.isPending || isLoadingLocation}
-              className="w-full h-12 text-base"
-            >
-              {isLoadingLocation ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Getting Location...
-                </>
-              ) : (
-                'Check In'
+          {/* Check In/Out Times */}
+          {todayAttendance && (
+            <div className="space-y-2 text-sm">
+              {todayAttendance.checkInTime && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>In: {format(new Date(todayAttendance.checkInTime), 'HH:mm')}</span>
+                </div>
               )}
-            </Button>
+              {todayAttendance.checkOutTime && (
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-500" />
+                  <span>Out: {format(new Date(todayAttendance.checkOutTime), 'HH:mm')}</span>
+                </div>
+              )}
+              {todayAttendance.totalHours && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  <span>Total: {formatHoursAndMinutes(todayAttendance.totalHours)}</span>
+                </div>
+              )}
+            </div>
           )}
 
-          {isCheckedIn && (
-            <>
+          {/* Location Error */}
+          {locationError && !checkoutDialogOpen && (
+            <Alert variant="destructive" className="text-xs">
+              <AlertCircle className="h-3 w-3" />
+              <AlertDescription className="flex items-center justify-between text-xs">
+                <span>{locationError}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetryLocation}
+                  className="ml-2 h-6 text-xs px-2"
+                >
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            {!todayAttendance && (
               <Button
-                onClick={handleCheckOutClick}
-                disabled={checkOutMutation.isPending || isLoadingLocation}
-                variant="outline"
+                onClick={handleCheckIn}
+                disabled={checkInMutation.isPending || isLoadingLocation}
                 className="w-full h-12 text-base"
               >
                 {isLoadingLocation ? (
@@ -243,45 +271,65 @@ export const MobileAttendanceCard = () => {
                     Getting Location...
                   </>
                 ) : (
-                  'Check Out'
+                  'Check In'
                 )}
               </Button>
-              <CheckoutDialog
-                open={checkoutDialogOpen}
-                onOpenChange={setCheckoutDialogOpen}
-                onCheckOut={handleCheckOut}
-                location={location}
-                isLoadingLocation={isLoadingLocation}
-                isPending={checkOutMutation.isPending}
-                locationError={locationError}
-                onRetryLocation={handleRetryLocation}
-                checkoutError={checkoutError}
-                uncommentedTasks={uncommentedTasks}
-                workspaceId={workspaceId}
-              />
-            </>
-          )}
+            )}
 
-          {isCheckedOut && (
-            <div className="text-center text-sm text-gray-500 py-2">
-              ✅ Completed for today
-            </div>
-          )}
-        </div>
+            {isCheckedIn && (
+              <>
+                <Button
+                  onClick={handleCheckOutClick}
+                  disabled={checkOutMutation.isPending || isLoadingLocation}
+                  variant="outline"
+                  className="w-full h-12 text-base"
+                >
+                  {isLoadingLocation ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Getting Location...
+                    </>
+                  ) : (
+                    'Check Out'
+                  )}
+                </Button>
+                <CheckoutDialog
+                  open={checkoutDialogOpen}
+                  onOpenChange={setCheckoutDialogOpen}
+                  onCheckOut={handleCheckOut}
+                  location={location}
+                  isLoadingLocation={isLoadingLocation}
+                  isPending={checkOutMutation.isPending}
+                  locationError={locationError}
+                  onRetryLocation={handleRetryLocation}
+                  checkoutError={checkoutError}
+                  uncommentedTasks={uncommentedTasks}
+                  workspaceId={workspaceId}
+                />
+              </>
+            )}
 
-        {/* Location Info */}
-        {location && (
-          <div className="text-xs  p-2 rounded">
-            <div className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              <span>Location captured</span>
-            </div>
-            {location.address && (
-              <div className="mt-1 truncate text-xs">{location.address}</div>
+            {isCheckedOut && (
+              <div className="text-center text-sm text-gray-500 py-2">
+                ✅ Completed for today
+              </div>
             )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Location Info */}
+          {location && (
+            <div className="text-xs  p-2 rounded">
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                <span>Location captured</span>
+              </div>
+              {location.address && (
+                <div className="mt-1 truncate text-xs">{location.address}</div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
