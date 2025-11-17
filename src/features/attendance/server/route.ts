@@ -251,6 +251,71 @@ app.post('/check-in', zValidator('json', createAttendanceSchema), async (c) => {
   }
 });
 
+// Get pending tasks (uncommented tasks)
+app.get('/pending-tasks', async (c) => {
+  try {
+    const user = await getCurrent();
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const { searchParams } = new URL(c.req.url);
+    const workspaceId = searchParams.get('workspaceId');
+
+    if (!workspaceId || !workspaceId.trim()) {
+      return c.json({ error: 'Workspace ID is required' }, 400);
+    }
+
+    const { databases } = await createSessionClient();
+
+    // Get member to verify access
+    const member = await getMember({
+      databases,
+      workspaceId: workspaceId.trim(),
+      userId: user.$id,
+    });
+
+    if (!member) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // Get all tasks assigned to user that are not DONE
+    const userTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+      Query.equal('workspaceId', workspaceId.trim()),
+      Query.contains('assigneeIds', member.$id),
+      Query.notEqual('status', TaskStatus.DONE),
+    ]);
+
+    // Get today's date range for comments (start and end of today in UTC)
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+    const todayEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+
+    // Get comments by this user made TODAY
+    const todayComments = await databases.listDocuments<Comment>(DATABASE_ID, COMMENTS_ID, [
+      Query.equal('authorId', user.$id),
+      Query.greaterThanEqual('$createdAt', todayStart.toISOString()),
+      Query.lessThanEqual('$createdAt', todayEnd.toISOString()),
+    ]);
+
+    // Get task IDs that user has commented on TODAY
+    const commentedTaskIdsToday = new Set(todayComments.documents.map((comment) => comment.taskId));
+
+    // Find tasks without comments TODAY
+    const uncommentedTasks = userTasks.documents.filter((task) => !commentedTaskIdsToday.has(task.$id));
+
+    return c.json({
+      uncommentedTasks: uncommentedTasks.map((task) => ({
+        id: task.$id,
+        name: task.name,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching pending tasks:', error);
+    return c.json({ error: 'Failed to fetch pending tasks' }, 500);
+  }
+});
+
 // Check out
 app.put('/check-out', zValidator('json', updateAttendanceSchema), async (c) => {
   try {
