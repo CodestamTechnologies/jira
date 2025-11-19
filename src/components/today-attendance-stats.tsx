@@ -46,11 +46,12 @@ export const TodayAttendanceStats = () => {
   const { data: userAttendance, isLoading: isLoadingUserAttendance } = useGetTodayAttendance(workspaceId, user?.$id);
   
   const today = new Date().toISOString().split('T')[0];
-  const { data: teamAttendance } = useGetTeamAttendance({
+  const { data: teamAttendanceData } = useGetTeamAttendance({
     workspaceId,
     date: today,
     enabled: !!isAdmin, // Only fetch for admins
   });
+  const teamAttendance: TeamAttendanceItem[] = teamAttendanceData || [];
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
@@ -117,16 +118,16 @@ export const TodayAttendanceStats = () => {
         filtered = teamAttendance;
         break;
       case 'Checked In':
-        filtered = teamAttendance.filter((item) => item.attendance !== null);
+        filtered = teamAttendance.filter((item: TeamAttendanceItem) => item.attendance !== null);
         break;
       case 'Present':
-        filtered = teamAttendance.filter((item) => item.attendance?.status === 'present');
+        filtered = teamAttendance.filter((item: TeamAttendanceItem) => item.attendance?.status === 'present');
         break;
       case 'Late':
-        filtered = teamAttendance.filter((item) => item.attendance?.status === 'late');
+        filtered = teamAttendance.filter((item: TeamAttendanceItem) => item.attendance?.status === 'late');
         break;
       case 'Not Checked In':
-        filtered = teamAttendance.filter((item) => item.attendance === null);
+        filtered = teamAttendance.filter((item: TeamAttendanceItem) => item.attendance === null);
         break;
       default:
         filtered = [];
