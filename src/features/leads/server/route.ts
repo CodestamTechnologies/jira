@@ -325,7 +325,7 @@ const app = new Hono()
         leads: z.array(
           z.object({
             name: z.string(),
-            email: z.string().email().optional(),
+            email: z.string().email().optional().or(z.literal("")),
             phone: z.string().optional(),
             company: z.string().optional(),
             website: z.string().optional(),
@@ -407,7 +407,7 @@ const app = new Hono()
           // Validate and create lead
           const validation = validateCreateLead({
             name: leadData.name,
-            email: leadData.email,
+            email: leadData.email && leadData.email.trim() !== "" ? leadData.email : undefined,
             phone: leadData.phone,
             company: leadData.company,
             website: leadData.website,
