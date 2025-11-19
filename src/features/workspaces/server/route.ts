@@ -385,7 +385,7 @@ const app = new Hono()
         Query.equal('role', MemberRole.ADMIN),
         Query.limit(1),
       ]);
-      
+
       let inviterName = 'Administrator';
       if (workspaceMembers.documents.length > 0) {
         const adminUser = await users.get(workspaceMembers.documents[0].userId);
@@ -424,6 +424,12 @@ const app = new Hono()
     const lastMonthStart = startOfMonth(subMonths(now, 1));
     const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
+    // Get ALL tasks (not just this month) for accurate counts
+    const allTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+      Query.equal('workspaceId', workspaceId),
+    ]);
+
+    // Get this month's tasks for comparison
     const thisMonthTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('workspaceId', workspaceId),
       Query.greaterThanEqual('$createdAt', thisMonthStart.toISOString()),
@@ -436,8 +442,14 @@ const app = new Hono()
       Query.lessThanEqual('$createdAt', lastMonthEnd.toISOString()),
     ]);
 
-    const taskCount = thisMonthTasks.total;
-    const taskDifference = taskCount - lastMonthTasks.total;
+    const taskCount = allTasks.total;
+    const taskDifference = thisMonthTasks.total - lastMonthTasks.total;
+
+    // Get ALL assigned tasks (not just this month)
+    const allAssignedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+      Query.equal('workspaceId', workspaceId),
+      Query.contains('assigneeIds', member.$id),
+    ]);
 
     const thisMonthAssignedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('workspaceId', workspaceId),
@@ -453,8 +465,14 @@ const app = new Hono()
       Query.lessThanEqual('$createdAt', lastMonthEnd.toISOString()),
     ]);
 
-    const assignedTaskCount = thisMonthAssignedTasks.total;
-    const assignedTaskDifference = assignedTaskCount - lastMonthAssignedTasks.total;
+    const assignedTaskCount = allAssignedTasks.total;
+    const assignedTaskDifference = thisMonthAssignedTasks.total - lastMonthAssignedTasks.total;
+
+    // Get ALL incomplete tasks (not just this month)
+    const allIncompleteTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+      Query.equal('workspaceId', workspaceId),
+      Query.notEqual('status', TaskStatus.DONE),
+    ]);
 
     const thisMonthIncompleteTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('workspaceId', workspaceId),
@@ -470,8 +488,14 @@ const app = new Hono()
       Query.lessThanEqual('$createdAt', lastMonthEnd.toISOString()),
     ]);
 
-    const incompleteTaskCount = thisMonthIncompleteTasks.total;
-    const incompleteTaskDifference = incompleteTaskCount - lastMonthIncompleteTasks.total;
+    const incompleteTaskCount = allIncompleteTasks.total;
+    const incompleteTaskDifference = thisMonthIncompleteTasks.total - lastMonthIncompleteTasks.total;
+
+    // Get ALL completed tasks (not just this month)
+    const allCompletedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+      Query.equal('workspaceId', workspaceId),
+      Query.equal('status', TaskStatus.DONE),
+    ]);
 
     const thisMonthCompletedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('workspaceId', workspaceId),
@@ -482,13 +506,20 @@ const app = new Hono()
 
     const lastMonthCompletedTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('workspaceId', workspaceId),
-      Query.notEqual('status', TaskStatus.DONE),
+      Query.equal('status', TaskStatus.DONE),
       Query.greaterThanEqual('$createdAt', lastMonthStart.toISOString()),
       Query.lessThanEqual('$createdAt', lastMonthEnd.toISOString()),
     ]);
 
-    const completedTaskCount = thisMonthCompletedTasks.total;
-    const completedTaskDifference = completedTaskCount - lastMonthCompletedTasks.total;
+    const completedTaskCount = allCompletedTasks.total;
+    const completedTaskDifference = thisMonthCompletedTasks.total - lastMonthCompletedTasks.total;
+
+    // Get ALL overdue tasks (not just this month)
+    const allOverdueTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+      Query.equal('workspaceId', workspaceId),
+      Query.notEqual('status', TaskStatus.DONE),
+      Query.lessThan('dueDate', now.toISOString()),
+    ]);
 
     const thisMonthOverdueTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
       Query.equal('workspaceId', workspaceId),
@@ -506,8 +537,8 @@ const app = new Hono()
       Query.lessThanEqual('$createdAt', lastMonthEnd.toISOString()),
     ]);
 
-    const overdueTaskCount = thisMonthOverdueTasks.total;
-    const overdueTaskDifference = overdueTaskCount - lastMonthOverdueTasks.total;
+    const overdueTaskCount = allOverdueTasks.total;
+    const overdueTaskDifference = thisMonthOverdueTasks.total - lastMonthOverdueTasks.total;
 
     return ctx.json({
       data: {

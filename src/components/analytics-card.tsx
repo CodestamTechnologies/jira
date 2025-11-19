@@ -10,15 +10,19 @@ interface AnalyticsCardProps {
   variant?: 'up' | 'down' | 'neutral';
   increaseValue?: number;
   icon?: LucideIcon;
+  onClick?: () => void;
 }
 
-export const AnalyticsCard = ({ title, value, variant, increaseValue, icon: Icon }: AnalyticsCardProps) => {
+export const AnalyticsCard = ({ title, value, variant, increaseValue, icon: Icon, onClick }: AnalyticsCardProps) => {
   const iconColor = variant === 'up' ? 'text-emerald-500' : variant === 'down' ? 'text-red-500' : 'text-muted-foreground';
   const increaseValueColor = variant === 'up' ? 'text-emerald-500' : variant === 'down' ? 'text-red-500' : 'text-muted-foreground';
   const CaretIcon = variant === 'up' ? FaCaretUp : variant === 'down' ? FaCaretDown : null;
 
   return (
-    <Card className="w-full border-none shadow-none">
+    <Card
+      className={cn('w-full border-none shadow-none', onClick && 'cursor-pointer hover:bg-accent/50 transition-colors')}
+      onClick={onClick}
+    >
       <CardHeader>
         <div className="flex items-center gap-x-2.5">
           <CardDescription className="flex items-center gap-x-2 overflow-hidden font-medium">

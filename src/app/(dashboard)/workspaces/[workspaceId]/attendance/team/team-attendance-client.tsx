@@ -23,10 +23,10 @@ export const TeamAttendanceClient = () => {
     return new Date().toISOString().split('T')[0];
   });
 
-  const { data: teamAttendance, isLoading } = useGetTeamAttendance(
+  const { data: teamAttendance, isLoading } = useGetTeamAttendance({
     workspaceId,
-    selectedDate
-  );
+    date: selectedDate,
+  });
 
   const { downloadTeamAttendance, isDownloading } = useDownloadTeamAttendance();
   const stats = calculateTeamAttendanceStats(teamAttendance);

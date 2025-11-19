@@ -3,23 +3,58 @@
 import { AlertCircle, CheckCircle, Clock, Users, LogIn, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { AnalyticsCard } from './analytics-card';
 import { DottedSeparator } from './dotted-separator';
+import { AttendanceMembersDialog } from './attendance-members-dialog';
 import { useGetTodayAttendance } from '@/features/attendance/api/use-get-today-attendance';
 import { useGetTodayAttendanceStats } from '@/features/attendance/api/use-get-today-attendance-stats';
+import { useGetTeamAttendance } from '@/features/attendance/api/use-get-team-attendance';
+import { useAdminStatus } from '@/features/attendance/hooks/use-admin-status';
 import { useCurrent } from '@/features/auth/api/use-current';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { formatHoursAndMinutes } from '@/features/attendance/utils';
 
+interface TeamAttendanceItem {
+  member: {
+    $id: string;
+    userId: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  attendance: {
+    $id: string;
+    date: string;
+    checkInTime: string;
+    checkOutTime?: string;
+    totalHours?: number;
+    status: string;
+    notes?: string;
+  } | null;
+}
+
 export const TodayAttendanceStats = () => {
   const workspaceId = useWorkspaceId();
   const { data: user } = useCurrent();
+  const { data: isAdmin } = useAdminStatus();
   const { data: stats, isLoading: isLoadingStats } = useGetTodayAttendanceStats(workspaceId);
   const { data: userAttendance, isLoading: isLoadingUserAttendance } = useGetTodayAttendance(workspaceId, user?.$id);
+  
+  const today = new Date().toISOString().split('T')[0];
+  const { data: teamAttendance } = useGetTeamAttendance({
+    workspaceId,
+    date: today,
+    enabled: !!isAdmin, // Only fetch for admins
+  });
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [filteredMembers, setFilteredMembers] = useState<TeamAttendanceItem[]>([]);
 
   const isLoading = isLoadingStats || isLoadingUserAttendance;
 
@@ -70,6 +105,37 @@ export const TodayAttendanceStats = () => {
   const notCheckedIn = stats.total - stats.checkedIn;
   const hasUserCheckedIn = !!userAttendance;
   const userStatus = userAttendance?.status || 'not-checked-in';
+
+  // Filter members based on attendance status
+  const handleCardClick = (title: string) => {
+    if (!isAdmin || !teamAttendance) return;
+
+    let filtered: TeamAttendanceItem[] = [];
+
+    switch (title) {
+      case 'Total Members':
+        filtered = teamAttendance;
+        break;
+      case 'Checked In':
+        filtered = teamAttendance.filter((item) => item.attendance !== null);
+        break;
+      case 'Present':
+        filtered = teamAttendance.filter((item) => item.attendance?.status === 'present');
+        break;
+      case 'Late':
+        filtered = teamAttendance.filter((item) => item.attendance?.status === 'late');
+        break;
+      case 'Not Checked In':
+        filtered = teamAttendance.filter((item) => item.attendance === null);
+        break;
+      default:
+        filtered = [];
+    }
+
+    setFilteredMembers(filtered);
+    setDialogTitle(title);
+    setDialogOpen(true);
+  };
 
   return (
     <div className="flex flex-col lg:flex-row gap-4">
@@ -164,6 +230,7 @@ export const TodayAttendanceStats = () => {
               value={stats.total}
               variant="neutral"
               icon={Users}
+              onClick={isAdmin ? () => handleCardClick('Total Members') : undefined}
             />
 
             <DottedSeparator direction="vertical" />
@@ -175,6 +242,7 @@ export const TodayAttendanceStats = () => {
               value={stats.checkedIn}
               variant={stats.checkedIn > 0 ? 'up' : 'neutral'}
               icon={CheckCircle}
+              onClick={isAdmin ? () => handleCardClick('Checked In') : undefined}
             />
 
             <DottedSeparator direction="vertical" />
@@ -186,6 +254,7 @@ export const TodayAttendanceStats = () => {
               value={stats.present}
               variant={stats.present > 0 ? 'up' : 'neutral'}
               icon={CheckCircle}
+              onClick={isAdmin ? () => handleCardClick('Present') : undefined}
             />
 
             <DottedSeparator direction="vertical" />
@@ -197,6 +266,7 @@ export const TodayAttendanceStats = () => {
               value={stats.late}
               variant={stats.late > 0 ? 'down' : 'neutral'}
               icon={AlertCircle}
+              onClick={isAdmin ? () => handleCardClick('Late') : undefined}
             />
 
             <DottedSeparator direction="vertical" />
@@ -208,12 +278,24 @@ export const TodayAttendanceStats = () => {
               value={notCheckedIn}
               variant={notCheckedIn > 0 ? 'down' : 'neutral'}
               icon={Clock}
+              onClick={isAdmin ? () => handleCardClick('Not Checked In') : undefined}
             />
           </div>
         </div>
 
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
+
+      {/* Attendance Members Dialog */}
+      {isAdmin && (
+        <AttendanceMembersDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          title={dialogTitle}
+          members={filteredMembers}
+          date={today}
+        />
+      )}
     </div>
   );
 };

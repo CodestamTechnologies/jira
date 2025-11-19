@@ -1,17 +1,21 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { CalendarIcon, PlusIcon, SettingsIcon } from 'lucide-react';
+import { ArrowDownUp, CalendarIcon, Folder, ListChecks, PlusIcon, SettingsIcon, UserIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
 import { Analytics } from '@/components/analytics';
+import { DatePicker } from '@/components/date-picker';
 import { DottedSeparator } from '@/components/dotted-separator';
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
 import { TodayAttendanceStats } from '@/components/today-attendance-stats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAdminStatus } from '@/features/attendance/hooks/use-admin-status';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import type { Member } from '@/features/members/types';
@@ -24,27 +28,24 @@ import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal
 import { TaskStatus } from '@/features/tasks/types';
 import type { Task } from '@/features/tasks/types';
 import { useGetWorkspaceAnalytics } from '@/features/workspaces/api/use-get-workspace-analytics';
+import { useWorkspaceFilters, type ProjectSortBy, type TaskSortBy } from '@/features/workspaces/hooks/use-workspace-filters';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
 export const WorkspaceIdClient = () => {
   const workspaceId = useWorkspaceId();
+  const { data: isAdmin, isLoading: isAdminLoading } = useAdminStatus();
 
   const { data: workspaceAnalytics, isLoading: isLoadingAnalytics } = useGetWorkspaceAnalytics({ workspaceId });
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({ workspaceId });
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 
-  const isLoading = isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers;
+  const isLoading = isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers || isAdminLoading;
 
-  const limitedTasks = useMemo(() => {
-    if (!tasks?.documents) return [];
-    const sorted = [...tasks.documents].sort((a, b) => {
-      const dateA = new Date(a.$createdAt).getTime();
-      const dateB = new Date(b.$createdAt).getTime();
-      return dateB - dateA; // Most recent first
-    });
-    return sorted.slice(0, 12);
-  }, [tasks?.documents]);
+  const [
+    { taskStatus, taskProjectId, taskAssigneeId, taskDueDate, taskSortBy, projectSearch, projectSortBy },
+    setFilters,
+  ] = useWorkspaceFilters();
 
   const projectTaskCounts = useMemo(() => {
     const counts: Record<string, { total: number; backlog: number; people: number }> = {};
@@ -84,20 +85,132 @@ export const WorkspaceIdClient = () => {
     return counts;
   }, [tasks?.documents, projects?.documents]);
 
+  // Apply filters and sorting to tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    if (!tasks?.documents) return [];
+
+    let filtered = [...tasks.documents];
+
+    // Apply filters
+    if (taskStatus) {
+      filtered = filtered.filter((task) => task.status === taskStatus);
+    }
+    if (taskProjectId) {
+      filtered = filtered.filter((task) => task.projectId === taskProjectId);
+    }
+    if (taskAssigneeId) {
+      filtered = filtered.filter((task) => task.assigneeIds?.includes(taskAssigneeId));
+    }
+    if (taskDueDate) {
+      const dueDateStr = new Date(taskDueDate).toISOString().split('T')[0];
+      filtered = filtered.filter((task) => {
+        if (!task.dueDate) return false;
+        const taskDueDateStr = new Date(task.dueDate).toISOString().split('T')[0];
+        return taskDueDateStr === dueDateStr;
+      });
+    }
+
+    // Apply sorting
+    const sortBy = taskSortBy || 'created-desc';
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'created-desc':
+          return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+        case 'created-asc':
+          return new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime();
+        case 'due-desc':
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
+        case 'due-asc':
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        case 'status':
+          return a.status.localeCompare(b.status);
+        case 'project':
+          return (a.project?.name || '').localeCompare(b.project?.name || '');
+        default:
+          return 0;
+      }
+    });
+
+    return filtered.slice(0, 12);
+  }, [tasks?.documents, taskStatus, taskProjectId, taskAssigneeId, taskDueDate, taskSortBy]);
+
+  // Apply filters and sorting to projects
+  const filteredAndSortedProjects = useMemo(() => {
+    if (!projects?.documents) return [];
+
+    let filtered = [...projects.documents];
+
+    // Apply search filter
+    if (projectSearch) {
+      const searchLower = projectSearch.toLowerCase();
+      filtered = filtered.filter((project) => project.name.toLowerCase().includes(searchLower));
+    }
+
+    // Apply sorting
+    const sortBy = projectSortBy || 'created-desc';
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name-asc':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'created-desc':
+          return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+        case 'created-asc':
+          return new Date(a.$createdAt).getTime() - new Date(b.$createdAt).getTime();
+        case 'tasks-desc':
+          return (projectTaskCounts[b.$id]?.total || 0) - (projectTaskCounts[a.$id]?.total || 0);
+        case 'tasks-asc':
+          return (projectTaskCounts[a.$id]?.total || 0) - (projectTaskCounts[b.$id]?.total || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [projects?.documents, projectSearch, projectSortBy, projectTaskCounts]);
+
   if (isLoading) return <PageLoader />;
-  if (!workspaceAnalytics || !tasks || !projects || !members) return <PageError message="Failed to load workspace data." />;
+  // Analytics is only required for admins
+  if ((isAdmin && !workspaceAnalytics) || !tasks || !projects || !members || isAdmin === undefined) return <PageError message="Failed to load workspace data." />;
+
+  // Backend already filters tasks and projects based on role:
+  // - Admins see all tasks/projects
+  // - Members only see tasks they're assigned to and projects where they have tasks
+  // So we just use the data as-is and adjust UI labels/visibility
 
   return (
     <div className="flex h-full flex-col space-y-6">
-      <Analytics data={workspaceAnalytics} />
-      <TodayAttendanceStats />
+      {/* Analytics - Only show full analytics to admins */}
+      {isAdmin && workspaceAnalytics ? <Analytics data={workspaceAnalytics} /> : null}
+      {isAdmin && <TodayAttendanceStats />}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:gap-x-6 xl:gap-y-6">
         <div className="flex flex-col gap-6">
-          <TaskList data={limitedTasks} total={tasks.total} />
-          <MemberList data={members.documents as Member[]} total={members.total} />
+          <TaskList
+            data={filteredAndSortedTasks}
+            total={tasks.total}
+            isAdmin={isAdmin}
+            projects={projects?.documents || []}
+            members={(members?.documents || []) as Member[]}
+            filters={{ taskStatus, taskProjectId, taskAssigneeId, taskDueDate, taskSortBy }}
+            onFiltersChange={setFilters}
+          />
+          {/* Members list - Only show to admins */}
+          {isAdmin && <MemberList data={members.documents as Member[]} total={members.total} />}
         </div>
-        <ProjectList data={projects.documents} total={projects.total} projectTaskCounts={projectTaskCounts} />
+        <ProjectList
+          data={filteredAndSortedProjects}
+          total={projects.total}
+          projectTaskCounts={projectTaskCounts}
+          isAdmin={isAdmin}
+          filters={{ projectSearch, projectSortBy }}
+          onFiltersChange={setFilters}
+        />
       </div>
     </div>
   );
@@ -106,21 +219,158 @@ export const WorkspaceIdClient = () => {
 interface TaskListProps {
   data: Task[];
   total: number;
+  isAdmin: boolean;
+  projects: Project[];
+  members: Member[];
+  filters: {
+    taskStatus: TaskStatus | null;
+    taskProjectId: string | null;
+    taskAssigneeId: string | null;
+    taskDueDate: string | null;
+    taskSortBy: TaskSortBy | null;
+  };
+  onFiltersChange: (filters: Partial<{
+    taskStatus: TaskStatus | null;
+    taskProjectId: string | null;
+    taskAssigneeId: string | null;
+    taskDueDate: string | null;
+    taskSortBy: TaskSortBy | null;
+  }>) => void;
 }
 
-export const TaskList = ({ data, total }: TaskListProps) => {
+export const TaskList = ({ data, total, isAdmin, projects, members, filters, onFiltersChange }: TaskListProps) => {
   const workspaceId = useWorkspaceId();
   const { open: createTask } = useCreateTaskModal();
+
+  const projectOptions = projects.map((project) => ({
+    value: project.$id,
+    label: project.name,
+  }));
+
+  const memberOptions = members
+    .filter((member) => member.isActive !== false)
+    .map((member) => ({
+      value: member.$id,
+      label: member.name,
+    }));
+
+  const handleStatusChange = (value: string) => {
+    onFiltersChange({ taskStatus: value === 'all' ? null : (value as TaskStatus) });
+  };
+
+  const handleProjectChange = (value: string) => {
+    onFiltersChange({ taskProjectId: value === 'all' ? null : value });
+  };
+
+  const handleAssigneeChange = (value: string) => {
+    onFiltersChange({ taskAssigneeId: value === 'all' ? null : value });
+  };
+
+  const handleDueDateChange = (date: Date | null) => {
+    onFiltersChange({ taskDueDate: date ? date.toISOString() : null });
+  };
+
+  const handleSortChange = (value: string) => {
+    onFiltersChange({ taskSortBy: value as TaskSortBy });
+  };
 
   return (
     <div className="col-span-1 flex flex-col gap-y-4">
       <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center justify-between">
-          <p className="text-lg font-semibold">Tasks ({total})</p>
+          <p className="text-lg font-semibold">
+            {isAdmin ? 'All Tasks' : 'My Tasks'} ({total})
+          </p>
 
           <Button title="Create Task" variant="secondary" size="icon" onClick={() => createTask(TaskStatus.TODO)}>
             <PlusIcon className="size-4 text-muted-foreground" />
           </Button>
+        </div>
+
+        <DottedSeparator className="my-4" />
+
+        {/* Filters and Sort */}
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Select value={filters.taskStatus || 'all'} onValueChange={handleStatusChange}>
+              <SelectTrigger className="h-8 w-full sm:w-[140px]">
+                <div className="flex items-center pr-2">
+                  <ListChecks className="mr-2 size-3" />
+                  <SelectValue placeholder="Status" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectSeparator />
+                <SelectItem value={TaskStatus.BACKLOG}>Backlog</SelectItem>
+                <SelectItem value={TaskStatus.IN_PROGRESS}>In Progress</SelectItem>
+                <SelectItem value={TaskStatus.IN_REVIEW}>In Review</SelectItem>
+                <SelectItem value={TaskStatus.TODO}>Todo</SelectItem>
+                <SelectItem value={TaskStatus.DONE}>Done</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.taskProjectId || 'all'} onValueChange={handleProjectChange}>
+              <SelectTrigger className="h-8 w-full sm:w-[140px]">
+                <div className="flex items-center pr-2">
+                  <Folder className="mr-2 size-3" />
+                  <SelectValue placeholder="Project" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All projects</SelectItem>
+                <SelectSeparator />
+                {projectOptions.map((project) => (
+                  <SelectItem key={project.value} value={project.value}>
+                    {project.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.taskAssigneeId || 'all'} onValueChange={handleAssigneeChange}>
+              <SelectTrigger className="h-8 w-full sm:w-[140px]">
+                <div className="flex items-center pr-2">
+                  <UserIcon className="mr-2 size-3" />
+                  <SelectValue placeholder="Assignee" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All assignees</SelectItem>
+                <SelectSeparator />
+                {memberOptions.map((member) => (
+                  <SelectItem key={member.value} value={member.value}>
+                    {member.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <DatePicker
+              placeholder="Due date"
+              className="h-8 w-full sm:w-[140px]"
+              value={filters.taskDueDate ? new Date(filters.taskDueDate) : undefined}
+              onChange={handleDueDateChange}
+              showReset
+            />
+
+            <Select value={filters.taskSortBy || 'created-desc'} onValueChange={handleSortChange}>
+              <SelectTrigger className="h-8 w-full sm:w-[140px]">
+                <div className="flex items-center pr-2">
+                  <ArrowDownUp className="mr-2 size-3" />
+                  <SelectValue placeholder="Sort by" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created-desc">Newest first</SelectItem>
+                <SelectItem value="created-asc">Oldest first</SelectItem>
+                <SelectItem value="due-asc">Due soonest</SelectItem>
+                <SelectItem value="due-desc">Due latest</SelectItem>
+                <SelectItem value="status">By status</SelectItem>
+                <SelectItem value="project">By project</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <DottedSeparator className="my-4" />
@@ -160,21 +410,73 @@ interface ProjectListProps {
   data: Project[];
   total: number;
   projectTaskCounts: Record<string, { total: number; backlog: number; people: number }>;
+  isAdmin: boolean;
+  filters: {
+    projectSearch: string | null;
+    projectSortBy: ProjectSortBy | null;
+  };
+  onFiltersChange: (filters: Partial<{
+    projectSearch: string | null;
+    projectSortBy: ProjectSortBy | null;
+  }>) => void;
 }
 
-export const ProjectList = ({ data, total, projectTaskCounts }: ProjectListProps) => {
+export const ProjectList = ({ data, total, projectTaskCounts, isAdmin, filters, onFiltersChange }: ProjectListProps) => {
   const workspaceId = useWorkspaceId();
   const { open: createProject } = useCreateProjectModal();
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onFiltersChange({ projectSearch: e.target.value || null });
+  };
+
+  const handleSortChange = (value: string) => {
+    onFiltersChange({ projectSortBy: value as ProjectSortBy });
+  };
 
   return (
     <div className="col-span-1 flex flex-col gap-y-4">
       <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center justify-between">
-          <p className="text-lg font-semibold">Projects ({total})</p>
+          <p className="text-lg font-semibold">
+            {isAdmin ? 'All Projects' : 'My Projects'} ({total})
+          </p>
 
-          <Button title="Create Project" variant="secondary" size="icon" onClick={createProject}>
-            <PlusIcon className="size-4 text-muted-foreground" />
-          </Button>
+          {isAdmin && (
+            <Button title="Create Project" variant="secondary" size="icon" onClick={createProject}>
+              <PlusIcon className="size-4 text-muted-foreground" />
+            </Button>
+          )}
+        </div>
+
+        <DottedSeparator className="my-4" />
+
+        {/* Filters and Sort */}
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Input
+              placeholder="Search projects..."
+              value={filters.projectSearch || ''}
+              onChange={handleSearchChange}
+              className="h-8 flex-1 min-w-[150px]"
+            />
+
+            <Select value={filters.projectSortBy || 'created-desc'} onValueChange={handleSortChange}>
+              <SelectTrigger className="h-8 w-full sm:w-[160px]">
+                <div className="flex items-center pr-2">
+                  <ArrowDownUp className="mr-2 size-3" />
+                  <SelectValue placeholder="Sort by" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+                <SelectItem value="name-desc">Name (Z-A)</SelectItem>
+                <SelectItem value="created-desc">Newest first</SelectItem>
+                <SelectItem value="created-asc">Oldest first</SelectItem>
+                <SelectItem value="tasks-desc">Most tasks</SelectItem>
+                <SelectItem value="tasks-asc">Fewest tasks</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <DottedSeparator className="my-4" />
