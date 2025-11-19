@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 
-export const useGetTeamAttendance = (workspaceId: string, date: string) => {
+interface UseGetTeamAttendanceProps {
+  workspaceId: string;
+  date: string;
+  enabled?: boolean;
+}
+
+export const useGetTeamAttendance = ({ workspaceId, date, enabled = true }: UseGetTeamAttendanceProps) => {
   return useQuery({
     queryKey: ['team-attendance', workspaceId, date],
     queryFn: async () => {
@@ -17,7 +23,7 @@ export const useGetTeamAttendance = (workspaceId: string, date: string) => {
 
       return response.json();
     },
-    enabled: !!workspaceId && !!date,
+    enabled: !!workspaceId && !!date && enabled,
   });
 };
 

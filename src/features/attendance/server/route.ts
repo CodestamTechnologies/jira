@@ -599,7 +599,9 @@ app.get('/stats', async (c) => {
         Query.equal('workspaceId', workspaceId.trim())
       ]);
 
-      const memberIds = members.documents.map((m) => m.userId);
+      // Filter out inactive members (same logic as /team endpoint)
+      const activeMembers = members.documents.filter((m: any) => m.isActive !== false);
+      const memberIds = activeMembers.map((m) => m.userId);
 
       if (memberIds.length === 0) {
         return c.json({
