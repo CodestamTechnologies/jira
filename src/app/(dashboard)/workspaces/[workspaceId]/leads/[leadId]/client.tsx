@@ -130,12 +130,14 @@ export const LeadIdClient = () => {
             <CardDescription>Lead contact details</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Mail className="size-4 text-muted-foreground" />
-              <a href={`mailto:${lead.email}`} className="text-sm hover:underline">
-                {lead.email}
-              </a>
-            </div>
+            {lead.email && (
+              <div className="flex items-center gap-3">
+                <Mail className="size-4 text-muted-foreground" />
+                <a href={`mailto:${lead.email}`} className="text-sm hover:underline">
+                  {lead.email}
+                </a>
+              </div>
+            )}
             {lead.phone && (
               <div className="flex items-center gap-3">
                 <Phone className="size-4 text-muted-foreground" />

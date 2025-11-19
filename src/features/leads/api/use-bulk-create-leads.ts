@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 interface BulkLeadData {
   name: string
-  email: string
+  email?: string
   phone?: string
   company?: string
   website?: string
