@@ -112,10 +112,10 @@ export function UploadLeadsExcelModal({ onSuccess }: UploadLeadsExcelModalProps)
         const values: string[] = []
         let current = ''
         let inQuotes = false
-        
+
         for (let i = 0; i < line.length; i++) {
             const char = line[i]
-            
+
             if (char === '"') {
                 if (inQuotes && line[i + 1] === '"') {
                     // Escaped quote
@@ -133,7 +133,7 @@ export function UploadLeadsExcelModal({ onSuccess }: UploadLeadsExcelModalProps)
                 current += char
             }
         }
-        
+
         // Add last field
         values.push(current.trim())
         return values
@@ -146,7 +146,7 @@ export function UploadLeadsExcelModal({ onSuccess }: UploadLeadsExcelModalProps)
                 try {
                     const text = e.target?.result as string
                     const lines = text.split('\n').map(line => line.trim()).filter(line => line)
-                    
+
                     if (lines.length < 2) {
                         reject(new Error('File must contain at least a header row and one data row'))
                         return
@@ -154,7 +154,7 @@ export function UploadLeadsExcelModal({ onSuccess }: UploadLeadsExcelModalProps)
 
                     // Parse header
                     const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase().replace(/"/g, ''))
-                    
+
                     // Find column indices
                     const nameIdx = headers.findIndex(h => h.includes('name'))
                     const emailIdx = headers.findIndex(h => h.includes('email'))
@@ -168,8 +168,8 @@ export function UploadLeadsExcelModal({ onSuccess }: UploadLeadsExcelModalProps)
                     const notesIdx = headers.findIndex(h => h.includes('notes'))
                     const assigneeIdx = headers.findIndex(h => h.includes('assignee'))
 
-                    if (nameIdx === -1 || emailIdx === -1) {
-                        reject(new Error('File must contain Name and Email columns'))
+                    if (nameIdx === -1) {
+                        reject(new Error('File must contain Name column'))
                         return
                     }
 
@@ -177,16 +177,16 @@ export function UploadLeadsExcelModal({ onSuccess }: UploadLeadsExcelModalProps)
                     const leads: any[] = []
                     for (let i = 1; i < lines.length; i++) {
                         const values = parseCSVLine(lines[i]).map(v => v.replace(/^"|"$/g, '').trim())
-                        
+
                         const name = values[nameIdx]?.trim()
                         const email = values[emailIdx]?.trim()
 
-                        if (!name || !email) {
-                            continue // Skip rows without name or email
+                        if (!name) {
+                            continue // Skip rows without name
                         }
 
                         // Parse assignee emails (comma-separated)
-                        const assigneeEmails = values[assigneeIdx] 
+                        const assigneeEmails = values[assigneeIdx]
                             ? values[assigneeIdx].split(',').map((e: string) => e.trim()).filter((e: string) => e && e.includes('@'))
                             : []
 
@@ -245,7 +245,7 @@ export function UploadLeadsExcelModal({ onSuccess }: UploadLeadsExcelModalProps)
 
         try {
             const leads = await parseExcelFile(file)
-            
+
             if (leads.length === 0) {
                 toast.error('No valid leads found in the file')
                 return
@@ -370,7 +370,7 @@ export function UploadLeadsExcelModal({ onSuccess }: UploadLeadsExcelModalProps)
                     <div className="p-4 border rounded-lg bg-muted/30">
                         <p className="text-xs font-medium mb-2">Instructions:</p>
                         <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                            <li>Name and Email are required fields</li>
+                            <li>Name is required, Email is optional</li>
                             <li>For Assignee Emails, separate multiple emails with commas</li>
                             <li>Source values: website, referral, social_media, email, phone, other</li>
                             <li>Status values: new, contacted, qualified, proposal, negotiation, closed_won, closed_lost</li>

@@ -46,7 +46,7 @@ export const leadSchema = z.object({
     id: z.string(),
     workspaceId: z.string(),
     name: z.string().min(1, "Name is required"),
-    email: z.string().email("Invalid email format"),
+    email: z.string().email("Invalid email format").optional(),
     phone: z.string().optional(),
     company: z.string().optional(),
     website: z.string().url().optional().or(z.literal("")),
@@ -75,7 +75,7 @@ export const leadSchema = z.object({
 // Create lead schema (without id and timestamps)
 export const createLeadSchema = z.object({
     name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
-    email: z.string().email("Invalid email format").max(255, "Email must be less than 255 characters"),
+    email: z.string().email("Invalid email format").max(255, "Email must be less than 255 characters").optional(),
     phone: z.string().max(20, "Phone must be less than 20 characters").optional(),
     company: z.string().max(100, "Company must be less than 100 characters").optional(),
     website: z.string().url("Invalid website URL").optional().or(z.literal("")),

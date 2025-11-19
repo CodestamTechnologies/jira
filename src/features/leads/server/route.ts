@@ -325,7 +325,7 @@ const app = new Hono()
         leads: z.array(
           z.object({
             name: z.string(),
-            email: z.string().email(),
+            email: z.string().email().optional(),
             phone: z.string().optional(),
             company: z.string().optional(),
             website: z.string().optional(),

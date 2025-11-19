@@ -138,7 +138,7 @@ const LeadsList = ({ onClose }: { onClose: () => void }) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="truncate text-sm font-medium">{lead.name}</div>
-                    <div className="truncate text-xs text-muted-foreground">{lead.company || lead.email}</div>
+                    <div className="truncate text-xs text-muted-foreground">{lead.company || lead.email || 'No contact info'}</div>
                   </div>
                 </div>
               </Link>

@@ -135,7 +135,7 @@ export function LeadCommentsModal({ lead, open, onOpenChange }: LeadCommentsModa
                             <div>
                                 <div className="font-medium">{lead.name}</div>
                                 <div className="text-sm text-muted-foreground">
-                                    {lead.company} • {lead.email}
+                                    {lead.company}{lead.email ? ` • ${lead.email}` : ''}
                                 </div>
                             </div>
                         </div>

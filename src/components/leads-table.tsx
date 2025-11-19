@@ -98,7 +98,7 @@ export function LeadsTable() {
             const searchLower = filters.search.toLowerCase()
             filtered = filtered.filter(lead =>
                 lead.name.toLowerCase().includes(searchLower) ||
-                lead.email.toLowerCase().includes(searchLower) ||
+                lead.email?.toLowerCase().includes(searchLower) ||
                 lead.company?.toLowerCase().includes(searchLower) ||
                 lead.phone?.toLowerCase().includes(searchLower)
             )
@@ -361,12 +361,14 @@ export function LeadsTable() {
                                     </TableCell>
                                     <TableCell>
                                         <div className="space-y-1">
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Mail className="h-3 w-3" />
-                                                <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">
-                                                    {lead.email}
-                                                </a>
-                                            </div>
+                                            {lead.email && (
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <Mail className="h-3 w-3" />
+                                                    <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline">
+                                                        {lead.email}
+                                                    </a>
+                                                </div>
+                                            )}
                                             {lead.phone && (
                                                 <div className="flex items-center gap-2 text-sm">
                                                     <Phone className="h-3 w-3" />
@@ -512,12 +514,14 @@ export function LeadsTable() {
 
                             {/* Contact Info */}
                             <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-[10px]">
-                                    <Mail className="h-2.5 w-2.5 flex-shrink-0" />
-                                    <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline truncate">
-                                        {lead.email}
-                                    </a>
-                                </div>
+                                {lead.email && (
+                                    <div className="flex items-center gap-1.5 text-[10px]">
+                                        <Mail className="h-2.5 w-2.5 flex-shrink-0" />
+                                        <a href={`mailto:${lead.email}`} className="text-blue-600 hover:underline truncate">
+                                            {lead.email}
+                                        </a>
+                                    </div>
+                                )}
                                 {lead.phone && (
                                     <div className="flex items-center gap-1.5 text-[10px]">
                                         <Phone className="h-2.5 w-2.5 flex-shrink-0" />
