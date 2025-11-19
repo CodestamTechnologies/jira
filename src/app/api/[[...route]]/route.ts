@@ -13,6 +13,7 @@ import salarySlip from '@/features/salary-slip/server/route';
 import activityLogs from '@/features/activity-logs/server/route';
 import logDownload from '@/features/activity-logs/server/log-download';
 import pdfTemplates from '@/features/pdf-templates/server/route';
+import leads from '@/features/leads/server/route';
 
 export const runtime = 'nodejs';
 
@@ -30,7 +31,8 @@ const routes = app
   .route('/salary-slip', salarySlip)
   .route('/activity-logs', activityLogs)
   .route('/activity-logs/download', logDownload)
-  .route('/pdf-templates', pdfTemplates);
+  .route('/pdf-templates', pdfTemplates)
+  .route('/leads', leads);
 
 export type AppType = typeof routes;
 

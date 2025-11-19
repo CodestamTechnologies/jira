@@ -1,5 +1,7 @@
 import type { PropsWithChildren } from 'react';
 
+import { AdminSidebarProvider } from '@/components/admin-sidebar-context';
+import { AdminSheet } from '@/components/admin-sidebar';
 import { CommandPalette } from '@/components/command-palette';
 import { ModalProvider } from '@/components/modal-provider';
 import { Navbar } from '@/components/navbar';
@@ -7,24 +9,26 @@ import { Sidebar } from '@/components/sidebar';
 
 const DashboardLayout = ({ children }: PropsWithChildren) => {
   return (
-    <div className="min-h-screen bg-background">
-      <ModalProvider />
-      <CommandPalette />
+    <AdminSidebarProvider>
+      <div className="min-h-screen bg-background">
+        <ModalProvider />
+        <CommandPalette />
 
-      <div className="flex size-full ">
-        <div className="fixed left-0 top-0 hidden h-full overflow-auto lg:block lg:w-[264px]">
+        <div className="flex size-full">
           <Sidebar />
-        </div>
 
-        <div className="w-full lg:pl-[264px]">
-          <div className="mx-auto h-full max-w-screen-xl">
-            <Navbar />
+          <div className="w-full lg:pl-[264px]">
+            <div className="mx-auto h-full max-w-screen-xl">
+              <Navbar />
 
-            <main className="flex h-full flex-col px-6 py-8">{children}</main>
+              <main className="flex h-full flex-col px-6 py-8">{children}</main>
+            </div>
           </div>
         </div>
+
+        <AdminSheet />
       </div>
-    </div>
+    </AdminSidebarProvider>
   );
 };
 export default DashboardLayout;

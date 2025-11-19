@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 
 import { UserButton } from '@/features/auth/components/user-button';
 
-import { MobileSidebar } from './mobile-sidebar';
 import { ModeToggle } from './ui/mode-toggle';
 
 const pathnameMap = {
@@ -33,6 +32,10 @@ const pathnameMap = {
     title: 'Team Attendance',
     description: 'View attendance for all team members on a specific day',
   },
+  leads: {
+    title: 'Leads Management',
+    description: 'Manage and track your sales leads with real-time updates',
+  },
 };
 
 const defaultMap = {
@@ -49,13 +52,11 @@ export const Navbar = () => {
   // Handle sub-routes for invoices
   if (pathnameKey === 'invoices' && subRoute === 'create') {
     return (
-      <nav className="flex items-center justify-between px-6 pt-4">
+      <nav className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4">
         <div className="hidden flex-col lg:flex">
           <h1 className="text-2xl font-semibold">Create Invoice</h1>
           <p className="text-muted-foreground">Generate and download invoices for your clients</p>
         </div>
-
-        <MobileSidebar />
 
         <div className="flex items-center gap-x-2.5">
           <ModeToggle />
@@ -68,13 +69,11 @@ export const Navbar = () => {
   // Handle member detail pages
   if (pathnameKey === 'members' && pathnameParts[4]) {
     return (
-      <nav className="flex items-center justify-between px-6 pt-4">
+      <nav className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4">
         <div className="hidden flex-col lg:flex">
-          <h1 className="text-2xl font-semibold">Member Profile</h1>
+          <h1 className="text-lg font-semibold">Member Profile</h1>
           <p className="text-muted-foreground">View member details and generate documents</p>
         </div>
-
-        <MobileSidebar />
 
         <div className="flex items-center gap-x-2.5">
           <ModeToggle />
@@ -87,19 +86,15 @@ export const Navbar = () => {
   const { title, description } = pathnameMap[pathnameKey] || defaultMap;
 
   return (
-    <nav className="flex items-center justify-between px-6 pt-4">
+    <nav className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4">
       <div className="hidden flex-col lg:flex">
         <h1 className="text-2xl font-semibold">{title}</h1>
-
         <p className="text-muted-foreground">{description}</p>
       </div>
-
-      <MobileSidebar />
 
       <div className="flex items-center gap-x-2.5">
         <ModeToggle />
         <UserButton />
-
       </div>
     </nav>
   );

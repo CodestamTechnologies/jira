@@ -1,10 +1,11 @@
 'use client'
 
-import { Settings, UsersIcon, Clock, FileText, History } from 'lucide-react'
+import { Settings, UsersIcon, Clock, FileText, History, TrendingUp, Folder, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { GoCheckCircle, GoCheckCircleFill, GoHome, GoHomeFill } from 'react-icons/go'
 
+import { useAdminSidebar } from '@/components/admin-sidebar-context'
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id'
 import { useAdminStatus } from '@/features/attendance/hooks/use-admin-status'
 import { cn } from '@/lib/utils'
@@ -21,6 +22,12 @@ const routes = [
     href: '/tasks',
     icon: GoCheckCircle,
     activeIcon: GoCheckCircleFill,
+  },
+  {
+    label: 'Leads',
+    href: '/leads',
+    icon: TrendingUp,
+    activeIcon: TrendingUp,
   },
   {
     label: 'Attendance',
@@ -68,6 +75,7 @@ export const Navigation = () => {
   const pathname = usePathname()
   const workspaceId = useWorkspaceId()
   const { data: isAdmin } = useAdminStatus()
+  const { activeAdminSection, setActiveAdminSection, setIsAdminSheetOpen } = useAdminSidebar()
 
   return (
     <ul className="flex flex-col">
@@ -86,10 +94,10 @@ export const Navigation = () => {
                 'flex items-center gap-2.5 rounded-md p-2.5 font-sans text-sm transition',
                 isActive
                   ? 'bg-accent text-accent-foreground shadow-sm hover:opacity-100'
-                  : 'text-muted-foreground hover:text-foreground',
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
               )}
             >
-              <Icon className={cn('size-4 mr-2', isActive ? 'text-accent-foreground' : 'text-muted-foreground')} />
+              <Icon className={cn('size-4', isActive ? 'text-accent-foreground' : 'text-muted-foreground')} />
               {route.label}
             </Link>
           </li>
@@ -99,10 +107,48 @@ export const Navigation = () => {
       {/* Admin Routes Section */}
       {isAdmin && adminRoutes.length > 0 && (
         <>
-          <li className="px-2.5 py-2 mt-2">
+          <li className="px-2.5 py-2 mt-4">
             <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Admin
+              Admin Tools
             </div>
+          </li>
+          {/* Projects Option */}
+          <li>
+            <button
+              onClick={() => {
+                const newSection = activeAdminSection === 'projects' ? null : 'projects'
+                setActiveAdminSection(newSection)
+                setIsAdminSheetOpen(newSection !== null)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2.5 rounded-md p-2.5 font-sans text-sm transition',
+                activeAdminSection === 'projects'
+                  ? 'bg-accent text-accent-foreground shadow-sm hover:opacity-100'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+              )}
+            >
+              <Folder className={cn('size-4', activeAdminSection === 'projects' ? 'text-accent-foreground' : 'text-muted-foreground')} />
+              Projects
+            </button>
+          </li>
+          {/* Leads Option */}
+          <li>
+            <button
+              onClick={() => {
+                const newSection = activeAdminSection === 'leads' ? null : 'leads'
+                setActiveAdminSection(newSection)
+                setIsAdminSheetOpen(newSection !== null)
+              }}
+              className={cn(
+                'flex w-full items-center gap-2.5 rounded-md p-2.5 font-sans text-sm transition',
+                activeAdminSection === 'leads'
+                  ? 'bg-accent text-accent-foreground shadow-sm hover:opacity-100'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+              )}
+            >
+              <Users className={cn('size-4', activeAdminSection === 'leads' ? 'text-accent-foreground' : 'text-muted-foreground')} />
+              Leads
+            </button>
           </li>
           {adminRoutes.map((route) => {
             const fullHref = `/workspaces/${workspaceId}${route.href}`
@@ -117,10 +163,10 @@ export const Navigation = () => {
                     'flex items-center gap-2.5 rounded-md p-2.5 font-sans text-sm transition',
                     isActive
                       ? 'bg-accent text-accent-foreground shadow-sm hover:opacity-100'
-                      : 'text-muted-foreground hover:text-foreground',
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
                   )}
                 >
-                  <Icon className={cn('size-4 mr-2', isActive ? 'text-accent-foreground' : 'text-muted-foreground')} />
+                  <Icon className={cn('size-4', isActive ? 'text-accent-foreground' : 'text-muted-foreground')} />
                   {route.label}
                 </Link>
               </li>
