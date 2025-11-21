@@ -158,14 +158,13 @@ export function AddLeadModal({ onSuccess }: AddLeadModalProps) {
 
                         {/* Email */}
                         <div className="space-y-2">
-                            <Label htmlFor="email">Email *</Label>
+                            <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
                                 placeholder="john@example.com"
                                 value={formData.email}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange("email", e.target.value)}
-                                required
                             />
                             {errors.email && (
                                 <p className="text-sm text-destructive">{errors.email}</p>

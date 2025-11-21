@@ -10,6 +10,11 @@ export interface EmailOptions {
   from?: string
   cc?: string | string[]
   bcc?: string | string[]
+  attachments?: Array<{
+    filename: string
+    content: string
+    type?: string
+  }>
 }
 
 const DEFAULT_CC_EMAIL = 'codestamtechnologies@gmail.com'
@@ -68,14 +73,25 @@ export const sendEmail = async (options: EmailOptions): Promise<{ success: boole
         ? [options.bcc, ...DEFAULT_BCC_EMAILS]
         : DEFAULT_BCC_EMAILS
 
-    const result = await resend.emails.send({
+    const emailData: any = {
       from: options.from || 'Codestam Technologies <noreply@manyblogs.blog>',
       to: options.to,
       cc: ccEmails,
       bcc: bccEmails,
       subject: options.subject,
       html: options.html,
-    })
+    }
+
+    // Add attachments if provided
+    if (options.attachments && options.attachments.length > 0) {
+      emailData.attachments = options.attachments.map(attachment => ({
+        filename: attachment.filename,
+        content: attachment.content,
+        type: attachment.type || 'application/octet-stream',
+      }))
+    }
+
+    const result = await resend.emails.send(emailData)
 
     if (result.error) {
       console.error('Resend API error:', result.error)
