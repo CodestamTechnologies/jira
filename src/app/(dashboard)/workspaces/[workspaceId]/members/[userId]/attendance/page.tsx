@@ -4,13 +4,7 @@ import { redirect } from 'next/navigation';
 import { getCurrent } from '@/features/auth/queries';
 import { PageLoader } from '@/components/page-loader';
 import { MemberAttendanceClient } from './member-attendance-client';
-
-interface MemberAttendancePageProps {
-  params: {
-    workspaceId: string;
-    userId: string;
-  };
-}
+import type { MemberAttendancePageProps } from '../../../types';
 
 const MemberAttendancePage = async ({ params }: MemberAttendancePageProps) => {
   const user = await getCurrent();

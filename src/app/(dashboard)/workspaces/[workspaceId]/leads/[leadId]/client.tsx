@@ -19,7 +19,7 @@ import { useEditLeadModal } from '@/features/leads/hooks/use-edit-lead-modal';
 import { LeadCommentsModal } from '@/components/lead-comments-modal';
 import { useState } from 'react';
 import { LeadPriority, LeadSource, LeadStatus } from '../../../../../../../data/lead-schema';
-type BadgeConfig = { label: string; variant: BadgeProps['variant'] };
+import type { BadgeConfig } from '../../types';
 const getStatusBadge = (status: string) => {
   const statusConfig: Record<string, BadgeConfig> = {
     [LeadStatus.NEW]: { label: 'New', variant: 'default' },

@@ -11,6 +11,8 @@ interface useGetTasksProps {
   assigneeId?: string | null;
   dueDate?: string | null;
   showAll?: boolean; // If true, shows all tasks including old done ones
+  page?: number; // Page number (1-based) for server-side pagination
+  limit?: number; // Items per page
 }
 
 export const useGetTasks = ({
@@ -21,9 +23,11 @@ export const useGetTasks = ({
   assigneeId,
   dueDate,
   showAll,
+  page,
+  limit,
 }: useGetTasksProps) => {
   const query = useQuery({
-    queryKey: ['tasks', workspaceId, projectId, status, search, assigneeId, dueDate, showAll],
+    queryKey: ['tasks', workspaceId, projectId, status, search, assigneeId, dueDate, showAll, page, limit],
     queryFn: async () => {
       const response = await client.api.tasks.$get({
         query: {
@@ -34,6 +38,8 @@ export const useGetTasks = ({
           assigneeId: assigneeId ?? undefined,
           dueDate: dueDate ?? undefined,
           showAll: showAll ? 'true' : undefined,
+          page: page?.toString(),
+          limit: limit?.toString(),
         },
       });
 

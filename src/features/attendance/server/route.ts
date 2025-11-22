@@ -72,6 +72,8 @@ app.get('/', async (c) => {
     const endDate = searchParams.get('endDate');
     const status = searchParams.get('status');
     const userId = searchParams.get('userId');
+    const page = searchParams.get('page');
+    const limit = searchParams.get('limit');
 
     console.log('Attendance API Request:', {
       workspaceId,
@@ -143,7 +145,17 @@ app.get('/', async (c) => {
       queries.push(Query.equal('status', status));
     }
 
+    // Order by latest date first (descending)
+    queries.push(Query.orderDesc('date'));
 
+    // Parse pagination parameters
+    const pageNumber = page ? parseInt(page, 10) : 1;
+    const pageSize = limit ? parseInt(limit, 10) : 10;
+    const offset = (pageNumber - 1) * pageSize;
+
+    // Add pagination to queries
+    queries.push(Query.limit(pageSize));
+    queries.push(Query.offset(offset));
 
     const { databases } = await createSessionClient();
     const response = await databases.listDocuments(
@@ -152,7 +164,11 @@ app.get('/', async (c) => {
       queries
     );
 
-    return c.json(response.documents);
+    // Return paginated response with total count
+    return c.json({
+      documents: response.documents,
+      total: response.total,
+    });
   } catch (error) {
     console.error('Error fetching attendance:', error);
     return c.json({ error: 'Failed to fetch attendance' }, 500);
