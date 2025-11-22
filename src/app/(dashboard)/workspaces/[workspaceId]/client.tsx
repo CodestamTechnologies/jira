@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowDownUp, CalendarIcon, Folder, ListChecks, PlusIcon, SettingsIcon, UserIcon } from 'lucide-react';
+import { ArrowDownUp, CalendarIcon, Folder, ListChecks, PlusIcon, SettingsIcon, UserIcon, Users, Briefcase, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
@@ -15,6 +15,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAdminStatus } from '@/features/attendance/hooks/use-admin-status';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
@@ -30,17 +33,83 @@ import type { Task } from '@/features/tasks/types';
 import { useGetWorkspaceAnalytics } from '@/features/workspaces/api/use-get-workspace-analytics';
 import { useWorkspaceFilters, type ProjectSortBy, type TaskSortBy } from '@/features/workspaces/hooks/use-workspace-filters';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import { useGetLeads } from '@/features/leads/api/use-get-leads';
+import { useGetTodayAttendance } from '@/features/attendance/api/use-get-today-attendance';
+import { useGetTeamAttendance } from '@/features/attendance/api/use-get-team-attendance';
+import { useCurrent } from '@/features/auth/api/use-current';
+import type { TaskListProps, ProjectListProps, MemberListProps, Lead } from './types';
+import { MyMemberDetails } from './components/my-member-details';
 
 export const WorkspaceIdClient = () => {
   const workspaceId = useWorkspaceId();
   const { data: isAdmin, isLoading: isAdminLoading } = useAdminStatus();
+  const { data: user } = useCurrent();
 
   const { data: workspaceAnalytics, isLoading: isLoadingAnalytics } = useGetWorkspaceAnalytics({ workspaceId });
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({ workspaceId });
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
+  const { data: leads, isLoading: isLoadingLeads } = useGetLeads({ workspaceId });
 
-  const isLoading = isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers || isAdminLoading;
+  const isLoading = isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers || isLoadingLeads || isAdminLoading;
+
+  // Get today's date for team attendance
+  const today = new Date().toISOString().split('T')[0];
+  const { data: teamAttendanceData } = useGetTeamAttendance({
+    workspaceId,
+    date: today,
+    enabled: !!isAdmin && !!workspaceId,
+  });
+
+  // Get current logged-in member
+  const currentMember = useMemo(() => {
+    if (!user || !members?.documents) return null;
+    const member = members.documents.find((m) => m.userId === user.$id) as Member | undefined;
+    return member;
+  }, [user, members?.documents]);
+
+  // Get ALL tasks assigned to current user using assigneeId filter
+  // This bypasses project filtering and gets all user's tasks
+  // Use a large limit to fetch all tasks for dashboard stats (not paginated)
+  const { data: myTasksData } = useGetTasks({
+    workspaceId,
+    assigneeId: currentMember?.$id || null,
+    showAll: true, // Get all tasks including old done ones
+    page: 1,
+    limit: 10000, // Large limit to get all tasks for dashboard stats
+  });
+
+  // For stats calculation, prioritize myTasksData (which has all user's tasks)
+  // Fallback to filtering from all tasks if myTasksData is not available
+  const tasksForStats = useMemo(() => {
+    if (!currentMember) {
+      return [];
+    }
+
+    // First try to use myTasksData (filtered by assigneeId from API)
+    if (myTasksData?.documents && myTasksData.documents.length > 0) {
+      return myTasksData.documents;
+    }
+
+    // Fallback: filter from all tasks
+    if (tasks?.documents && tasks.documents.length > 0) {
+      const filtered = tasks.documents.filter((task) => {
+        if (!task.assigneeIds) {
+          return false;
+        }
+        if (!Array.isArray(task.assigneeIds)) {
+          return false;
+        }
+        return task.assigneeIds.includes(currentMember.$id);
+      });
+      return filtered;
+    }
+
+    return [];
+  }, [myTasksData?.documents, tasks?.documents, currentMember]);
+
+  // Get current member's today attendance
+  const { data: currentMemberAttendance } = useGetTodayAttendance(workspaceId, user?.$id);
 
   const [
     { taskStatus, taskProjectId, taskAssigneeId, taskDueDate, taskSortBy, projectSearch, projectSortBy },
@@ -50,7 +119,13 @@ export const WorkspaceIdClient = () => {
   const projectTaskCounts = useMemo(() => {
     const counts: Record<string, { total: number; backlog: number; people: number }> = {};
 
-    if (!projects?.documents || !tasks?.documents) return counts;
+    // For non-admin users, use myTasksData which has all their tasks (bypasses project filtering)
+    // For admins, use the regular tasks query
+    const tasksToUse = !isAdmin && currentMember && myTasksData?.documents
+      ? myTasksData.documents
+      : tasks?.documents;
+
+    if (!projects?.documents || !tasksToUse) return counts;
 
     projects.documents.forEach((project) => {
       counts[project.$id] = { total: 0, backlog: 0, people: 0 };
@@ -58,7 +133,7 @@ export const WorkspaceIdClient = () => {
 
     const projectAssignees: Record<string, Set<string>> = {};
 
-    tasks.documents.forEach((task) => {
+    tasksToUse.forEach((task) => {
       if (counts[task.projectId]) {
         counts[task.projectId].total += 1;
         if (task.status === TaskStatus.BACKLOG) {
@@ -83,13 +158,31 @@ export const WorkspaceIdClient = () => {
     });
 
     return counts;
-  }, [tasks?.documents, projects?.documents]);
+  }, [tasks?.documents, myTasksData?.documents, projects?.documents, isAdmin, currentMember]);
 
   // Apply filters and sorting to tasks
+  // For non-admin users, use myTasksData (which bypasses project filtering)
+  // For admins, use the regular tasks query
   const filteredAndSortedTasks = useMemo(() => {
-    if (!tasks?.documents) return [];
+    // For non-admin users, use myTasksData which has all their tasks (bypasses project filtering)
+    const tasksToUse = !isAdmin && currentMember && myTasksData?.documents
+      ? myTasksData.documents
+      : tasks?.documents;
 
-    let filtered = [...tasks.documents];
+    if (!tasksToUse || tasksToUse.length === 0) {
+      return [];
+    }
+
+    let filtered = [...tasksToUse];
+
+    // For non-admin users, tasks are already filtered by assigneeId in myTasksData
+    // But if using regular tasks query, filter by assignee
+    if (isAdmin && !taskAssigneeId) {
+      // Admins see all tasks when no assignee filter is set
+    } else if (!isAdmin && currentMember && !taskAssigneeId) {
+      // If using regular tasks (fallback), filter to show only their assigned tasks
+      filtered = filtered.filter((task) => task.assigneeIds?.includes(currentMember.$id));
+    }
 
     // Apply filters
     if (taskStatus) {
@@ -136,11 +229,13 @@ export const WorkspaceIdClient = () => {
     });
 
     return filtered.slice(0, 12);
-  }, [tasks?.documents, taskStatus, taskProjectId, taskAssigneeId, taskDueDate, taskSortBy]);
+  }, [tasks?.documents, myTasksData?.documents, taskStatus, taskProjectId, taskAssigneeId, taskDueDate, taskSortBy, isAdmin, currentMember]);
 
   // Apply filters and sorting to projects
   const filteredAndSortedProjects = useMemo(() => {
-    if (!projects?.documents) return [];
+    if (!projects?.documents) {
+      return [];
+    }
 
     let filtered = [...projects.documents];
 
@@ -189,11 +284,26 @@ export const WorkspaceIdClient = () => {
       {isAdmin && workspaceAnalytics ? <Analytics data={workspaceAnalytics} /> : null}
       {isAdmin && <TodayAttendanceStats />}
 
+      {/* My Details - Show for all logged-in members */}
+      {currentMember && (
+        <MyMemberDetails
+          member={currentMember}
+          tasks={myTasksData?.documents || tasksForStats}
+          leads={leads?.documents || []}
+          projects={projects?.documents || []}
+          attendance={currentMemberAttendance}
+          workspaceId={workspaceId}
+          totalTasks={myTasksData?.total}
+        />
+      )}
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:gap-x-6 xl:gap-y-6">
         <div className="flex flex-col gap-6">
           <TaskList
             data={filteredAndSortedTasks}
-            total={tasks.total}
+            total={!isAdmin && currentMember && myTasksData?.total
+              ? myTasksData.total
+              : tasks.total}
             isAdmin={isAdmin}
             projects={projects?.documents || []}
             members={(members?.documents || []) as Member[]}
@@ -201,7 +311,16 @@ export const WorkspaceIdClient = () => {
             onFiltersChange={setFilters}
           />
           {/* Members list - Only show to admins */}
-          {isAdmin && <MemberList data={members.documents as Member[]} total={members.total} />}
+          {isAdmin && (
+            <MemberList
+              data={members.documents as Member[]}
+              total={members.total}
+              tasks={tasks?.documents || []}
+              leads={leads?.documents || []}
+              projects={projects?.documents || []}
+              teamAttendance={teamAttendanceData || []}
+            />
+          )}
         </div>
         <ProjectList
           data={filteredAndSortedProjects}
@@ -216,27 +335,6 @@ export const WorkspaceIdClient = () => {
   );
 };
 
-interface TaskListProps {
-  data: Task[];
-  total: number;
-  isAdmin: boolean;
-  projects: Project[];
-  members: Member[];
-  filters: {
-    taskStatus: TaskStatus | null;
-    taskProjectId: string | null;
-    taskAssigneeId: string | null;
-    taskDueDate: string | null;
-    taskSortBy: TaskSortBy | null;
-  };
-  onFiltersChange: (filters: Partial<{
-    taskStatus: TaskStatus | null;
-    taskProjectId: string | null;
-    taskAssigneeId: string | null;
-    taskDueDate: string | null;
-    taskSortBy: TaskSortBy | null;
-  }>) => void;
-}
 
 export const TaskList = ({ data, total, isAdmin, projects, members, filters, onFiltersChange }: TaskListProps) => {
   const workspaceId = useWorkspaceId();
@@ -406,20 +504,6 @@ export const TaskList = ({ data, total, isAdmin, projects, members, filters, onF
   );
 };
 
-interface ProjectListProps {
-  data: Project[];
-  total: number;
-  projectTaskCounts: Record<string, { total: number; backlog: number; people: number }>;
-  isAdmin: boolean;
-  filters: {
-    projectSearch: string | null;
-    projectSortBy: ProjectSortBy | null;
-  };
-  onFiltersChange: (filters: Partial<{
-    projectSearch: string | null;
-    projectSortBy: ProjectSortBy | null;
-  }>) => void;
-}
 
 export const ProjectList = ({ data, total, projectTaskCounts, isAdmin, filters, onFiltersChange }: ProjectListProps) => {
   const workspaceId = useWorkspaceId();
@@ -520,13 +604,119 @@ export const ProjectList = ({ data, total, projectTaskCounts, isAdmin, filters, 
   );
 };
 
-interface MemberListProps {
-  data: Member[];
-  total: number;
-}
 
-export const MemberList = ({ data, total }: MemberListProps) => {
+
+export const MemberList = ({ data, total, tasks, leads, projects, teamAttendance }: MemberListProps) => {
   const workspaceId = useWorkspaceId();
+
+  // Calculate member statistics
+  const memberStats = useMemo(() => {
+    const stats: Record<string, {
+      tasks: { total: number; todo: number; inProgress: number; done: number; backlog: number };
+      leads: number;
+      projects: number;
+      attendance: { status?: string; checkInTime?: string; checkOutTime?: string; totalHours?: number } | null;
+    }> = {};
+
+    // Initialize stats for all members
+    data.forEach((member) => {
+      stats[member.$id] = {
+        tasks: { total: 0, todo: 0, inProgress: 0, done: 0, backlog: 0 },
+        leads: 0,
+        projects: 0,
+        attendance: null,
+      };
+    });
+
+    // Calculate task counts per member
+    tasks.forEach((task) => {
+      if (task.assigneeIds && task.assigneeIds.length > 0) {
+        task.assigneeIds.forEach((assigneeId) => {
+          if (stats[assigneeId]) {
+            stats[assigneeId].tasks.total += 1;
+            switch (task.status) {
+              case TaskStatus.TODO:
+                stats[assigneeId].tasks.todo += 1;
+                break;
+              case TaskStatus.IN_PROGRESS:
+                stats[assigneeId].tasks.inProgress += 1;
+                break;
+              case TaskStatus.DONE:
+                stats[assigneeId].tasks.done += 1;
+                break;
+              case TaskStatus.BACKLOG:
+                stats[assigneeId].tasks.backlog += 1;
+                break;
+            }
+          }
+        });
+      }
+    });
+
+    // Calculate lead counts per member
+    leads.forEach((lead) => {
+      if (lead.assigneeIds && lead.assigneeIds.length > 0) {
+        lead.assigneeIds.forEach((assigneeId: string) => {
+          if (stats[assigneeId]) {
+            stats[assigneeId].leads += 1;
+          }
+        });
+      }
+    });
+
+    // Calculate project counts per member (projects where member has tasks)
+    const memberProjects = new Map<string, Set<string>>();
+    tasks.forEach((task) => {
+      if (task.assigneeIds && task.assigneeIds.length > 0) {
+        task.assigneeIds.forEach((assigneeId) => {
+          if (!memberProjects.has(assigneeId)) {
+            memberProjects.set(assigneeId, new Set());
+          }
+          memberProjects.get(assigneeId)?.add(task.projectId);
+        });
+      }
+    });
+    memberProjects.forEach((projectIds, memberId) => {
+      if (stats[memberId]) {
+        stats[memberId].projects = projectIds.size;
+      }
+    });
+
+    // Map team attendance to member stats
+    teamAttendance.forEach((item) => {
+      const member = data.find((m) => m.userId === item.member?.userId);
+      if (member && stats[member.$id]) {
+        stats[member.$id].attendance = item.attendance ? {
+          status: item.attendance.status,
+          checkInTime: item.attendance.checkInTime,
+          checkOutTime: item.attendance.checkOutTime,
+          totalHours: item.attendance.totalHours,
+        } : null;
+      }
+    });
+
+    return stats;
+  }, [data, tasks, leads, projects, teamAttendance]);
+
+  const getAttendanceStatusBadge = (attendance: { status?: string } | null) => {
+    if (!attendance || !attendance.status) {
+      return <Badge variant="secondary" className="text-xs">Not checked in</Badge>;
+    }
+
+    const status = attendance.status.toLowerCase();
+    switch (status) {
+      case 'present':
+        return <Badge className="bg-green-100 text-green-800 text-xs">Present</Badge>;
+      case 'late':
+        return <Badge className="bg-yellow-100 text-yellow-800 text-xs">Late</Badge>;
+      case 'absent':
+        return <Badge className="bg-red-100 text-red-800 text-xs">Absent</Badge>;
+      case 'half-day':
+        return <Badge className="bg-orange-100 text-orange-800 text-xs">Half Day</Badge>;
+      default:
+        return <Badge variant="secondary" className="text-xs">{attendance.status}</Badge>;
+    }
+  };
 
   return (
     <div className="col-span-1 flex flex-col gap-y-4">
@@ -543,23 +733,96 @@ export const MemberList = ({ data, total }: MemberListProps) => {
 
         <DottedSeparator className="my-4" />
 
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-4">
           {data.length === 0 && (
             <li className="col-span-full text-center text-sm text-muted-foreground">No members found.</li>
           )}
-          {data.map((member) => (
-            <li key={member.$id}>
-              <Card className="rounded-lg shadow-none transition hover:opacity-75">
-                <CardContent className="flex flex-col gap-y-2 p-4 items-start">
-                  <p className="line-clamp-1 text-sm font-medium">{member.name}</p>
-                  <div className="flex items-center gap-x-2 text-xs text-muted-foreground min-w-0">
-                    <MemberAvatar name={member.name} className="size-4 shrink-0" fallbackClassName="text-[8px]" />
-                    <span className="line-clamp-2 block min-w-0 flex-1">{member.email}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
+          {data.map((member) => {
+            const stats = memberStats[member.$id] || {
+              tasks: { total: 0, todo: 0, inProgress: 0, done: 0, backlog: 0 },
+              leads: 0,
+              projects: 0,
+              attendance: null,
+            };
+
+            return (
+              <li key={member.$id}>
+                <Link href={`/workspaces/${workspaceId}/members/${member.userId}`}>
+                  <Card className="rounded-lg shadow-none transition hover:opacity-75 hover:shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <MemberAvatar name={member.name} className="size-10 shrink-0" fallbackClassName="text-xs" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <p className="text-sm font-medium truncate">{member.name}</p>
+                            {getAttendanceStatusBadge(stats.attendance)}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate mb-3">{member.email}</p>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {/* Tasks */}
+                            <div className="flex items-center gap-1.5">
+                              <ListChecks className="size-3.5 text-muted-foreground" />
+                              <span className="text-muted-foreground">Tasks:</span>
+                              <span className="font-medium">{stats.tasks.total}</span>
+                              {stats.tasks.inProgress > 0 && (
+                                <span className="text-blue-600">({stats.tasks.inProgress} active)</span>
+                              )}
+                            </div>
+
+                            {/* Leads */}
+                            <div className="flex items-center gap-1.5">
+                              <Users className="size-3.5 text-muted-foreground" />
+                              <span className="text-muted-foreground">Leads:</span>
+                              <span className="font-medium">{stats.leads}</span>
+                            </div>
+
+                            {/* Projects */}
+                            <div className="flex items-center gap-1.5">
+                              <Briefcase className="size-3.5 text-muted-foreground" />
+                              <span className="text-muted-foreground">Projects:</span>
+                              <span className="font-medium">{stats.projects}</span>
+                            </div>
+
+                            {/* Attendance Time */}
+                            {stats.attendance?.checkInTime && (
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="size-3.5 text-muted-foreground" />
+                                <span className="text-muted-foreground">
+                                  {stats.attendance.checkOutTime ? 'Checked out' : 'Checked in'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Task Status Breakdown */}
+                          {(stats.tasks.todo > 0 || stats.tasks.inProgress > 0 || stats.tasks.done > 0) && (
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t">
+                              {stats.tasks.todo > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  <span className="font-medium text-blue-600">{stats.tasks.todo}</span> todo
+                                </span>
+                              )}
+                              {stats.tasks.inProgress > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  <span className="font-medium text-purple-600">{stats.tasks.inProgress}</span> in progress
+                                </span>
+                              )}
+                              {stats.tasks.done > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  <span className="font-medium text-green-600">{stats.tasks.done}</span> done
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         <Button variant="secondary" className="mt-4 w-full" asChild>

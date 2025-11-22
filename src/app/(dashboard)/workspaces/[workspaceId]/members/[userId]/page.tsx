@@ -4,13 +4,7 @@ import { redirect } from 'next/navigation'
 import { getCurrent } from '@/features/auth/queries'
 import { PageLoader } from '@/components/page-loader'
 import { MemberDetailClient } from './member-detail-client'
-
-interface MemberDetailPageProps {
-  params: {
-    workspaceId: string
-    userId: string
-  }
-}
+import type { MemberDetailPageProps } from '../../types'
 
 const MemberDetailPage = async ({ params }: MemberDetailPageProps) => {
   const user = await getCurrent()

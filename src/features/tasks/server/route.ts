@@ -37,6 +37,8 @@ const app = new Hono()
         search: z.string().nullish(),
         dueDate: z.string().nullish(),
         showAll: z.string().optional(), // 'true' to show all tasks including old done ones
+        page: z.string().optional(), // Page number (1-based)
+        limit: z.string().optional(), // Items per page
       }),
     ),
     async (ctx) => {
@@ -45,8 +47,13 @@ const app = new Hono()
       const storage = ctx.get('storage');
       const user = ctx.get('user');
 
-      const { workspaceId, projectId, assigneeId, status, search, dueDate, showAll } =
+      const { workspaceId, projectId, assigneeId, status, search, dueDate, showAll, page, limit } =
         ctx.req.valid('query');
+
+      // Parse pagination parameters
+      const pageNumber = page ? parseInt(page, 10) : 1;
+      const pageSize = limit ? parseInt(limit, 10) : 10;
+      const offset = (pageNumber - 1) * pageSize;
 
       const member = await getMember({
         databases,
@@ -62,7 +69,11 @@ const app = new Hono()
       const isAdmin = member.role === MemberRole.ADMIN;
       let allowedProjectIds: string[] | null = null;
 
-      if (!isAdmin) {
+      // IMPORTANT: If assigneeId is provided, bypass project filtering to allow users to see ALL their assigned tasks
+      // This fixes the circular dependency where projects require tasks, but tasks are filtered by projects
+      const bypassProjectFilter = !!assigneeId && assigneeId === member.$id;
+
+      if (!isAdmin && !bypassProjectFilter) {
         // Find all tasks where the user is assigned to get project IDs
         const userTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
           Query.equal('workspaceId', workspaceId),
@@ -86,8 +97,8 @@ const app = new Hono()
       const query = [Query.equal('workspaceId', workspaceId), Query.orderDesc('$createdAt')];
 
       if (projectId) {
-        // If filtering by specific project, verify user has access (if not admin)
-        if (!isAdmin && allowedProjectIds && !allowedProjectIds.includes(projectId)) {
+        // If filtering by specific project, verify user has access (if not admin and not bypassing)
+        if (!isAdmin && !bypassProjectFilter && allowedProjectIds && !allowedProjectIds.includes(projectId)) {
           return ctx.json({
             data: {
               documents: [],
@@ -106,11 +117,17 @@ const app = new Hono()
 
       if (search) query.push(Query.search('name', search));
 
-      const tasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, query);
+      // Server-side pagination: Fetch tasks for the requested page
+      // Fetch the requested page with pagination
+      let tasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+        ...query,
+        Query.limit(pageSize),
+        Query.offset(offset),
+      ]);
 
-      // Filter tasks by allowed project IDs if user is not admin
+      // Filter tasks by allowed project IDs if user is not admin and not bypassing project filter
       let filteredTasks = tasks;
-      if (!isAdmin && allowedProjectIds && allowedProjectIds.length > 0) {
+      if (!isAdmin && !bypassProjectFilter && allowedProjectIds && allowedProjectIds.length > 0) {
         filteredTasks = {
           ...tasks,
           documents: tasks.documents.filter((task) => allowedProjectIds!.includes(task.projectId)),
@@ -121,6 +138,8 @@ const app = new Hono()
       // Filter out tasks marked as DONE for more than 7 days when viewing all tasks (not project-specific)
       // When viewing tasks of a specific project, show all tasks including old done ones
       // If showAll=true, bypass this filter
+      // IMPORTANT: For server-side pagination, if showAll is not true, we need to handle this differently
+      // because filtering after pagination gives wrong totals. For now, if showAll=true, show all tasks.
       if (!projectId && showAll !== 'true') {
         const sevenDaysAgo = subDays(new Date(), 7).toISOString();
         const filteredDocuments = filteredTasks.documents.filter((task) => {
@@ -128,11 +147,43 @@ const app = new Hono()
           return task.status !== TaskStatus.DONE || task.$updatedAt >= sevenDaysAgo;
         });
 
+        // For server-side pagination with 7-day filter, we need accurate total
+        // Fetch all matching tasks to get accurate count (this is expensive but necessary for accurate pagination)
+        const allMatchingTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+          ...query,
+          Query.limit(10000), // Large limit to get all
+        ]);
+
+        const filteredTotal = allMatchingTasks.documents.filter((task) => {
+          return task.status !== TaskStatus.DONE || task.$updatedAt >= sevenDaysAgo;
+        }).length;
+
         filteredTasks = {
           ...filteredTasks,
           documents: filteredDocuments,
-          total: filteredDocuments.length,
+          total: filteredTotal, // Use the accurate filtered total
         };
+      } else {
+        // When showAll=true or viewing project-specific tasks, we need accurate total
+        // If assigneeId matches current user, get total count without pagination for accuracy
+        if (bypassProjectFilter && assigneeId) {
+          // Get total count without pagination to ensure accuracy
+          // This ensures we get the correct total even when filters are applied
+          const countQuery = [...query];
+          // Note: countQuery already has all filters (status, projectId, assigneeId, dueDate, search)
+          // So countResponse.total will be the accurate count for the filtered query
+          const countResponse = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, countQuery);
+          filteredTasks = {
+            ...filteredTasks,
+            total: countResponse.total, // Use accurate total from count query (includes all filters)
+          };
+        } else {
+          // For other cases, use Appwrite's total from the paginated query
+          filteredTasks = {
+            ...filteredTasks,
+            total: tasks.total, // Use Appwrite's total (accurate for the query)
+          };
+        }
       }
 
       const projectIds = filteredTasks.documents.map((task) => task.projectId);

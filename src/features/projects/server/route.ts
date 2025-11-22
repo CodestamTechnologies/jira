@@ -140,23 +140,75 @@ const app = new Hono()
       let projects;
 
       if (isAdmin) {
-        // Admins see all projects
-        projects = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+        // Admins see all projects - fetch with pagination to get all
+        let allProjects: Project[] = [];
+        let projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
           Query.equal('workspaceId', workspaceId),
           Query.orderDesc('$createdAt'),
-        ]);
-      } else {
-        // Regular members only see projects where they have tasks
-        const tasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
-          Query.equal('workspaceId', workspaceId),
-          Query.contains('assigneeIds', member.$id),
+          Query.limit(100), // Get up to 100 projects at a time
         ]);
 
+        allProjects = [...projectsResponse.documents];
+
+        // Handle pagination if there are more projects
+        while (projectsResponse.documents.length === 100) {
+          projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+          Query.equal('workspaceId', workspaceId),
+          Query.orderDesc('$createdAt'),
+            Query.limit(100),
+            Query.offset(allProjects.length),
+          ]);
+          allProjects = [...allProjects, ...projectsResponse.documents];
+        }
+
+        projects = {
+          ...projectsResponse,
+          documents: allProjects,
+          total: allProjects.length,
+        };
+      } else {
+        // Regular members only see projects where they have tasks
+        // IMPORTANT: Query tasks directly from database to bypass any project filtering
+        // This ensures we get ALL tasks assigned to the user, regardless of project visibility
+        // Note: We need to handle pagination as Appwrite has a default limit
+        let allTasks: Task[] = [];
+        let tasksResponse = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+          Query.equal('workspaceId', workspaceId),
+          Query.contains('assigneeIds', member.$id),
+          Query.limit(100), // Get up to 100 tasks at a time
+        ]);
+
+        allTasks = [...tasksResponse.documents];
+
+        // Handle pagination if there are more tasks
+        while (tasksResponse.documents.length === 100) {
+          tasksResponse = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+            Query.equal('workspaceId', workspaceId),
+            Query.contains('assigneeIds', member.$id),
+            Query.limit(100),
+            Query.offset(allTasks.length),
+          ]);
+          allTasks = [...allTasks, ...tasksResponse.documents];
+        }
+
+        console.log('[Projects API] Non-admin user - member ID:', member.$id);
+        console.log('[Projects API] Total tasks found:', allTasks.length);
+        if (allTasks.length > 0) {
+          console.log('[Projects API] Sample tasks:', allTasks.slice(0, 5).map(t => ({ id: t.$id, name: t.name, projectId: t.projectId, assigneeIds: t.assigneeIds })));
+        } else {
+          console.log('[Projects API] WARNING: No tasks found for member:', member.$id);
+          console.log('[Projects API] This might indicate a query issue or the member has no assigned tasks');
+        }
+
         // Get unique project IDs from tasks
-        const projectIds = Array.from(new Set(tasks.documents.map((task) => task.projectId)));
+        const projectIds = Array.from(new Set(allTasks.map((task) => task.projectId).filter(Boolean)));
+
+        console.log('[Projects API] Unique project IDs from tasks:', projectIds);
+        console.log('[Projects API] Project IDs count:', projectIds.length);
 
         // If user has no tasks, return empty result
         if (projectIds.length === 0) {
+          console.log('[Projects API] No project IDs found, returning empty result');
           return ctx.json({
             data: {
               documents: [],
@@ -165,12 +217,43 @@ const app = new Hono()
           });
         }
 
-        // Fetch only projects where user has tasks
-        projects = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+        // Fetch all projects in the workspace and filter by projectIds in memory
+        // Appwrite doesn't support Query.in for $id, so we fetch all and filter
+        // Use pagination to fetch all projects
+        let allProjectsList: Project[] = [];
+        let projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
           Query.equal('workspaceId', workspaceId),
-          Query.contains('$id', projectIds),
           Query.orderDesc('$createdAt'),
+          Query.limit(100), // Get up to 100 projects at a time
         ]);
+
+        allProjectsList = [...projectsResponse.documents];
+
+        // Handle pagination if there are more projects
+        while (projectsResponse.documents.length === 100) {
+          projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+          Query.equal('workspaceId', workspaceId),
+          Query.orderDesc('$createdAt'),
+            Query.limit(100),
+            Query.offset(allProjectsList.length),
+          ]);
+          allProjectsList = [...allProjectsList, ...projectsResponse.documents];
+        }
+
+        console.log('[Projects API] All projects in workspace:', allProjectsList.length);
+        console.log('[Projects API] All project IDs:', allProjectsList.map(p => p.$id));
+
+        // Filter to only include projects where user has tasks
+        const filteredProjects = allProjectsList.filter((project) => projectIds.includes(project.$id));
+
+        console.log('[Projects API] Filtered projects:', filteredProjects.length);
+        console.log('[Projects API] Filtered project IDs:', filteredProjects.map(p => p.$id));
+
+        projects = {
+          ...projectsResponse,
+          documents: filteredProjects,
+          total: filteredProjects.length,
+        };
       }
 
       const projectsWithImages: Project[] = await Promise.all(

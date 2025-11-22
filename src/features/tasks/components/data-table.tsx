@@ -12,6 +12,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,11 +20,31 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  total?: number; // Total number of items (for server-side pagination)
+  page?: number; // Current page (1-based)
+  pageSize?: number; // Items per page
+  onPageChange?: (page: number) => void; // Callback when page changes
+  isLoading?: boolean; // Loading state
 }
 
-export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  total = 0,
+  page = 1,
+  pageSize = 10,
+  onPageChange,
+  isLoading = false,
+}: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+  // Calculate pagination info
+  const totalPages = Math.ceil(total / pageSize);
+  const canPreviousPage = page > 1;
+  const canNextPage = page < totalPages;
+  const startItem = total > 0 ? (page - 1) * pageSize + 1 : 0;
+  const endItem = Math.min(page * pageSize, total);
 
   const table = useReactTable({
     data,
@@ -32,13 +53,30 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    manualPagination: true, // Enable server-side pagination
+    pageCount: totalPages,
     state: {
       columnFilters,
       sorting,
+      pagination: {
+        pageIndex: page - 1, // TanStack Table uses 0-based index
+        pageSize,
+      },
     },
   });
+
+  const handlePreviousPage = () => {
+    if (canPreviousPage && onPageChange) {
+      onPageChange(page - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (canNextPage && onPageChange) {
+      onPageChange(page + 1);
+    }
+  };
 
   return (
     <div>
@@ -59,7 +97,15 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
           </TableHeader>
 
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div className="flex items-center justify-center">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
                   {row.getVisibleCells().map((cell) => (
@@ -78,13 +124,31 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button variant="secondary" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-          Previous
-        </Button>
-        <Button variant="secondary" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-          Next
-        </Button>
+      <div className="flex items-center justify-between py-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {startItem} to {endItem} of {total} tasks
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePreviousPage}
+            disabled={!canPreviousPage || isLoading}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages || 1}
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleNextPage}
+            disabled={!canNextPage || isLoading}
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   );

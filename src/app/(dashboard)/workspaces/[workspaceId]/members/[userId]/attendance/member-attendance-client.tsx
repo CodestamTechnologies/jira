@@ -16,10 +16,7 @@ import { useGetMembers } from '@/features/members/api/use-get-members';
 import { Attendance } from '@/features/attendance/types';
 import { formatHoursAndMinutes } from '@/features/attendance/utils';
 
-interface MemberAttendanceClientProps {
-  workspaceId: string;
-  userId: string;
-}
+import type { MemberAttendanceClientProps } from '../../../types';
 
 export const MemberAttendanceClient = ({ workspaceId, userId }: MemberAttendanceClientProps) => {
   const [filters, setFilters] = useState({
@@ -42,7 +39,12 @@ export const MemberAttendanceClient = ({ workspaceId, userId }: MemberAttendance
     userId: userId,
   };
 
-  const { data: attendanceRecords, isLoading } = useGetAttendance(workspaceId, typedAttendanceFilters);
+  const { data: attendanceData, isLoading } = useGetAttendance({
+    workspaceId,
+    filters: typedAttendanceFilters,
+  });
+
+  const attendanceRecords = attendanceData?.documents || [];
 
   const { data: members } = useGetMembers({ workspaceId });
   const member = members?.documents.find((m: { userId: string }) => m.userId === userId);
@@ -93,7 +95,7 @@ export const MemberAttendanceClient = ({ workspaceId, userId }: MemberAttendance
   };
 
   // Calculate summary statistics
-  const totalRecords = attendanceRecords?.length || 0;
+  const totalRecords = attendanceData?.total || attendanceRecords?.length || 0;
   const presentCount = attendanceRecords?.filter((r: { status: string; }) => r.status === 'present').length || 0;
   const lateCount = attendanceRecords?.filter((r: { status: string; }) => r.status === 'late').length || 0;
   const absentCount = attendanceRecords?.filter((r: { status: string; }) => r.status === 'absent').length || 0;

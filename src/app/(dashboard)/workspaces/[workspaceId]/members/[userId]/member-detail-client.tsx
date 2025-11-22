@@ -34,10 +34,7 @@ import { useSendNDA } from '@/features/nda/api/use-send-nda'
 import { useSendSalarySlip } from '@/features/salary-slip/api/use-send-salary-slip'
 import { useGetAttendance } from '@/features/attendance/api/use-get-attendance'
 
-interface MemberDetailClientProps {
-  workspaceId: string
-  userId: string
-}
+import type { MemberDetailClientProps } from '../../types';
 
 export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientProps) => {
   const { data: memberDetail, isLoading: isLoadingDetail } = useGetMemberDetail(userId)
