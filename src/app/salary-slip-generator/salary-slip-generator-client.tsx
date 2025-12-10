@@ -42,6 +42,7 @@ export function SalarySlipGeneratorClient() {
 
   // Deductions
   const [providentFund, setProvidentFund] = useState('')
+  const [esi, setEsi] = useState('')
   const [professionalTax, setProfessionalTax] = useState('')
   const [incomeTax, setIncomeTax] = useState('')
   const [loanDeduction, setLoanDeduction] = useState('')
@@ -120,6 +121,7 @@ export function SalarySlipGeneratorClient() {
       const otherEarningsVal = parseNumber(otherEarnings)
 
       const pf = parseNumber(providentFund)
+      const esiVal = parseNumber(esi)
       const profTax = parseNumber(professionalTax)
       const incomeTaxVal = parseNumber(incomeTax)
       const loan = parseNumber(loanDeduction)
@@ -127,7 +129,7 @@ export function SalarySlipGeneratorClient() {
 
       // Calculate totals
       const grossSalary = basic + hraVal + transport + medical + special + bonusVal + overtimeVal + otherEarningsVal
-      const totalDeductions = pf + profTax + incomeTaxVal + loan + otherDeductionsVal
+      const totalDeductions = pf + esiVal + profTax + incomeTaxVal + loan + otherDeductionsVal
       const netSalary = grossSalary - totalDeductions
 
       const salarySlipData: SalarySlipData = {
@@ -148,6 +150,7 @@ export function SalarySlipGeneratorClient() {
         overtime: overtimeVal > 0 ? overtimeVal : undefined,
         otherEarnings: otherEarningsVal > 0 ? otherEarningsVal : undefined,
         providentFund: pf > 0 ? pf : undefined,
+        esi: esiVal > 0 ? esiVal : undefined,
         professionalTax: profTax > 0 ? profTax : undefined,
         incomeTax: incomeTaxVal > 0 ? incomeTaxVal : undefined,
         loanDeduction: loan > 0 ? loan : undefined,
@@ -416,6 +419,16 @@ export function SalarySlipGeneratorClient() {
                   placeholder="0"
                   value={providentFund}
                   onChange={(e) => setProvidentFund(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="esi">ESI (Employee State Insurance)</Label>
+                <Input
+                  id="esi"
+                  type="number"
+                  placeholder="0"
+                  value={esi}
+                  onChange={(e) => setEsi(e.target.value)}
                 />
               </div>
               <div className="space-y-2">

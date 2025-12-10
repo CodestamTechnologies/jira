@@ -42,6 +42,7 @@ export interface SalarySlipData {
 
   // Deductions
   providentFund?: number
+  esi?: number
   professionalTax?: number
   incomeTax?: number
   loanDeduction?: number
@@ -79,6 +80,7 @@ const SalarySlipPDF: React.FC<SalarySlipData> = ({
   overtime = 0,
   otherEarnings = 0,
   providentFund = 0,
+  esi = 0,
   professionalTax = 0,
   incomeTax = 0,
   loanDeduction = 0,
@@ -223,6 +225,12 @@ const SalarySlipPDF: React.FC<SalarySlipData> = ({
                 <View style={pdfStyles.row}>
                   <Text style={pdfStyles.key}>PF</Text>
                   <Text style={pdfStyles.value}>₹{providentFund.toLocaleString('en-IN')}</Text>
+                </View>
+              )}
+              {esi > 0 && (
+                <View style={pdfStyles.row}>
+                  <Text style={pdfStyles.key}>ESI</Text>
+                  <Text style={pdfStyles.value}>₹{esi.toLocaleString('en-IN')}</Text>
                 </View>
               )}
               {professionalTax > 0 && (
