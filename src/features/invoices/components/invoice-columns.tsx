@@ -17,8 +17,8 @@ interface CreateInvoiceColumnsProps {
   projectsMap: Map<string, Project>;
   onDownload: (invoice: Invoice, project: Project | null) => void;
   onSend: (invoice: Invoice, project: Project | null) => void;
-  isDownloading?: boolean;
-  isSending?: boolean;
+  downloadingInvoiceId?: string | null;
+  sendingInvoiceId?: string | null;
 }
 
 export const createInvoiceColumns = ({
@@ -26,8 +26,8 @@ export const createInvoiceColumns = ({
   projectsMap,
   onDownload,
   onSend,
-  isDownloading = false,
-  isSending = false,
+  downloadingInvoiceId = null,
+  sendingInvoiceId = null,
 }: CreateInvoiceColumnsProps): ColumnDef<InvoiceWithProject>[] => [
     {
       accessorKey: 'invoiceNumber',
@@ -120,8 +120,8 @@ export const createInvoiceColumns = ({
       cell: ({ row }) => {
         const invoice = row.original;
         const project = projectsMap.get(invoice.projectId) || null;
-        const isCurrentlyDownloading = isDownloading;
-        const isCurrentlySending = isSending;
+        const isCurrentlyDownloading = downloadingInvoiceId === invoice.$id;
+        const isCurrentlySending = sendingInvoiceId === invoice.$id;
         const isDisabled = isCurrentlyDownloading || isCurrentlySending || !project;
 
         return (

@@ -84,7 +84,7 @@ const app = new Hono()
     const user = ctx.get('user');
 
     // Get data from request - invoiceNumber is IGNORED (always server-generated)
-    const { projectId, workspaceId, items, notes } = ctx.req.valid('json');
+    const { projectId, workspaceId, items, notes, paymentLinkUrl } = ctx.req.valid('json');
 
     // Validate items array
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -174,6 +174,7 @@ const app = new Hono()
       notes: notes?.trim() || undefined,
       subtotal, // Server-calculated
       total, // Server-calculated
+      paymentLinkUrl: paymentLinkUrl || undefined, // Payment link URL if provided
     });
 
     // Parse items from JSON string to array for response
@@ -372,6 +373,64 @@ const app = new Hono()
       } catch (error) {
         console.error('Error sending invoice:', error);
         return ctx.json({ error: 'An error occurred while sending the invoice.' }, 500);
+      }
+    },
+  )
+  .patch(
+    '/:id/payment-link',
+    sessionMiddleware,
+    zValidator(
+      'param',
+      z.object({
+        id: z.string().min(1, 'Invoice ID is required'),
+      }),
+    ),
+    zValidator(
+      'json',
+      z.object({
+        paymentLinkUrl: z.string().url('Valid payment link URL is required'),
+      }),
+    ),
+    async (ctx) => {
+      if (!INVOICES_ID) {
+        return ctx.json({ error: 'Invoice collection is not configured.' }, 500);
+      }
+
+      const databases = ctx.get('databases');
+      const user = ctx.get('user');
+      const { id } = ctx.req.valid('param');
+      const { paymentLinkUrl } = ctx.req.valid('json');
+
+      try {
+        // Get invoice to verify it exists and user has access
+        const invoice = await databases.getDocument<Invoice>(DATABASE_ID, INVOICES_ID, id);
+
+        // Verify user has access to workspace
+        const member = await getMember({
+          databases,
+          workspaceId: invoice.workspaceId,
+          userId: user.$id,
+        });
+
+        if (!member) {
+          return ctx.json({ error: 'Unauthorized.' }, 401);
+        }
+
+        // Update invoice with payment link URL
+        const updatedInvoice = await databases.updateDocument(DATABASE_ID, INVOICES_ID, id, {
+          paymentLinkUrl,
+        });
+
+        // Parse items from JSON string to array for response
+        const invoiceResponse = {
+          ...updatedInvoice,
+          items: typeof updatedInvoice.items === 'string' ? JSON.parse(updatedInvoice.items) : updatedInvoice.items,
+        };
+
+        return ctx.json({ data: invoiceResponse });
+      } catch (error) {
+        console.error('Error updating invoice payment link:', error);
+        return ctx.json({ error: 'Failed to update payment link.' }, 500);
       }
     },
   );

@@ -29,10 +29,12 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
   const workspaceId = useWorkspaceId();
   const { data: invoicesData, isLoading: isLoadingInvoices } = useGetInvoices({ workspaceId, projectId });
   const { data: projectsData } = useGetProjects({ workspaceId });
-  const { downloadInvoice, generateInvoicePDF, isDownloading } = useDownloadInvoice();
+  const { downloadInvoice, generateInvoicePDF } = useDownloadInvoice();
   const { mutate: sendInvoice, isPending: isSending } = useSendInvoice();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<{ invoice: Invoice; project: Project | null } | null>(null);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
 
   // Create a map of project IDs to project names for quick lookup
   const projectMap = useMemo(() => {
@@ -59,12 +61,15 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
 
   const handleDownload = useCallback(
     async (invoice: Invoice, project: Project | null) => {
+      setDownloadingInvoiceId(invoice.$id);
       try {
         await downloadInvoice({ invoice, project });
         toast.success('Invoice downloaded successfully');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to download invoice. Please try again.';
         toast.error(errorMessage);
+      } finally {
+        setDownloadingInvoiceId(null);
       }
     },
     [downloadInvoice],
@@ -93,6 +98,7 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
         return;
       }
 
+      setSendingInvoiceId(invoice.$id);
       try {
         // Generate PDF
         const { pdfBlob, invoiceData } = await generateInvoicePDF({ invoice, project });
@@ -113,16 +119,19 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
               toast.success('Invoice sent successfully');
               setSendDialogOpen(false);
               setSelectedInvoice(null);
+              setSendingInvoiceId(null);
             },
             onError: (error) => {
               const errorMessage = error instanceof Error ? error.message : 'Failed to send invoice. Please try again.';
               toast.error(errorMessage);
+              setSendingInvoiceId(null);
             },
           },
         );
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to generate invoice. Please try again.';
         toast.error(errorMessage);
+        setSendingInvoiceId(null);
       }
     },
     [selectedInvoice, generateInvoicePDF, sendInvoice],
@@ -135,10 +144,10 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
         projectsMap,
         onDownload: handleDownload,
         onSend: handleSendClick,
-        isDownloading,
-        isSending,
+        downloadingInvoiceId,
+        sendingInvoiceId,
       }),
-    [projectMap, projectsMap, handleDownload, handleSendClick, isDownloading, isSending],
+    [projectMap, projectsMap, handleDownload, handleSendClick, downloadingInvoiceId, sendingInvoiceId],
   );
 
   if (isLoading) {

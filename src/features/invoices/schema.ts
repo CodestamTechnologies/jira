@@ -17,4 +17,6 @@ export const createInvoiceSchema = z.object({
   // subtotal and total are IGNORED - always recalculated server-side for security
   subtotal: z.number().optional(),
   total: z.number().optional(),
+  // Payment link URL (optional - can be created before invoice creation)
+  paymentLinkUrl: z.string().url('Valid payment link URL is required.').optional(),
 });

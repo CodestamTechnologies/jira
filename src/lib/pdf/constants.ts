@@ -21,10 +21,10 @@ export const COMPANY_INFO = {
 // Bank Details - Can be used across PDFs
 export const BANK_DETAILS = {
   bankName: 'HDFC Bank',
-  accountName: 'Priyanshu Kushwaha',
-  accountNumber: '57100718608692',
-  ifsc: 'HDFC0005866',
-  branch: 'BIT MESRA',
+  accountName: 'KBYTE TECHBUILDER PRIVATE LIMITED',
+  accountNumber: '50200116657331',
+  ifsc: 'HDFC0000719',
+  branch: 'RANCHI 2ND - RANCHI - JHARKHAND',
   upi: 'kushwaha.priyanshu@ptyes',
 }
 

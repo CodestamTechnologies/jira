@@ -27,6 +27,10 @@ declare global {
 
       // Resend API key for email sending
       RESEND_API_KEY: string;
+
+      // Razorpay credentials
+      RAZORPAY_KEY_ID: string;
+      RAZORPAY_KEY_SECRET: string;
     }
   }
 }

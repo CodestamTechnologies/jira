@@ -12,4 +12,5 @@ export type Invoice = Models.Document & {
   notes?: string;
   subtotal: number;
   total: number;
+  paymentLinkUrl?: string; // Razorpay payment link URL
 };

@@ -88,6 +88,10 @@ export interface InvoiceData {
   notes?: string;
   termsAndConditions?: string;
 
+  // Payment Link
+  paymentLinkUrl?: string;
+  paymentLinkQrCode?: string; // QR code data URL
+
   // Bank Details
   bankName: string;
   accountName: string;
@@ -118,6 +122,8 @@ const InvoicePDF: React.FC<InvoiceData> = ({
   total,
   notes,
   termsAndConditions,
+  paymentLinkUrl,
+  paymentLinkQrCode,
   bankName,
   accountName,
   accountNumber,
@@ -237,18 +243,38 @@ const InvoicePDF: React.FC<InvoiceData> = ({
           </View>
         )}
 
-        {/* Terms and Conditions */}
-        {termsAndConditions && (
+        <Text>----------------------------------------------------------------------------{"\n"}</Text>
+
+        {/* Payment Link */}
+        {paymentLinkUrl && (
           <>
-            <Text>----------------------------------------------------------------------------{"\n"}</Text>
             <View style={{ marginTop: 6, marginBottom: 6 }}>
-              <Text style={{ fontWeight: 'bold', fontSize: 11 }}>TERMS AND CONDITIONS:{"\n"}</Text>
-              <Text style={styles.value}>{termsAndConditions}{"\n"}</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 11 }}>PAYMENT LINK:{"\n"}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 4 }}>
+                {paymentLinkQrCode && (
+                  <View style={{ marginRight: 8 }}>
+                    <Image
+                      src={paymentLinkQrCode}
+                      style={{ width: 60, height: 60 }}
+                    />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...styles.value, fontSize: 9, marginBottom: 2 }}>
+                    Scan QR code or visit:{"\n"}
+                  </Text>
+                  <Text style={{
+                    ...styles.value,
+                    fontSize: 8,
+                  }}>
+                    {paymentLinkUrl}{"\n"}
+                  </Text>
+                </View>
+              </View>
             </View>
+            <Text>----------------------------------------------------------------------------{"\n"}</Text>
           </>
         )}
-
-        <Text>----------------------------------------------------------------------------{"\n"}</Text>
 
         {/* Bank Details */}
         <View style={{ marginTop: 6, marginBottom: 6 }}>
@@ -269,6 +295,13 @@ const InvoicePDF: React.FC<InvoiceData> = ({
           <Text style={styles.value}>
             Thank you for your business!{"\n"}
             {companyName}
+          </Text>
+        </View>
+
+        {/* T&C Apply */}
+        <View style={{ marginTop: 12, alignItems: 'center' }}>
+          <Text style={{ ...styles.value, fontSize: 8 }}>
+            T&C apply
           </Text>
         </View>
       </Page>

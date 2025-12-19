@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { format } from 'date-fns'
 import { pdf } from '@react-pdf/renderer'
+import QRCode from 'qrcode'
 
 import InvoicePDF, { type InvoiceData } from '@/components/invoice-pdf'
 import { COMPANY_INFO, BANK_DETAILS, TERMS_AND_CONDITIONS } from '@/lib/pdf/constants'
@@ -49,6 +50,26 @@ export const useDownloadInvoice = () => {
         ? format(new Date(invoice.$createdAt), 'MMM dd, yyyy')
         : format(new Date(), 'MMM dd, yyyy')
 
+      // Generate QR code for payment link if available
+      let qrCodeDataUrl: string | undefined
+      if (invoice.paymentLinkUrl) {
+        try {
+          qrCodeDataUrl = await QRCode.toDataURL(invoice.paymentLinkUrl, {
+            width: 200,
+            margin: 1,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF',
+            },
+          })
+        } catch (error) {
+          console.error('Error generating QR code:', error)
+          // Continue without QR code if generation fails
+        }
+      } else {
+        console.log('No payment link URL found for invoice:', invoice.invoiceNumber)
+      }
+
       // Prepare invoice data
       const invoiceData: InvoiceData = {
         // Company Information - Use legalName to match invoice-generator behavior
@@ -82,6 +103,10 @@ export const useDownloadInvoice = () => {
         // Notes and Terms
         notes: invoice.notes || undefined,
         termsAndConditions: TERMS_AND_CONDITIONS,
+
+        // Payment Link
+        paymentLinkUrl: invoice.paymentLinkUrl || undefined,
+        paymentLinkQrCode: qrCodeDataUrl,
 
         // Bank Details
         bankName: BANK_DETAILS.bankName,

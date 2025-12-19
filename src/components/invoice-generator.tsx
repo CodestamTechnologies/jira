@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { FileText, Download, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
+import QRCode from 'qrcode';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import { useCreateInvoice } from '@/features/invoices/api/use-create-invoice';
 import { useGetNextInvoiceNumber } from '@/features/invoices/api/use-get-next-invoice-number';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import { client } from '@/lib/hono';
 import { COMPANY_INFO, BANK_DETAILS, TERMS_AND_CONDITIONS } from '@/lib/pdf/constants';
 import { useDownloadWithLogging } from '@/lib/pdf/use-download-with-logging';
 import { generateSafeFilename } from '@/lib/pdf/utils';
@@ -27,6 +29,27 @@ interface InvoiceItem {
   description: string;
   price: number;
 }
+
+// Helper function to normalize phone number to 10 digits
+const normalizePhoneNumber = (phone: string | undefined | null): string | undefined => {
+  if (!phone) return undefined;
+
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/\D/g, '');
+
+  // If it's exactly 10 digits, return it
+  if (digitsOnly.length === 10) {
+    return digitsOnly;
+  }
+
+  // If it's longer (e.g., with country code), take the last 10 digits
+  if (digitsOnly.length > 10) {
+    return digitsOnly.slice(-10);
+  }
+
+  // If it's less than 10 digits, return undefined (invalid)
+  return undefined;
+};
 
 export const InvoiceGenerator = () => {
   const workspaceId = useWorkspaceId();
@@ -84,8 +107,74 @@ export const InvoiceGenerator = () => {
   const taxAmount = Math.round((subtotal * taxRate) / 100 * 100) / 100; // Calculate tax (0% = 0)
   const total = Math.round((subtotal + taxAmount) * 100) / 100;
   const [isGenerating, setIsGenerating] = useState(false);
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState<string | undefined>();
 
   const isGeneratingOrCreating = isGenerating || isCreatingInvoice;
+
+  const generateAndDownloadPDF = async (
+    invoiceData: InvoiceData,
+    finalInvoiceNumber: string,
+    serverSubtotal: number,
+    serverTaxRate: number,
+    serverTaxAmount: number,
+    serverTotal: number,
+    paymentLink?: string,
+  ) => {
+    // Generate QR code for payment link if available
+    let qrCodeDataUrl: string | undefined;
+    if (paymentLink) {
+      try {
+        qrCodeDataUrl = await QRCode.toDataURL(paymentLink, {
+          width: 200,
+          margin: 1,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF',
+          },
+        });
+      } catch (error) {
+        console.error('Error generating QR code:', error);
+        // Continue without QR code if generation fails
+      }
+    }
+
+    const finalInvoiceData = {
+      ...invoiceData,
+      invoiceNumber: finalInvoiceNumber,
+      subtotal: serverSubtotal,
+      taxRate: serverTaxRate,
+      taxAmount: serverTaxAmount,
+      total: serverTotal,
+      paymentLinkUrl: paymentLink,
+      paymentLinkQrCode: qrCodeDataUrl,
+    };
+
+    // Generate and download PDF
+    const doc = <InvoicePDF {...finalInvoiceData} />;
+    pdf(doc)
+      .toBlob()
+      .then(async (blob) => {
+        const filename = generateSafeFilename(`invoice-${finalInvoiceNumber.replace(/\//g, '-')}`, 'pdf');
+        await downloadWithLogging({
+          documentType: 'INVOICE',
+          blob,
+          filename,
+          documentName: `invoice-${finalInvoiceNumber}`,
+          invoiceNumber: finalInvoiceNumber,
+          workspaceId,
+        });
+        setIsGenerating(false);
+        setPaymentLinkUrl(undefined);
+
+        // Refetch next invoice number for next invoice
+        refetchNextInvoiceNumber();
+      })
+      .catch((error) => {
+        console.error('Error generating PDF:', error);
+        setIsGenerating(false);
+        setPaymentLinkUrl(undefined);
+      });
+  };
 
   const getInvoiceData = (): InvoiceData => ({
     companyName: COMPANY_INFO.legalName,
@@ -129,6 +218,61 @@ export const InvoiceGenerator = () => {
       // Save invoice to database
       const filteredItems = items.filter((item) => item.description.trim() !== '');
 
+      // Calculate totals first (needed for payment link)
+      // Match server-side calculation: round each item price first, then sum
+      const validItemsForCalculation = filteredItems
+        .filter((item) => item.description && item.description.trim() !== '' && typeof item.price === 'number' && item.price >= 0)
+        .map((item) => ({
+          description: item.description.trim(),
+          price: Math.round(item.price * 100) / 100, // Round to 2 decimal places (matches server)
+        }));
+
+      const calculatedSubtotal = validItemsForCalculation.reduce((sum, item) => sum + item.price, 0);
+      const calculatedTotal = Math.round(calculatedSubtotal * 100) / 100;
+
+      // Create payment link BEFORE creating invoice (if conditions are met)
+      let paymentLink: string | undefined;
+
+      if (clientEmail && clientName && calculatedTotal > 0) {
+        try {
+          // Normalize phone number to 10 digits
+          const normalizedPhone = normalizePhoneNumber(clientPhone);
+
+          // Generate a temporary invoice number for the payment link description
+          // (We'll use the actual invoice number after creation, but this is just for the description)
+          const tempInvoiceNumber = invoiceNumber || 'TEMP';
+
+          // Create payment link using the API client directly
+          const paymentResponse = await client.api.payments['create-link']['$post']({
+            json: {
+              amount: calculatedTotal,
+              currency: 'INR',
+              description: `Payment for Invoice ${tempInvoiceNumber}`,
+              customer: {
+                name: clientName,
+                email: clientEmail,
+                ...(normalizedPhone && { contact: normalizedPhone }),
+              },
+              notes: {
+                project_id: selectedProjectId,
+                workspace_id: workspaceId,
+              },
+              reminderEnable: true,
+            },
+          });
+
+          if (paymentResponse.ok) {
+            const paymentData = await paymentResponse.json();
+            paymentLink = paymentData.data?.shortUrl;
+            setPaymentLinkUrl(paymentLink);
+          }
+        } catch (error) {
+          console.error('Error creating payment link:', error);
+          // Continue with invoice creation even if payment link fails
+        }
+      }
+
+      // Create invoice with payment link included
       createInvoice(
         {
           json: {
@@ -141,10 +285,11 @@ export const InvoiceGenerator = () => {
               price: item.price,
             })),
             notes: notes?.trim() || undefined,
+            paymentLinkUrl: paymentLink, // Include payment link if created
           },
         },
         {
-          onSuccess: (response) => {
+          onSuccess: async (response) => {
             // Type assertion: response.data contains the invoice
             const invoice = response.data as Invoice;
 
@@ -157,38 +302,19 @@ export const InvoiceGenerator = () => {
             const serverTaxAmount = 0; // Tax is 0%
             const serverTotal = invoice.total || total;
 
-            const finalInvoiceData = {
-              ...invoiceData,
-              invoiceNumber: finalInvoiceNumber,
-              subtotal: serverSubtotal,
-              taxRate: serverTaxRate,
-              taxAmount: serverTaxAmount,
-              total: serverTotal,
-            };
+            // Use payment link from invoice (saved during creation) or the one we created
+            const finalPaymentLink = invoice.paymentLinkUrl || paymentLink;
 
-            // Generate and download PDF after saving
-            const doc = <InvoicePDF {...finalInvoiceData} />;
-            pdf(doc)
-              .toBlob()
-              .then(async (blob) => {
-                const filename = generateSafeFilename(`invoice-${finalInvoiceNumber.replace(/\//g, '-')}`, 'pdf');
-                await downloadWithLogging({
-                  documentType: 'INVOICE',
-                  blob,
-                  filename,
-                  documentName: `invoice-${finalInvoiceNumber}`,
-                  invoiceNumber: finalInvoiceNumber,
-                  workspaceId,
-                });
-                setIsGenerating(false);
-
-                // Refetch next invoice number for next invoice
-                refetchNextInvoiceNumber();
-              })
-              .catch((error) => {
-                console.error('Error generating PDF:', error);
-                setIsGenerating(false);
-              });
+            // Generate and download PDF with payment link
+            generateAndDownloadPDF(
+              invoiceData,
+              finalInvoiceNumber,
+              serverSubtotal,
+              serverTaxRate,
+              serverTaxAmount,
+              serverTotal,
+              finalPaymentLink,
+            );
           },
           onError: () => {
             setIsGenerating(false);
