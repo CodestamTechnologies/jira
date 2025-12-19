@@ -14,7 +14,7 @@ export const useCreatePaymentLink = () => {
       const response = await client.api.payments['create-link']['$post']({ json })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = (await response.json()) as { error?: string }
         throw new Error(error.error || 'Failed to create payment link.')
       }
 
