@@ -47,7 +47,7 @@ export const PendingTasksDialog = ({
             <div className="flex-1">
               <DialogTitle className="text-xl font-semibold">Pending Tasks</DialogTitle>
               <DialogDescription className="mt-1.5">
-                Please comment on all your incomplete tasks before checking out.
+                Please comment on all your in-progress tasks before checking out.
               </DialogDescription>
             </div>
             {uncommentedTasks.length > 0 && (
@@ -72,7 +72,7 @@ export const PendingTasksDialog = ({
 
               <div className="space-y-3">
                 <p className="text-sm font-medium text-muted-foreground px-1">
-                  Tasks that need comments today:
+                  In-progress tasks that need comments today:
                 </p>
                 <div className="space-y-2">
                   {uncommentedTasks.map((task: UncommentedTask, index: number) => (
@@ -124,7 +124,7 @@ export const PendingTasksDialog = ({
               </div>
               <h3 className="text-lg font-semibold mb-2">All caught up!</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                No pending tasks. All tasks have been commented on today.
+                No pending tasks. All in-progress tasks have been commented on today.
               </p>
             </div>
           )}
@@ -133,4 +133,3 @@ export const PendingTasksDialog = ({
     </Dialog>
   );
 };
-

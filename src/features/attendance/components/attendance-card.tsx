@@ -50,12 +50,12 @@ export const AttendanceCard = () => {
     }
   }, [location, checkoutDialogOpen]);
 
-  // Refetch pending tasks when dialog opens
+  // Refetch pending tasks when dialogs open
   useEffect(() => {
-    if (pendingTasksDialogOpen && workspaceId) {
+    if ((pendingTasksDialogOpen || checkoutDialogOpen) && workspaceId) {
       refetchPendingTasks();
     }
-  }, [pendingTasksDialogOpen, workspaceId, refetchPendingTasks]);
+  }, [pendingTasksDialogOpen, checkoutDialogOpen, workspaceId, refetchPendingTasks]);
 
   const handleCheckIn = async () => {
     let currentLocation = location;
@@ -106,7 +106,7 @@ export const AttendanceCard = () => {
     }
   };
 
-  const handleCheckOut = (data: { checkOutLatitude: number; checkOutLongitude: number; checkOutAddress?: string; notes: string }) => {
+  const handleCheckOut = (data: { checkOutLatitude: number; checkOutLongitude: number; checkOutAddress?: string; notes?: string }) => {
     checkOutMutation.mutate(data, {
       onSuccess: () => {
         refetchToday();
@@ -272,11 +272,15 @@ export const AttendanceCard = () => {
               <>
                 <Button
                   onClick={handleCheckOutClick}
-                  disabled={checkOutMutation.isPending || isLoadingLocation}
+                  disabled={checkOutMutation.isPending || isLoadingLocation || uncommentedTasks.length > 0}
                   variant="outline"
                   className="w-full"
                 >
-                  {isLoadingLocation ? 'Getting Location...' : 'Check Out'}
+                  {isLoadingLocation 
+                    ? 'Getting Location...' 
+                    : uncommentedTasks.length > 0
+                    ? `Check Out (${uncommentedTasks.length} task${uncommentedTasks.length === 1 ? '' : 's'} pending)`
+                    : 'Check Out'}
                 </Button>
                 <CheckoutDialog
                   open={checkoutDialogOpen}

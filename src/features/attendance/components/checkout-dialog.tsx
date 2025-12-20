@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { AlertCircle, MapPin, Loader2, FileText } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { AlertCircle, MapPin, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -21,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { updateAttendanceSchema } from '../schema'
 import { countNormalizedCharacters } from '../utils'
+import { useGenerateSummary } from '../api/use-generate-summary'
 
 interface LocationData {
   latitude: number
@@ -36,7 +36,7 @@ interface UncommentedTask {
 interface CheckoutDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCheckOut: (data: { checkOutLatitude: number; checkOutLongitude: number; checkOutAddress?: string; notes: string }) => void
+  onCheckOut: (data: { checkOutLatitude: number; checkOutLongitude: number; checkOutAddress?: string; notes?: string }) => void
   location: LocationData | null
   isLoadingLocation: boolean
   isPending: boolean
@@ -53,9 +53,26 @@ const checkoutFormSchema = updateAttendanceSchema.pick({
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>
 
+/**
+ * Constants for summary validation
+ */
 const MIN_CHARS = 10
 const MAX_CHARS = 1000
 
+/**
+ * Checkout dialog component
+ * 
+ * Handles the checkout process with:
+ * - Location capture
+ * - Task comment validation
+ * - Auto-generated summary from tasks and comments
+ * - Optional user-editable summary
+ * 
+ * @remarks
+ * - Blocks checkout if there are uncommented IN_PROGRESS tasks
+ * - Auto-generates summary from today's tasks and comments
+ * - Allows user to edit or add to the auto-generated summary
+ */
 export const CheckoutDialog = ({
   open,
   onOpenChange,
@@ -69,8 +86,21 @@ export const CheckoutDialog = ({
   uncommentedTasks = [],
   workspaceId,
 }: CheckoutDialogProps) => {
+  // Local state
   const [charCount, setCharCount] = useState(0)
-  const router = useRouter()
+  const [isSummaryGenerated, setIsSummaryGenerated] = useState(false)
+  
+  // Check if there are uncommented tasks blocking checkout
+  const hasUncommentedTasks = uncommentedTasks.length > 0
+  
+  // Fetch auto-generated summary when dialog opens and there are no uncommented tasks
+  // Only fetch when dialog is open to avoid unnecessary API calls
+  const { data: summaryData, isLoading: isLoadingSummary } = useGenerateSummary(
+    workspaceId,
+    open && !hasUncommentedTasks
+  )
+
+  // Form setup with react-hook-form
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
@@ -80,6 +110,35 @@ export const CheckoutDialog = ({
 
   const notesValue = form.watch('notes')
 
+  /**
+   * Pre-fill summary when it's generated and dialog opens
+   * Only runs once per dialog open to avoid overwriting user edits
+   */
+  useEffect(() => {
+    if (open && !hasUncommentedTasks && summaryData?.summary && !isSummaryGenerated) {
+      const autoSummary = summaryData.summary.trim()
+      if (autoSummary) {
+        form.setValue('notes', autoSummary)
+        setIsSummaryGenerated(true)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, hasUncommentedTasks, summaryData?.summary, isSummaryGenerated])
+
+  /**
+   * Reset summary generation flag when dialog closes
+   * This ensures summary is re-generated on next open
+   */
+  useEffect(() => {
+    if (!open) {
+      setIsSummaryGenerated(false)
+    }
+  }, [open])
+
+  /**
+   * Update character count when notes value changes
+   * Uses normalized character count for accurate validation
+   */
   useEffect(() => {
     if (notesValue) {
       const normalized = countNormalizedCharacters(notesValue)
@@ -89,6 +148,10 @@ export const CheckoutDialog = ({
     }
   }, [notesValue])
 
+  /**
+   * Handle form submission
+   * Validates location and calls onCheckOut callback
+   */
   const onSubmit = (values: CheckoutFormValues) => {
     if (!location) {
       form.setError('notes', {
@@ -105,20 +168,34 @@ export const CheckoutDialog = ({
       notes: values.notes,
     })
 
+    // Reset form after successful submission
     form.reset()
     setCharCount(0)
   }
 
+  /**
+   * Handle dialog open/close state changes
+   * Resets form state when dialog closes
+   */
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       form.reset()
       setCharCount(0)
+      setIsSummaryGenerated(false)
     }
     onOpenChange(open)
   }
 
-  const isNotesValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS
-  const canSubmit = !isPending && !isLoadingLocation && location !== null && isNotesValid
+  /**
+   * Validation: Notes are optional, but if provided must be between MIN and MAX chars
+   */
+  const isNotesValid = charCount === 0 || (charCount >= MIN_CHARS && charCount <= MAX_CHARS)
+  
+  /**
+   * Determine if checkout can be submitted
+   * Requires: location ready, no pending tasks, valid notes (or empty), and not currently processing
+   */
+  const canSubmit = !isPending && !isLoadingLocation && location !== null && !hasUncommentedTasks && isNotesValid
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -126,7 +203,9 @@ export const CheckoutDialog = ({
         <DialogHeader>
           <DialogTitle>Check Out</DialogTitle>
           <DialogDescription>
-            Please provide a summary of your day's work before checking out.
+            {hasUncommentedTasks 
+              ? 'Please comment on all your in-progress tasks before checking out.'
+              : 'Add a summary of your day\'s work (optional).'}
           </DialogDescription>
         </DialogHeader>
 
@@ -169,43 +248,18 @@ export const CheckoutDialog = ({
           </Alert>
         )}
 
-        {checkoutError && uncommentedTasks.length > 0 && (
+        {/* Show error if there are uncommented tasks - but don't show task list (already shown in Pending Tasks button) */}
+        {hasUncommentedTasks && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <div className="space-y-2">
-                <p className="font-semibold">{checkoutError}</p>
-                <div className="mt-2 space-y-1">
-                  <p className="text-sm font-medium">Tasks that need comments:</p>
-                  <ul className="list-disc list-inside space-y-1 text-sm">
-                    {uncommentedTasks.map((task) => (
-                      <li key={task.id} className="flex items-center gap-2">
-                        <span>{task.name}</span>
-                        {workspaceId && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-auto p-0 text-xs underline"
-                            onClick={() => {
-                              onOpenChange(false)
-                              router.push(`/workspaces/${workspaceId}/tasks/${task.id}`)
-                            }}
-                          >
-                            <FileText className="h-3 w-3 mr-1" />
-                            Add Comment
-                          </Button>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+              {checkoutError || 'Please comment on all your in-progress tasks before checking out. Use the "Pending Tasks" button to see which tasks need comments.'}
             </AlertDescription>
           </Alert>
         )}
 
-        {checkoutError && uncommentedTasks.length === 0 && (
+        {/* Other checkout errors (not related to uncommented tasks) */}
+        {checkoutError && !hasUncommentedTasks && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{checkoutError}</AlertDescription>
@@ -219,11 +273,18 @@ export const CheckoutDialog = ({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Daily Summary *</FormLabel>
+                  <FormLabel>
+                    Daily Summary (Optional)
+                  </FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Enter a summary of your day's work (e.g., completed tasks, meetings attended, progress made)..."
+                      placeholder={
+                        isLoadingSummary
+                          ? 'Generating summary from your tasks and comments...'
+                          : "Summary is auto-generated from your tasks and comments. You can edit or add to it..."
+                      }
                       className="min-h-[120px] resize-none"
+                      disabled={hasUncommentedTasks || isLoadingSummary}
                       {...field}
                       onChange={(e) => {
                         field.onChange(e)
@@ -232,26 +293,39 @@ export const CheckoutDialog = ({
                       }}
                     />
                   </FormControl>
-                  <FormDescription className="flex items-center justify-between">
-                    <span>
-                      {charCount < MIN_CHARS
-                        ? `At least ${MIN_CHARS - charCount} more character${MIN_CHARS - charCount === 1 ? '' : 's'} needed`
-                        : charCount > MAX_CHARS
-                        ? `Exceeds limit by ${charCount - MAX_CHARS} character${charCount - MAX_CHARS === 1 ? '' : 's'}`
-                        : 'Summary looks good'}
-                    </span>
-                    <span
-                      className={`text-sm font-medium ${
-                        charCount < MIN_CHARS
-                          ? 'text-yellow-600'
+                  {!hasUncommentedTasks && (
+                    <FormDescription className="flex items-center justify-between">
+                      <span>
+                        {isLoadingSummary
+                          ? 'Generating summary from your tasks and comments...'
+                          : charCount === 0
+                          ? 'Summary is auto-generated from your tasks and comments. You can edit or add to it.'
+                          : charCount < MIN_CHARS
+                          ? `At least ${MIN_CHARS - charCount} more character${MIN_CHARS - charCount === 1 ? '' : 's'} needed`
                           : charCount > MAX_CHARS
-                          ? 'text-red-600'
-                          : 'text-green-600'
-                      }`}
-                    >
-                      {charCount}/{MAX_CHARS}
-                    </span>
-                  </FormDescription>
+                          ? `Exceeds limit by ${charCount - MAX_CHARS} character${charCount - MAX_CHARS === 1 ? '' : 's'}`
+                          : 'Summary looks good. You can edit or add to it.'}
+                      </span>
+                      {charCount > 0 && (
+                        <span
+                          className={`text-sm font-medium ${
+                            charCount < MIN_CHARS
+                              ? 'text-yellow-600'
+                              : charCount > MAX_CHARS
+                              ? 'text-red-600'
+                              : 'text-green-600'
+                          }`}
+                        >
+                          {charCount}/{MAX_CHARS}
+                        </span>
+                      )}
+                    </FormDescription>
+                  )}
+                  {hasUncommentedTasks && (
+                    <FormDescription className="text-muted-foreground">
+                      Complete all in-progress task comments to enable checkout
+                    </FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -282,8 +356,10 @@ export const CheckoutDialog = ({
                   </>
                 ) : !location ? (
                   'Waiting for Location...'
-                ) : !isNotesValid ? (
-                  'Complete Summary'
+                ) : hasUncommentedTasks ? (
+                  'Complete Task Comments First'
+                ) : !isNotesValid && charCount > 0 ? (
+                  'Fix Summary'
                 ) : (
                   'Check Out'
                 )}

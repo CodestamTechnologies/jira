@@ -15,9 +15,11 @@ export const updateAttendanceSchema = z.object({
   checkOutAddress: z.string().optional(),
   notes: z
     .string()
-    .min(1, 'Daily summary is required')
+    .optional()
     .refine(
       (val) => {
+        // If notes are provided, validate length
+        if (!val || val.trim() === '') return true; // Optional, so empty is fine
         const normalized = normalizeText(val);
         return countNormalizedCharacters(normalized) >= 10;
       },
@@ -27,6 +29,8 @@ export const updateAttendanceSchema = z.object({
     )
     .refine(
       (val) => {
+        // If notes are provided, validate max length
+        if (!val || val.trim() === '') return true; // Optional, so empty is fine
         const normalized = normalizeText(val);
         return countNormalizedCharacters(normalized) <= 1000;
       },
@@ -34,7 +38,7 @@ export const updateAttendanceSchema = z.object({
         message: 'Daily summary cannot exceed 1000 characters',
       }
     )
-    .transform((val) => normalizeText(val)), // Normalize before storing
+    .transform((val) => val ? normalizeText(val) : ''), // Normalize before storing, or empty string if not provided
 });
 
 export const attendanceFiltersSchema = z.object({
