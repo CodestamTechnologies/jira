@@ -13,6 +13,7 @@ import { useDeleteMember } from '@/features/members/api/use-delete-member';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useUpdateMember } from '@/features/members/api/use-update-member';
 import { useUpdateMemberStatus } from '@/features/members/api/use-update-member-status';
+import { useUpdateLeadsAccess } from '@/features/members/api/use-update-leads-access';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { MemberRole } from '@/features/members/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
@@ -32,6 +33,7 @@ export const MembersList = () => {
   const { mutate: deleteMember, isPending: isDeletingMember } = useDeleteMember();
   const { mutate: updateMember, isPending: isUpdatingMember } = useUpdateMember();
   const { mutate: updateMemberStatus, isPending: isUpdatingStatus } = useUpdateMemberStatus();
+  const { mutate: updateLeadsAccess, isPending: isUpdatingLeadsAccess } = useUpdateLeadsAccess();
 
   const handleDeleteMember = async (memberId: string) => {
     const ok = await confirm();
@@ -62,7 +64,14 @@ export const MembersList = () => {
     });
   };
 
-  const isPending = isDeletingMember || isUpdatingMember || isUpdatingStatus || allMembers?.documents.length === 1;
+  const isPending = isDeletingMember || isUpdatingMember || isUpdatingStatus || isUpdatingLeadsAccess || allMembers?.documents.length === 1;
+
+  const handleToggleLeadsAccess = (memberId: string, currentAccess: boolean) => {
+    updateLeadsAccess({
+      param: { memberId },
+      json: { hasLeadsAccess: !currentAccess },
+    });
+  };
 
   // Separate active and inactive members for display
   const activeMembers = allMembers?.documents.filter(m => m.isActive !== false) || [];
@@ -203,14 +212,33 @@ export const MembersList = () => {
                   <DropdownMenuSeparator />
 
                   {isAdmin && !isAdminLoading && (
-                    <DropdownMenuItem
-                      className="font-medium text-orange-600"
-                      onClick={() => handleToggleMemberStatus(member.$id, member.isActive !== false)}
-                      disabled={isPending}
-                    >
-                      <UserX className="h-4 w-4 mr-2" />
-                      Mark as Inactive
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem
+                        className="font-medium"
+                        onClick={() => handleToggleLeadsAccess(member.$id, member.hasLeadsAccess || false)}
+                        disabled={isPending}
+                      >
+                        {member.hasLeadsAccess ? (
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Revoke Leads Access
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Grant Leads Access
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="font-medium text-orange-600"
+                        onClick={() => handleToggleMemberStatus(member.$id, member.isActive !== false)}
+                        disabled={isPending}
+                      >
+                        <UserX className="h-4 w-4 mr-2" />
+                        Mark as Inactive
+                      </DropdownMenuItem>
+                    </>
                   )}
 
                   <DropdownMenuItem

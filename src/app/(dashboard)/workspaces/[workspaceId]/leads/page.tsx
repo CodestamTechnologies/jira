@@ -1,48 +1,33 @@
-import { AddLeadModal } from "@/components/add-lead-modal"
-import { UploadLeadsExcelModal } from "@/components/upload-leads-excel-modal"
-import { LeadsStats } from "@/components/leads-stats"
-import { LeadsTable } from "@/components/leads-table"
-import { EditLeadModal } from "@/features/leads/components/edit-lead-modal"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { GalleryVerticalEnd } from "lucide-react"
+import { redirect } from 'next/navigation'
+import { LeadsPageClient } from './leads-page-client'
+import { getCurrent } from '@/features/auth/queries'
+import { createAdminClient } from '@/lib/appwrite'
+import { checkLeadsAccess } from '@/features/members/utils/permissions'
 
-export default function LeadsPage() {
-  return (
-    <>
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto py-8">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-md">
-                <GalleryVerticalEnd className="size-5" />
-              </div>
-              <h1 className="text-xl md:text-3xl font-bold">Leads Management</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <UploadLeadsExcelModal />
-              <AddLeadModal />
-            </div>
-          </div>
+/**
+ * Leads page with server-side access control
+ * Uses scalable permission system to check access before rendering
+ */
+export default async function LeadsPage({
+  params,
+}: {
+  params: Promise<{ workspaceId: string }>
+}) {
+  const { workspaceId } = await params
+  const user = await getCurrent()
 
-          {/* Dynamic Stats */}
-          <LeadsStats />
+  if (!user) {
+    redirect('/sign-in')
+  }
 
-          {/* Leads Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>All Leads</CardTitle>
-              <CardDescription>
-                Manage and track your sales leads with real-time updates
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LeadsTable />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-      <EditLeadModal />
-    </>
-  )
+  // Check if user has access to leads using scalable permission system
+  const { databases } = await createAdminClient()
+  const accessResult = await checkLeadsAccess(databases, workspaceId, user.$id)
+
+  if (!accessResult.hasAccess) {
+    // Redirect to workspace home if no access
+    redirect(`/workspaces/${workspaceId}`)
+  }
+
+  return <LeadsPageClient />
 }

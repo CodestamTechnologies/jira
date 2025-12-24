@@ -96,7 +96,9 @@ const app = new Hono()
             email: user.email,
             role: member.role,
             // Ensure isActive defaults to true for backward compatibility
-            isActive: member.isActive !== false
+            isActive: member.isActive !== false,
+            // Include permission fields for feature access
+            hasLeadsAccess: member.hasLeadsAccess || false,
           }
         }),
       )
@@ -416,6 +418,64 @@ const app = new Hono()
         changes: {
           old: { isActive: member.isActive },
           new: { isActive },
+        },
+        metadata,
+      })
+
+      return ctx.json({
+        data: updatedMember,
+      })
+    },
+  )
+  .patch(
+    '/:memberId/leads-access',
+    sessionMiddleware,
+    zValidator(
+      'json',
+      z.object({
+        hasLeadsAccess: z.boolean(),
+      }),
+    ),
+    async (ctx) => {
+      const databases = ctx.get('databases')
+      const user = ctx.get('user')
+      const { memberId } = ctx.req.param()
+      const { hasLeadsAccess } = ctx.req.valid('json')
+
+      const member = await databases.getDocument<Member>(DATABASE_ID, MEMBERS_ID, memberId)
+
+      if (!member) {
+        return ctx.json({ error: 'Member not found.' }, 404)
+      }
+
+      const requesterMember = await getMember({
+        databases,
+        workspaceId: member.workspaceId,
+        userId: user.$id,
+      })
+
+      if (!requesterMember || requesterMember.role !== MemberRole.ADMIN) {
+        return ctx.json({ error: 'Unauthorized. Only admins can manage leads access.' }, 401)
+      }
+
+      const updatedMember = await databases.updateDocument(DATABASE_ID, MEMBERS_ID, memberId, {
+        hasLeadsAccess,
+      })
+
+      const userInfo = getUserInfoForLogging(user)
+      const metadata = getRequestMetadata(ctx)
+      logActivityBackground({
+        databases,
+        action: ActivityAction.UPDATE,
+        entityType: ActivityEntityType.MEMBER,
+        entityId: updatedMember.$id,
+        workspaceId: member.workspaceId,
+        userId: userInfo.userId,
+        username: userInfo.username,
+        userEmail: userInfo.userEmail,
+        changes: {
+          old: { hasLeadsAccess: member.hasLeadsAccess },
+          new: { hasLeadsAccess },
         },
         metadata,
       })

@@ -230,6 +230,12 @@ export function invalidateMemberQueries(
     queryKey: ['members', workspaceId],
     exact: true,
   });
+
+  // Invalidate feature access queries (permissions)
+  queryClient.invalidateQueries({
+    queryKey: ['has-leads-access'],
+    exact: false,
+  });
 }
 
 /**

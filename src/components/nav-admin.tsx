@@ -9,7 +9,7 @@
  */
 "use client"
 
-import { Clock, FileText, History, Folder, Users } from "lucide-react"
+import { Clock, FileText, History, Folder, Users, Settings } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 
@@ -25,6 +25,7 @@ import { useWorkspaceRoute } from "@/hooks/use-workspace-route"
 import { useAdminSidebar } from "@/components/admin-sidebar-context"
 import { useAdminStatus } from "@/features/attendance/hooks/use-admin-status"
 import { NavItem } from "@/components/sidebar/nav-item"
+import { useHasLeadsAccess } from '@/features/members/hooks/use-feature-access'
 
 /**
  * Admin-only navigation routes
@@ -46,6 +47,11 @@ const ADMIN_ROUTES = [
     url: "/activity",
     icon: History,
   },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+  },
 ] as const
 
 /**
@@ -56,6 +62,7 @@ export function NavAdmin() {
   const { buildUrl, isActive, workspaceId } = useWorkspaceRoute()
   const pathname = usePathname()
   const { data: isAdmin, isLoading } = useAdminStatus()
+  const { data: hasLeadsAccess, isLoading: isLoadingLeadsAccess } = useHasLeadsAccess()
   const { activeAdminSection, setActiveAdminSection, setIsAdminSheetOpen } = useAdminSidebar()
 
   // Don't render anything if not admin or still loading
@@ -90,17 +97,19 @@ export function NavAdmin() {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* Leads Management - Opens admin sheet */}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Leads"
-              isActive={activeAdminSection === "leads"}
-              onClick={() => handleAdminSectionToggle("leads")}
-            >
-              <Users />
-              <span>Leads</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {/* Leads Management - Opens admin sheet - Only show if user has access */}
+          {!isLoadingLeadsAccess && hasLeadsAccess && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Leads"
+                isActive={activeAdminSection === "leads"}
+                onClick={() => handleAdminSectionToggle("leads")}
+              >
+                <Users />
+                <span>Leads</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
 
           {/* Admin-only routes */}
           {ADMIN_ROUTES.map((route) => (

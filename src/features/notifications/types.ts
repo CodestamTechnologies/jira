@@ -30,3 +30,4 @@ export type Notification = Models.Document & {
   metadata?: string | NotificationMetadata; // Stored as JSON string in Appwrite, parsed when reading
 };
 
+

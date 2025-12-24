@@ -16,6 +16,7 @@ import {
 import { COMPANY_INFO } from '@/lib/pdf/constants';
 import { format } from 'date-fns';
 import { type ActivityLog } from '../types';
+import { formatActivityDetails } from '../utils/format-activity-details';
 
 registerPDFFonts();
 
@@ -50,40 +51,33 @@ const tableStyles = StyleSheet.create({
     fontSize: 8,
     borderRightWidth: 1,
     borderRightColor: '#000',
-    width: '15%',
+    width: '16%',
   },
   tableCellUser: {
     padding: 4,
     fontSize: 8,
     borderRightWidth: 1,
     borderRightColor: '#000',
-    width: '18%',
+    width: '20%',
   },
   tableCellAction: {
     padding: 4,
     fontSize: 8,
     borderRightWidth: 1,
     borderRightColor: '#000',
-    width: '10%',
+    width: '12%',
   },
   tableCellEntityType: {
     padding: 4,
     fontSize: 8,
     borderRightWidth: 1,
     borderRightColor: '#000',
-    width: '12%',
-  },
-  tableCellEntityId: {
-    padding: 4,
-    fontSize: 8,
-    borderRightWidth: 1,
-    borderRightColor: '#000',
     width: '15%',
   },
-  tableCellChanges: {
+  tableCellDetails: {
     padding: 4,
     fontSize: 8,
-    width: '30%',
+    width: '37%',
   },
   lastCell: {
     borderRightWidth: 0,
@@ -108,37 +102,7 @@ const ActivityLogPDF: React.FC<ActivityLogPDFData> = ({
   filters,
   logoUrl = COMPANY_INFO.logoUrl,
 }) => {
-  const formatChanges = (changes: string | Record<string, unknown> | undefined): string => {
-    if (!changes) return '-';
-    
-    try {
-      const parsed = typeof changes === 'string' ? JSON.parse(changes) : changes;
-      if (typeof parsed === 'object' && parsed !== null) {
-        const old = parsed.old || {};
-        const new_ = parsed.new || {};
-        const changesList: string[] = [];
-        
-        Object.keys({ ...old, ...new_ }).forEach((key) => {
-          const oldVal = old[key];
-          const newVal = new_[key];
-          if (oldVal !== newVal) {
-            const oldStr = typeof oldVal === 'object' ? JSON.stringify(oldVal) : String(oldVal);
-            const newStr = typeof newVal === 'object' ? JSON.stringify(newVal) : String(newVal);
-            changesList.push(`${key}: ${oldStr} → ${newStr}`);
-          }
-        });
-        
-        const result = changesList.length > 0 ? changesList.join('; ') : 'No changes';
-        // Truncate if too long to prevent layout issues
-        return result.length > 150 ? result.substring(0, 147) + '...' : result;
-      }
-      const result = JSON.stringify(parsed);
-      return result.length > 150 ? result.substring(0, 147) + '...' : result;
-    } catch {
-      const result = typeof changes === 'string' ? changes : JSON.stringify(changes);
-      return result.length > 150 ? result.substring(0, 147) + '...' : result;
-    }
-  };
+  // Use shared utility function for formatting activity details (DRY principle)
 
   const getFilterSummary = (): string => {
     const parts: string[] = [];
@@ -227,11 +191,8 @@ const ActivityLogPDF: React.FC<ActivityLogPDFData> = ({
               <View style={[tableStyles.tableCellEntityType]}>
                 <Text style={{ fontWeight: 'bold', fontSize: 8 }}>Entity Type</Text>
               </View>
-              <View style={[tableStyles.tableCellEntityId]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8 }}>Entity ID</Text>
-              </View>
-              <View style={[tableStyles.tableCellChanges, tableStyles.lastCell]}>
-                <Text style={{ fontWeight: 'bold', fontSize: 8 }}>Changes</Text>
+              <View style={[tableStyles.tableCellDetails, tableStyles.lastCell]}>
+                <Text style={{ fontWeight: 'bold', fontSize: 8 }}>Details</Text>
               </View>
             </View>
 
@@ -256,12 +217,9 @@ const ActivityLogPDF: React.FC<ActivityLogPDFData> = ({
                 <View style={[tableStyles.tableCellEntityType]}>
                   <Text style={{ fontSize: 8 }}>{log.entityType}</Text>
                 </View>
-                <View style={[tableStyles.tableCellEntityId]}>
-                  <Text style={{ fontSize: 7 }}>{log.entityId.substring(0, 12)}...</Text>
-                </View>
-                <View style={[tableStyles.tableCellChanges, tableStyles.lastCell]}>
-                  <Text style={{ fontSize: 7 }}>
-                    {formatChanges(log.changes)}
+                <View style={[tableStyles.tableCellDetails, tableStyles.lastCell]}>
+                  <Text style={{ fontSize: 7, lineHeight: 1.3 }}>
+                    {formatActivityDetails(log)}
                   </Text>
                 </View>
               </View>

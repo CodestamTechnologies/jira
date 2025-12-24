@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowRight, CheckCircle2, ChevronDown, ChevronUp, Download, FileText, Folder, Mail, MessageSquare, Trash2, User, Users } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -9,110 +9,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
-import { ActivityAction, ActivityEntityType, type ActivityLog } from '../types';
+import { type ActivityLog } from '../types';
 import { parseActivityChanges, parseActivityMetadata } from '../utils/log-activity';
+import { formatActivityDetails } from '../utils/format-activity-details';
+import { getActionConfig, getEntityIcon, getActionText } from '../utils/activity-helpers';
 import { cn } from '@/lib/utils';
 
 interface ActivityLogItemProps {
   log: ActivityLog;
 }
 
-const getActionConfig = (action: ActivityAction) => {
-  switch (action) {
-    case ActivityAction.CREATE:
-      return {
-        icon: CheckCircle2,
-        color: 'text-green-600 dark:text-green-400',
-        bgColor: 'bg-green-50 dark:bg-green-950/30',
-        borderColor: 'border-green-200 dark:border-green-800',
-        badge: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-800',
-      };
-    case ActivityAction.UPDATE:
-      return {
-        icon: FileText,
-        color: 'text-blue-600 dark:text-blue-400',
-        bgColor: 'bg-blue-50 dark:bg-blue-950/30',
-        borderColor: 'border-blue-200 dark:border-blue-800',
-        badge: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800',
-      };
-    case ActivityAction.DELETE:
-      return {
-        icon: Trash2,
-        color: 'text-red-600 dark:text-red-400',
-        bgColor: 'bg-red-50 dark:bg-red-950/30',
-        borderColor: 'border-red-200 dark:border-red-800',
-        badge: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800',
-      };
-    case ActivityAction.DOWNLOAD:
-      return {
-        icon: Download,
-        color: 'text-purple-600 dark:text-purple-400',
-        bgColor: 'bg-purple-50 dark:bg-purple-950/30',
-        borderColor: 'border-purple-200 dark:border-purple-800',
-        badge: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-800',
-      };
-    case ActivityAction.SEND_EMAIL:
-      return {
-        icon: Mail,
-        color: 'text-orange-600 dark:text-orange-400',
-        bgColor: 'bg-orange-50 dark:bg-orange-950/30',
-        borderColor: 'border-orange-200 dark:border-orange-800',
-        badge: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-800',
-      };
-    default:
-      return {
-        icon: FileText,
-        color: 'text-gray-600 dark:text-gray-400',
-        bgColor: 'bg-gray-50 dark:bg-gray-950/30',
-        borderColor: 'border-gray-200 dark:border-gray-800',
-        badge: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/50 dark:text-gray-300 dark:border-gray-800',
-      };
-  }
-};
-
-const getEntityIcon = (entityType: ActivityEntityType) => {
-  switch (entityType) {
-    case ActivityEntityType.TASK:
-      return CheckCircle2;
-    case ActivityEntityType.PROJECT:
-      return Folder;
-    case ActivityEntityType.WORKSPACE:
-      return Folder;
-    case ActivityEntityType.MEMBER:
-      return User;
-    case ActivityEntityType.COMMENT:
-      return MessageSquare;
-    case ActivityEntityType.INVOICE:
-      return FileText;
-    case ActivityEntityType.ATTENDANCE:
-      return Users;
-    case ActivityEntityType.DOCUMENT_NDA:
-    case ActivityEntityType.DOCUMENT_JOINING_LETTER:
-    case ActivityEntityType.DOCUMENT_SALARY_SLIP:
-    case ActivityEntityType.DOCUMENT_INVOICE:
-      return FileText;
-    default:
-      return FileText;
-  }
-};
-
-const getActionText = (action: ActivityAction, entityType: ActivityEntityType) => {
-  const entityName = entityType.toLowerCase().replace(/_/g, ' ');
-  switch (action) {
-    case ActivityAction.CREATE:
-      return `created ${entityName}`;
-    case ActivityAction.UPDATE:
-      return `updated ${entityName}`;
-    case ActivityAction.DELETE:
-      return `deleted ${entityName}`;
-    case ActivityAction.DOWNLOAD:
-      return `downloaded ${entityName}`;
-    case ActivityAction.SEND_EMAIL:
-      return `sent ${entityName} via email`;
-    default:
-      return `${String(action).toLowerCase()} ${entityName}`;
-  }
-};
+// Using shared utilities from activity-helpers.ts (DRY principle)
 
 const formatValue = (value: unknown): string => {
   if (value === null || value === undefined) return 'null';
@@ -178,9 +85,14 @@ export const ActivityLogItem = ({ log }: ActivityLogItemProps) => {
   const hasChanges = changes.length > 0;
   const metadata = parseActivityMetadata(log.metadata);
   const hasMetadata = metadata && (metadata.ipAddress || metadata.userAgent);
-  const actionConfig = getActionConfig(log.action);
+  
+  // Use shared utilities (DRY principle)
+  const actionConfig = getActionConfig(log.action, true); // Include full config for UI component
   const ActionIcon = actionConfig.icon;
   const EntityIcon = getEntityIcon(log.entityType);
+  
+  // Get formatted activity details for display
+  const activityDetails = formatActivityDetails(log);
 
   return (
     <div className={cn(
@@ -209,6 +121,16 @@ export const ActivityLogItem = ({ log }: ActivityLogItemProps) => {
                     {getActionText(log.action, log.entityType)}
                   </span>
                 </div>
+                {/* Display formatted activity details */}
+                {activityDetails && activityDetails !== '-' && (
+                  <div className="mt-1.5 text-sm text-foreground/90 bg-background/50 rounded-md px-2 py-1 border">
+                    {activityDetails.split('\n').map((line, idx) => (
+                      <div key={idx} className={idx > 0 ? 'mt-1' : ''}>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-1 flex items-center gap-2 flex-wrap">
                   <Badge variant="outline" className={cn('text-xs font-medium', actionConfig.badge)}>
                     <ActionIcon className="mr-1 size-3" />

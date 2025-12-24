@@ -12,11 +12,12 @@
 "use client"
 
 import * as React from "react"
-import { Suspense } from "react"
+import { Suspense, useMemo } from "react"
 import {
   Clock,
   TrendingUp,
   Users as UsersIcon,
+  Settings,
 } from "lucide-react"
 import { GoHome, GoCheckCircle } from "react-icons/go"
 
@@ -35,6 +36,7 @@ import {
 import { Logo } from "@/components/logo"
 import { WorkspaceSwitcher } from "@/components/workspaces-switcher"
 import { type NavItem } from "@/components/sidebar/types"
+import { useHasLeadsAccess } from '@/features/members/hooks/use-feature-access'
 
 /**
  * Main navigation items configuration
@@ -82,6 +84,19 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> { }
  * - User profile management
  */
 export function AppSidebar({ ...props }: AppSidebarProps) {
+  const { data: hasLeadsAccess, isLoading: isLoadingLeadsAccess } = useHasLeadsAccess()
+
+  // Filter navigation items based on access
+  const filteredNavItems = useMemo(() => {
+    return NAV_MAIN_ITEMS.filter((item) => {
+      // Show Leads only if user has access
+      if (item.title === "Leads") {
+        return hasLeadsAccess === true
+      }
+      return true
+    })
+  }, [hasLeadsAccess])
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       {/* Sidebar Header - Logo and Workspace Switcher */}
@@ -108,7 +123,7 @@ export function AppSidebar({ ...props }: AppSidebarProps) {
 
       {/* Sidebar Content - Navigation Sections */}
       <SidebarContent>
-        <NavMain items={NAV_MAIN_ITEMS} />
+        {!isLoadingLeadsAccess && <NavMain items={filteredNavItems} />}
         <NavAdmin />
       </SidebarContent>
 

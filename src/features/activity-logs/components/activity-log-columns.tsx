@@ -13,91 +13,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ActivityAction, ActivityEntityType, type ActivityLog } from '../types';
+import { type ActivityLog } from '../types';
+import { formatActivityDetailsShort } from '../utils/format-activity-details';
+import { getActionConfig, getEntityIcon, getActionText } from '../utils/activity-helpers';
 import { cn } from '@/lib/utils';
 
 interface ActivityLogColumnsProps {
   onViewDetails?: (log: ActivityLog) => void;
 }
 
-const getActionConfig = (action: ActivityAction) => {
-  switch (action) {
-    case ActivityAction.CREATE:
-      return {
-        icon: CheckCircle2,
-        badge: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-800',
-      };
-    case ActivityAction.UPDATE:
-      return {
-        icon: FileText,
-        badge: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800',
-      };
-    case ActivityAction.DELETE:
-      return {
-        icon: Trash2,
-        badge: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800',
-      };
-    case ActivityAction.DOWNLOAD:
-      return {
-        icon: Download,
-        badge: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-800',
-      };
-    case ActivityAction.SEND_EMAIL:
-      return {
-        icon: Mail,
-        badge: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-800',
-      };
-    default:
-      return {
-        icon: FileText,
-        badge: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/50 dark:text-gray-300 dark:border-gray-800',
-      };
-  }
-};
-
-const getEntityIcon = (entityType: ActivityEntityType) => {
-  switch (entityType) {
-    case ActivityEntityType.TASK:
-      return CheckCircle2;
-    case ActivityEntityType.PROJECT:
-      return Folder;
-    case ActivityEntityType.WORKSPACE:
-      return Folder;
-    case ActivityEntityType.MEMBER:
-      return User;
-    case ActivityEntityType.COMMENT:
-      return MessageSquare;
-    case ActivityEntityType.INVOICE:
-      return FileText;
-    case ActivityEntityType.ATTENDANCE:
-      return Users;
-    case ActivityEntityType.DOCUMENT_NDA:
-    case ActivityEntityType.DOCUMENT_JOINING_LETTER:
-    case ActivityEntityType.DOCUMENT_SALARY_SLIP:
-    case ActivityEntityType.DOCUMENT_INVOICE:
-      return FileText;
-    default:
-      return FileText;
-  }
-};
-
-const getActionText = (action: ActivityAction, entityType: ActivityEntityType) => {
-  const entityName = entityType.toLowerCase().replace(/_/g, ' ');
-  switch (action) {
-    case ActivityAction.CREATE:
-      return `Created ${entityName}`;
-    case ActivityAction.UPDATE:
-      return `Updated ${entityName}`;
-    case ActivityAction.DELETE:
-      return `Deleted ${entityName}`;
-    case ActivityAction.DOWNLOAD:
-      return `Downloaded ${entityName}`;
-    case ActivityAction.SEND_EMAIL:
-      return `Sent ${entityName} via email`;
-    default:
-      return `${String(action)} ${entityName}`;
-  }
-};
+// Using shared utilities from activity-helpers.ts (DRY principle)
 
 export const createActivityLogColumns = ({ onViewDetails }: ActivityLogColumnsProps = {}): ColumnDef<ActivityLog>[] => [
   {
@@ -141,6 +66,7 @@ export const createActivityLogColumns = ({ onViewDetails }: ActivityLogColumnsPr
       const log = row.original;
       const actionConfig = getActionConfig(log.action);
       const ActionIcon = actionConfig.icon;
+      const activityDetails = formatActivityDetailsShort(log, 80);
 
       return (
         <div className="flex flex-col gap-1">
@@ -149,8 +75,11 @@ export const createActivityLogColumns = ({ onViewDetails }: ActivityLogColumnsPr
             {log.action}
           </Badge>
           <span className="text-xs text-muted-foreground">
-            {getActionText(log.action, log.entityType)}
+            {getActionText(log.action, log.entityType, true)}
           </span>
+          {activityDetails && activityDetails !== '-' && (
+            <span className="text-xs text-foreground/80 mt-0.5">{activityDetails}</span>
+          )}
         </div>
       );
     },
@@ -178,18 +107,21 @@ export const createActivityLogColumns = ({ onViewDetails }: ActivityLogColumnsPr
     },
   },
   {
-    accessorKey: 'entityId',
-    header: () => <span className="h-8 px-2 lg:px-4 flex items-center">Entity ID</span>,
+    accessorKey: 'details',
+    header: () => <span className="h-8 px-2 lg:px-4 flex items-center">Details</span>,
     cell: ({ row }) => {
       const log = row.original;
+      const activityDetails = formatActivityDetailsShort(log, 120);
+      
       return (
-        <div className="flex flex-col">
-          <code className="text-xs font-mono text-muted-foreground max-w-[120px] truncate">
-            {log.entityId}
-          </code>
-          {log.projectId && (
-            <code className="text-xs font-mono text-muted-foreground/70 max-w-[120px] truncate">
-              Project: {log.projectId.slice(0, 8)}...
+        <div className="flex flex-col max-w-[200px]">
+          {activityDetails && activityDetails !== '-' ? (
+            <span className="text-xs text-foreground break-words">
+              {activityDetails}
+            </span>
+          ) : (
+            <code className="text-xs font-mono text-muted-foreground truncate">
+              {log.entityId.slice(0, 16)}...
             </code>
           )}
         </div>
