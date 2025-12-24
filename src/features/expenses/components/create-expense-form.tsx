@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Upload, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, useCallback, useMemo } from 'react';
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -65,9 +65,12 @@ export const CreateExpenseForm = ({ onCancel, projectId }: CreateExpenseFormProp
   });
 
   // Update workspaceId in form when it becomes available
-  if (workspaceId && createExpenseForm.getValues('workspaceId') !== workspaceId) {
-    createExpenseForm.setValue('workspaceId', workspaceId);
-  }
+  // Using useEffect to avoid side effects during render
+  useEffect(() => {
+    if (workspaceId && createExpenseForm.getValues('workspaceId') !== workspaceId) {
+      createExpenseForm.setValue('workspaceId', workspaceId);
+    }
+  }, [workspaceId, createExpenseForm]);
 
   // Watch category to show/hide custom category field
   const selectedCategory = createExpenseForm.watch('category');
@@ -85,59 +88,72 @@ export const CreateExpenseForm = ({ onCancel, projectId }: CreateExpenseFormProp
         return;
       }
 
-      // Ensure all required values are valid before creating FormData
-      // These should already be validated by React Hook Form, but double-check
+      /**
+       * Additional validation beyond Zod schema
+       * Zod handles type validation, but we add runtime checks for:
+       * 1. Workspace ID availability (may be async)
+       * 2. Business logic validation (amount > 0)
+       * 3. Date validity checks
+       * 
+       * These are defensive checks that should rarely fail if Zod validation passed,
+       * but provide better error messages and handle edge cases.
+       */
       const description = values.description?.trim() || '';
       const category = values.category || ExpenseCategory.OTHER;
       const finalWorkspaceId = (values.workspaceId || workspaceId || '').trim();
 
-      // Validate critical fields before proceeding
-      // These checks should never fail if React Hook Form validation passed, but we check anyway
+      // Validate description (Zod already checks, but ensure non-empty after trim)
       if (!description) {
         toast.error('Description is required.');
         return;
       }
 
+      // Validate amount (Zod checks type, we check business logic: must be > 0)
       const amount = typeof values.amount === 'number' && !isNaN(values.amount) && values.amount > 0 ? values.amount : null;
       if (!amount || amount <= 0) {
         toast.error('Amount must be greater than 0.');
         return;
       }
 
+      // Validate workspaceId (critical for authorization and data integrity)
       if (!finalWorkspaceId) {
         toast.error('Workspace ID is missing. Please refresh the page.');
         return;
       }
 
+      // Validate date (ensure it's a valid Date object)
       const date = values.date instanceof Date && !isNaN(values.date.getTime()) ? values.date : null;
       if (!date || isNaN(date.getTime())) {
         toast.error('Please select a valid date.');
         return;
       }
 
-      // Ensure category is a valid enum value
+      // Validate category enum (defensive check for type safety)
       if (!Object.values(ExpenseCategory).includes(category as ExpenseCategory)) {
         toast.error('Please select a valid category.');
         return;
       }
 
-      // Build form data EXACTLY like project forms (see create-project-form.tsx line 44-49)
-      // Use spread operator with values, then override specific fields
+      /**
+       * Build form data payload
+       * Uses plain object pattern (consistent with project forms)
+       * Hono client automatically converts to FormData when File instances are present
+       * 
+       * Pattern: Convert all values to strings/Date strings, except File instances
+       */
       const finalValues: Record<string, unknown> = {
-        // Convert amount to string (FormData will handle it)
-        amount: String(amount),
-        // Convert date to YYYY-MM-DD string format
-        date: date.toISOString().split('T')[0],
+        // Required fields
+        amount: String(amount), // Convert to string for FormData compatibility
+        date: date.toISOString().split('T')[0], // YYYY-MM-DD format for server parsing
         description,
         category,
-        // Ensure workspaceId is set
         workspaceId: finalWorkspaceId,
         status: values.status || ExpenseStatus.APPROVED,
-        // Handle file EXACTLY like project form: File instance or empty string
+        // File handling: File instance or empty string (Hono client handles conversion)
         billFile: selectedFile instanceof File ? selectedFile : '',
       };
 
-      // Add optional fields only if they have values (don't include undefined)
+      // Optional fields: only include if they have values (avoid sending undefined)
       if (values.category === ExpenseCategory.CUSTOM && (values.customCategory?.trim() || customCategory.trim())) {
         finalValues.customCategory = values.customCategory?.trim() || customCategory.trim();
       }
@@ -150,7 +166,9 @@ export const CreateExpenseForm = ({ onCancel, projectId }: CreateExpenseFormProp
 
       createExpense(
         {
-          form: finalValues as any, // Type assertion needed - Hono client handles FormData conversion
+          // Type assertion needed - Hono client handles FormData conversion internally
+          // The client expects a plain object and converts it to FormData when File instances are present
+          form: finalValues as any,
         },
         {
           onSuccess: () => {

@@ -12,7 +12,7 @@ import { sessionMiddleware } from '@/lib/session-middleware';
 import type { Invoice } from '@/features/invoices/types';
 
 const logDownloadSchema = z.object({
-  documentType: z.enum(['NDA', 'JOINING_LETTER', 'SALARY_SLIP', 'INVOICE']),
+  documentType: z.enum(['NDA', 'JOINING_LETTER', 'SALARY_SLIP', 'INVOICE', 'EXPENSE']),
   workspaceId: z.string().trim().min(1, 'Workspace ID is required'),
   documentName: z.string().optional(),
   invoiceNumber: z.string().optional(), // For invoice downloads
@@ -37,6 +37,7 @@ const app = new Hono()
         JOINING_LETTER: ActivityEntityType.DOCUMENT_JOINING_LETTER,
         SALARY_SLIP: ActivityEntityType.DOCUMENT_SALARY_SLIP,
         INVOICE: ActivityEntityType.DOCUMENT_INVOICE,
+        EXPENSE: ActivityEntityType.EXPENSE,
       };
 
       const entityType = entityTypeMap[documentType];

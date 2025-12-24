@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Upload, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -22,6 +22,7 @@ import { ExpenseCategory, ExpenseStatus, type Expense } from '../types';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { useGetExpense } from '../api/use-get-expense';
 import { validateBillFile, getFileTypeDescription } from '@/utils/file-validation';
+import { formatCategoryForDisplay } from '../utils/expense-helpers';
 
 interface EditExpenseFormProps {
   expenseId: string;
@@ -40,8 +41,13 @@ export const EditExpenseForm = ({ expenseId, onCancel }: EditExpenseFormProps) =
   const [customCategory, setCustomCategory] = useState('');
 
   const { data: expense, isLoading: isLoadingExpense } = useGetExpense(expenseId);
-  const { data: projectsData } = useGetProjects({ workspaceId });
+  const { data: projectsData, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { mutate: updateExpense, isPending } = useUpdateExpense();
+
+  // Memoize project options to prevent unnecessary re-renders
+  const projectOptions = useMemo(() => {
+    return projectsData?.documents || [];
+  }, [projectsData?.documents]);
 
   const editExpenseForm = useForm<z.infer<typeof updateExpenseSchema>>({
     resolver: zodResolver(updateExpenseSchema),
@@ -70,83 +76,144 @@ export const EditExpenseForm = ({ expenseId, onCancel }: EditExpenseFormProps) =
     }
   }, [expense, editExpenseForm]);
 
+  // Watch category to show/hide custom category field
   const selectedCategory = editExpenseForm.watch('category');
 
-  const onSubmit = (values: z.infer<typeof updateExpenseSchema>) => {
-    const formData = new FormData();
-    formData.append('workspaceId', values.workspaceId);
-    
-    if (values.amount !== undefined) {
-      formData.append('amount', values.amount.toString());
-    }
-    if (values.date) {
-      formData.append('date', values.date.toISOString());
-    }
-    if (values.description) {
-      formData.append('description', values.description);
-    }
-    if (values.category) {
-      formData.append('category', values.category);
-      if (values.category === ExpenseCategory.CUSTOM && customCategory) {
-        formData.append('customCategory', customCategory);
+  /**
+   * Handles form submission for expense updates
+   * 
+   * Key differences from create form:
+   * - Supports partial updates (only changed fields sent)
+   * - Uses same plain object pattern for consistency (DRY principle)
+   * - Zod validation happens automatically via resolver
+   * 
+   * Pattern: Only include fields that have values (undefined fields are omitted)
+   */
+  const onSubmit = useCallback(
+    async (values: z.infer<typeof updateExpenseSchema>) => {
+      /**
+       * Workspace ID validation
+       * Critical for authorization - must be present for all operations
+       */
+      if (!workspaceId) {
+        toast.error('Workspace ID is missing. Please refresh the page.');
+        return;
       }
-    }
-    if (values.projectId !== undefined) {
-      formData.append('projectId', values.projectId || '');
-    }
-    if (values.notes !== undefined) {
-      formData.append('notes', values.notes || '');
-    }
-    if (values.status) {
-      formData.append('status', values.status);
-    }
-    if (selectedFile) {
-      formData.append('billFile', selectedFile);
-    }
 
-    updateExpense(
-      {
-        param: { expenseId },
-        form: formData,
-      },
-      {
-        onSuccess: () => {
-          if (onCancel) {
-            onCancel();
-          } else {
-            router.push(`/workspaces/${workspaceId}/expenses`);
-          }
+      const finalWorkspaceId = (values.workspaceId || workspaceId || '').trim();
+      if (!finalWorkspaceId) {
+        toast.error('Workspace ID is missing. Please refresh the page.');
+        return;
+      }
+
+      /**
+       * Build form data payload for partial update
+       * Only include fields that have values (undefined = no change)
+       * Uses same pattern as create form for consistency
+       */
+      const finalValues: Record<string, unknown> = {
+        workspaceId: finalWorkspaceId, // Always required for authorization
+      };
+
+      // Amount: only update if provided and valid
+      if (values.amount !== undefined && values.amount !== null) {
+        const amount = typeof values.amount === 'number' && !isNaN(values.amount) && values.amount > 0 ? values.amount : null;
+        if (amount) {
+          finalValues.amount = String(amount); // Convert to string for FormData
+        }
+      }
+
+      // Date: only update if provided and valid
+      if (values.date) {
+        const date = values.date instanceof Date && !isNaN(values.date.getTime()) ? values.date : null;
+        if (date) {
+          finalValues.date = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        }
+      }
+
+      // Description: only update if provided
+      if (values.description?.trim()) {
+        finalValues.description = values.description.trim();
+      }
+
+      // Category: only update if provided
+      if (values.category) {
+        finalValues.category = values.category;
+        // Handle custom category (only if category is CUSTOM)
+        if (values.category === ExpenseCategory.CUSTOM && (values.customCategory?.trim() || customCategory.trim())) {
+          finalValues.customCategory = values.customCategory?.trim() || customCategory.trim();
+        }
+      }
+
+      // Project ID: can be set to empty string to remove project association
+      if (values.projectId !== undefined) {
+        finalValues.projectId = values.projectId && values.projectId !== 'none' ? values.projectId : '';
+      }
+
+      // Notes: only update if provided
+      if (values.notes?.trim()) {
+        finalValues.notes = values.notes.trim();
+      }
+
+      // Status: only update if provided
+      if (values.status) {
+        finalValues.status = values.status;
+      }
+
+      // File handling: File instance or empty string (Hono client handles conversion)
+      finalValues.billFile = selectedFile instanceof File ? selectedFile : '';
+
+      updateExpense(
+        {
+          param: { expenseId },
+          form: finalValues as any, // Type assertion needed - Hono client handles FormData conversion
         },
-      },
-    );
-  };
+        {
+          onSuccess: () => {
+            editExpenseForm.reset();
+            setSelectedFile(null);
+            setCustomCategory('');
+            if (onCancel) {
+              onCancel();
+            } else {
+              router.push(`/workspaces/${workspaceId}/expenses`);
+            }
+          },
+        },
+      );
+    },
+    [workspaceId, customCategory, selectedFile, updateExpense, expenseId, editExpenseForm, onCancel, router],
+  );
 
   /**
    * Handles file selection and validation
-   * Uses centralized file validation utility
+   * Uses centralized file validation utility (DRY principle)
    */
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
 
-    if (file) {
-      const validation = validateBillFile(file);
-      if (!validation.valid) {
-        return toast.error(validation.error || 'Invalid file.');
+      if (file) {
+        const validation = validateBillFile(file);
+        if (!validation.valid) {
+          return toast.error(validation.error || 'Invalid file.');
+        }
+
+        setSelectedFile(file);
       }
+    },
+    [],
+  );
 
-      setSelectedFile(file);
-      setExistingBillFileId(undefined); // New file selected, clear existing
-    } else {
-      setSelectedFile(null);
-    }
-  };
-
-  const removeFile = () => {
+  /**
+   * Removes selected file and resets file input
+   */
+  const removeFile = useCallback(() => {
     setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+  }, []);
 
   if (isLoadingExpense) {
     return (
@@ -220,9 +287,29 @@ export const EditExpenseForm = ({ expenseId, onCancel }: EditExpenseFormProps) =
                     <FormControl>
                       <Input
                         type="date"
-                        {...field}
-                        value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                        value={
+                          field.value instanceof Date
+                            ? field.value.toISOString().split('T')[0]
+                            : field.value
+                              ? new Date(field.value).toISOString().split('T')[0]
+                              : ''
+                        }
+                        onChange={(e) => {
+                          // Convert date input string to Date object
+                          // Add time component to avoid timezone issues (consistent with create form)
+                          const dateString = e.target.value;
+                          if (dateString) {
+                            const dateValue = new Date(dateString + 'T00:00:00');
+                            // Only update if valid date
+                            if (!isNaN(dateValue.getTime())) {
+                              field.onChange(dateValue);
+                            }
+                          } else {
+                            // If empty, set to today's date
+                            field.onChange(new Date());
+                          }
+                        }}
+                        onBlur={field.onBlur}
                       />
                     </FormControl>
                     <FormMessage />
@@ -274,17 +361,31 @@ export const EditExpenseForm = ({ expenseId, onCancel }: EditExpenseFormProps) =
               />
 
               {selectedCategory === ExpenseCategory.CUSTOM && (
-                <FormItem>
-                  <FormLabel>Custom Category Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter custom category"
-                      value={customCategory}
-                      onChange={(e) => setCustomCategory(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormDescription>Enter a name for your custom category</FormDescription>
-                </FormItem>
+                <FormField
+                  disabled={isPending}
+                  control={editExpenseForm.control}
+                  name="customCategory"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Custom Category Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter custom category"
+                          {...field}
+                          value={field.value || customCategory || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Sync with local state for fallback
+                            setCustomCategory(value);
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription>Enter a name for your custom category</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
 
               <FormField
@@ -305,7 +406,7 @@ export const EditExpenseForm = ({ expenseId, onCancel }: EditExpenseFormProps) =
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">Workspace (No Project)</SelectItem>
-                        {projectsData?.documents.map((project) => (
+                        {projectOptions.map((project) => (
                           <SelectItem key={project.$id} value={project.$id}>
                             {project.name}
                           </SelectItem>

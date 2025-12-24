@@ -22,7 +22,7 @@ export const useUpdateExpense = () => {
       const response = await client.api.expenses[':expenseId']['$patch']({ param, form });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as { error?: string };
         throw new Error(error.error || 'Failed to update expense.');
       }
 

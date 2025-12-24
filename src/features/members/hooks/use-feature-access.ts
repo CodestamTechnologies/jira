@@ -16,6 +16,7 @@ import { useGetMembers } from '@/features/members/api/use-get-members'
 import { FeaturePermission, type PermissionCheckResult } from '../utils/permissions'
 import { useGetLeads } from '@/features/leads/api/use-get-leads'
 import { isMemberAssigned } from '@/features/leads/utils/parse-assignee-ids'
+import type { Member } from '../types'
 
 /**
  * Options for feature access checking
@@ -86,8 +87,12 @@ export function useFeatureAccess(
     }
 
     // Check explicit permission
-    if (currentMemberData.member && currentMemberData.member[permission] === true) {
-      return { hasAccess: true, reason: 'permission' }
+    if (currentMemberData.member) {
+      const member = currentMemberData.member as Member
+      const permissionValue = member[permission as keyof Member] as boolean | undefined
+      if (permissionValue === true) {
+        return { hasAccess: true, reason: 'permission' }
+      }
     }
 
     // Check for assigned items if enabled

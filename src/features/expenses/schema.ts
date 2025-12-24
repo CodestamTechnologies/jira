@@ -19,8 +19,7 @@ export const createExpenseSchema = z.object({
     },
     z.coerce
       .number({
-        required_error: 'Amount is required.',
-        invalid_type_error: 'Amount must be a number.',
+        message: 'Amount must be a number.',
       })
       .min(0, 'Amount must be non-negative.')
       .max(999999999, 'Amount too large.')
@@ -37,24 +36,20 @@ export const createExpenseSchema = z.object({
       return val;
     },
     z.coerce.date({
-      required_error: 'Date is required.',
-      invalid_type_error: 'Invalid date format.',
+      message: 'Invalid date format.',
     }),
   ),
   description: z.preprocess(
     (val) => (typeof val === 'string' ? val.trim() : val),
     z
-      .string({
-        required_error: 'Description is required.',
-      })
+      .string()
       .min(1, 'Description is required.')
       .max(500, 'Description must be less than 500 characters.'),
   ),
   category: z.preprocess(
     (val) => (typeof val === 'string' ? val.toLowerCase().trim() : val),
     z.nativeEnum(ExpenseCategory, {
-      required_error: 'Category is required.',
-      invalid_type_error: 'Invalid category.',
+      message: 'Invalid category.',
     }),
   ),
   customCategory: z

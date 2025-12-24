@@ -12,6 +12,7 @@ import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useDeleteExpense } from '../api/use-delete-expense';
 import { toast } from 'sonner';
 import type { Expense } from '../types';
+import type { ExpenseFiltersInput } from '../schema';
 import { ExpenseFilters } from './expense-filters';
 import { ExpenseStats } from './expense-stats';
 import { ExpenseExport } from './expense-export';
@@ -30,13 +31,13 @@ interface ExpenseWithProject extends Expense {
  */
 export const ExpenseTable = ({ projectId }: ExpenseTableProps) => {
   const workspaceId = useWorkspaceId();
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<ExpenseFiltersInput>({
     workspaceId,
     projectId,
-    startDate: undefined as string | undefined,
-    endDate: undefined as string | undefined,
-    category: undefined as string | undefined,
-    status: undefined as string | undefined,
+    startDate: undefined,
+    endDate: undefined,
+    category: undefined,
+    status: undefined,
   });
 
   const { data: expensesData, isLoading: isLoadingExpenses } = useGetExpenses(filters);
