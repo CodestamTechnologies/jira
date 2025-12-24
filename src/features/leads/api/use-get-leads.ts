@@ -23,8 +23,11 @@ export const useGetLeads = ({ workspaceId }: UseGetLeadsProps) => {
       return data
     },
     enabled: !!workspaceId,
+    // Leads change moderately - cache for 2 minutes
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    // Don't refetch on window focus - leads are updated via mutations which invalidate cache
+    refetchOnWindowFocus: false,
   })
 
   return query
 }
-

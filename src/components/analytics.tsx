@@ -2,7 +2,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { ProjectAnalyticsResponseType } from '@/features/projects/api/use-get-project-analytics';
 
 import { AnalyticsCard } from './analytics-card';
-import { DottedSeparator } from './dotted-separator';
+import { Separator } from '@/components/ui/separator';
 
 /* interface AnalyticsProps {
   data?: {
@@ -33,7 +33,7 @@ export const Analytics = ({ data }: ProjectAnalyticsResponseType) => {
             increaseValue={data.taskDifference}
           />
 
-          <DottedSeparator direction="vertical" />
+          <Separator orientation="vertical" />
         </div>
 
         <div className="flex flex-1 items-center">
@@ -44,7 +44,7 @@ export const Analytics = ({ data }: ProjectAnalyticsResponseType) => {
             increaseValue={data.assignedTaskDifference}
           />
 
-          <DottedSeparator direction="vertical" />
+          <Separator orientation="vertical" />
         </div>
 
         <div className="flex flex-1 items-center">
@@ -55,7 +55,7 @@ export const Analytics = ({ data }: ProjectAnalyticsResponseType) => {
             increaseValue={data.completedTaskDifference}
           />
 
-          <DottedSeparator direction="vertical" />
+          <Separator orientation="vertical" />
         </div>
 
         <div className="flex flex-1 items-center">
@@ -66,7 +66,7 @@ export const Analytics = ({ data }: ProjectAnalyticsResponseType) => {
             increaseValue={data.overdueTaskDifference}
           />
 
-          <DottedSeparator direction="vertical" />
+          <Separator orientation="vertical" />
         </div>
 
         <div className="flex flex-1 items-center">

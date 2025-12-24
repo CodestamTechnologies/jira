@@ -261,7 +261,7 @@ const app = new Hono()
         notes: validation.data.notes || '',
         assigneeIds: JSON.stringify(validation.data.assigneeIds || []), // Store assigneeIds as JSON string
         createdBy: user.$id,
-        comments: JSON.stringify([]), // Store comments as JSON string
+        // comments is optional, will be initialized when first comment is added
       }
 
       const response = await databases.createDocument(DATABASE_ID, LEADS_ID, ID.unique(), leadDocument)
@@ -298,13 +298,13 @@ const app = new Hono()
         priority: response.priority,
         description: response.description || undefined,
         notes: response.notes || undefined,
-        assigneeIds: response.assigneeIds || [],
+        assigneeIds: response.assigneeIds ? (typeof response.assigneeIds === 'string' ? JSON.parse(response.assigneeIds) : response.assigneeIds) : [],
         assignees,
         assignee: assignees[0], // For backward compatibility
         createdBy: response.createdBy,
         createdAt: response.$createdAt,
         updatedAt: response.$updatedAt,
-        comments: [],
+        comments: response.comments ? (typeof response.comments === 'string' ? JSON.parse(response.comments) : response.comments) : [],
       }
 
       return ctx.json({ data: lead }, 201)
@@ -440,7 +440,7 @@ const app = new Hono()
             notes: validation.data.notes || '',
             assigneeIds: JSON.stringify(validation.data.assigneeIds || []),
             createdBy: user.$id,
-            comments: JSON.stringify([]),
+            // comments is optional, will be initialized when first comment is added
           }
 
           await databases.createDocument(DATABASE_ID, LEADS_ID, ID.unique(), leadDocument)
@@ -766,4 +766,3 @@ const app = new Hono()
   })
 
 export default app
-

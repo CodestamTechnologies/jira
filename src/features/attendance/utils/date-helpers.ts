@@ -30,3 +30,4 @@ export const getTodayDateRange = (): { start: string; end: string } => {
 export const getTodayDateString = (): string => {
   return new Date().toISOString().split('T')[0];
 };
+

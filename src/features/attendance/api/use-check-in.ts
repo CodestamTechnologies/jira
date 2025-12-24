@@ -25,7 +25,10 @@ export const useCheckIn = () => {
     },
     onSuccess: () => {
       toast.success('Successfully checked in!');
+      // Invalidate all attendance-related queries for real-time updates
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['today-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['team-attendance'] });
       queryClient.invalidateQueries({ queryKey: ['attendance-stats'] });
     },
     onError: (error: Error) => {

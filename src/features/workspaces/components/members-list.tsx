@@ -4,12 +4,11 @@ import { ArrowLeft, MoreVertical, Shield, UserX, UserCheck } from 'lucide-react'
 import Link from 'next/link';
 import { Fragment, useState } from 'react';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
 import { useDeleteMember } from '@/features/members/api/use-delete-member';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useUpdateMember } from '@/features/members/api/use-update-member';
@@ -88,7 +87,7 @@ export const MembersList = () => {
       </CardHeader>
 
       <div className="px-7">
-        <DottedSeparator />
+        <Separator />
       </div>
 
       <CardContent className="p-7">

@@ -1,7 +1,8 @@
 'use client';
 
-import { Download, FileDown, Loader2 } from 'lucide-react';
+import { Download, FileDown, FileText, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { pdf } from '@react-pdf/renderer';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +14,7 @@ import {
 import { toast } from 'sonner';
 import { useExportActivityLogs } from '../api/use-export-activity-logs';
 import { ActivityAction, ActivityEntityType } from '../types';
+import ActivityLogPDF from './activity-log-pdf';
 
 interface ActivityLogExportProps {
   workspaceId: string;
@@ -71,7 +73,7 @@ export const ActivityLogExport = ({ workspaceId, filters }: ActivityLogExportPro
     enabled: false,
   });
 
-  const handleExport = async (format: 'csv' | 'json') => {
+  const handleExport = async (format: 'csv' | 'json' | 'pdf') => {
     setIsExporting(true);
     try {
       const { data } = await refetch();
@@ -82,7 +84,7 @@ export const ActivityLogExport = ({ workspaceId, filters }: ActivityLogExportPro
 
       if (format === 'csv') {
         exportToCSV(data.data);
-      } else {
+      } else if (format === 'json') {
         // JSON export
         const jsonContent = JSON.stringify(data.data, null, 2);
         const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
@@ -95,6 +97,25 @@ export const ActivityLogExport = ({ workspaceId, filters }: ActivityLogExportPro
         link.click();
         document.body.removeChild(link);
         toast.success('Activity logs exported to JSON');
+      } else if (format === 'pdf') {
+        // PDF export
+        const pdfDoc = (
+          <ActivityLogPDF
+            logs={data.data}
+            filters={filters}
+          />
+        );
+        const blob = await pdf(pdfDoc).toBlob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `activity-logs-${new Date().toISOString().split('T')[0]}.pdf`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success('Activity logs exported to PDF');
       }
     } catch (error) {
       console.error('[EXPORT_ERROR]:', error);
@@ -129,6 +150,10 @@ export const ActivityLogExport = ({ workspaceId, filters }: ActivityLogExportPro
         <DropdownMenuItem onClick={() => handleExport('json')}>
           <FileDown className="mr-2 size-4" />
           Export as JSON
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleExport('pdf')}>
+          <FileText className="mr-2 size-4" />
+          Export as PDF
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

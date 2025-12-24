@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { getCurrent } from '@/features/auth/queries';
 import { getWorkspaces } from '@/features/workspaces/queries';
 
+export const dynamic = 'force-dynamic';
+
 const HomePage = async () => {
   const user = await getCurrent();
 

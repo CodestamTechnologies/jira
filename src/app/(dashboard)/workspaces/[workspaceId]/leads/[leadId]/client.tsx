@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { ArrowLeft, Edit, Mail, Phone, ExternalLink, Building2, Globe, User, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, Edit, Mail, Phone, ExternalLink, Building2, Globe, User, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 import { PageError } from '@/components/page-error';
@@ -16,8 +16,9 @@ import { useGetLead } from '@/features/leads/api/use-get-lead';
 import { useLeadId } from '@/features/leads/hooks/use-lead-id';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useEditLeadModal } from '@/features/leads/hooks/use-edit-lead-modal';
-import { LeadCommentsModal } from '@/components/lead-comments-modal';
-import { useState } from 'react';
+import { EditLeadModal } from '@/features/leads/components/edit-lead-modal';
+import { LeadComments } from '@/features/leads/components/lead-comments';
+import { useCurrent } from '@/features/auth/api/use-current';
 import { LeadPriority, LeadSource, LeadStatus } from '../../../../../../../data/lead-schema';
 import type { BadgeConfig } from '../../types';
 const getStatusBadge = (status: string) => {
@@ -74,8 +75,8 @@ export const LeadIdClient = () => {
   const leadId = useLeadId();
   const workspaceId = useWorkspaceId();
   const { data: lead, isLoading } = useGetLead({ leadId });
+  const { data: currentUser } = useCurrent();
   const { open: openEditLeadModal } = useEditLeadModal();
-  const [commentsModalOpen, setCommentsModalOpen] = useState(false);
 
   if (isLoading) return <PageLoader />;
 
@@ -104,10 +105,6 @@ export const LeadIdClient = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setCommentsModalOpen(true)}>
-            <FileText className="mr-2 size-4" />
-            Comments ({lead.comments.length})
-          </Button>
           <Button variant="secondary" size="sm" onClick={() => openEditLeadModal(lead.id)}>
             <Edit className="mr-2 size-4" />
             Edit Lead
@@ -233,13 +230,18 @@ export const LeadIdClient = () => {
         </Card>
       )}
 
-      {/* Comments Modal */}
-      <LeadCommentsModal
-        lead={lead}
-        open={commentsModalOpen}
-        onOpenChange={setCommentsModalOpen}
-      />
+      {/* Comments */}
+      {currentUser && (
+        <LeadComments
+          leadId={lead.id}
+          workspaceId={workspaceId}
+          currentUserId={currentUser.$id}
+          currentUserName={currentUser.name || currentUser.email || currentUser.$id}
+        />
+      )}
+
+      {/* Edit Lead Modal */}
+      <EditLeadModal />
     </div>
   );
 };
-

@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -78,7 +78,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
       </CardHeader>
 
       <div className="px-7">
-        <DottedSeparator />
+        <Separator />
       </div>
 
       <CardContent className="p-7">
@@ -144,7 +144,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                             type="button"
                             disabled={isPending}
                             variant="destructive"
-                            size="xs"
+                            size="sm"
                             className="mt-2 w-fit"
                             onClick={() => {
                               field.onChange(null);
@@ -158,8 +158,8 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                           <Button
                             type="button"
                             disabled={isPending}
-                            variant="tertiary"
-                            size="xs"
+                            variant="outline"
+                            size="sm"
                             className="mt-2 w-fit"
                             onClick={() => inputRef.current?.click()}
                           >
@@ -173,7 +173,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
               />
             </div>
 
-            <DottedSeparator className="py-7" />
+            <Separator className="py-7" />
 
             <div className="flex items-center justify-between">
               <Button

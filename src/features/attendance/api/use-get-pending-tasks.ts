@@ -41,7 +41,8 @@ export const useGetPendingTasks = (workspaceId: string | undefined) => {
       return response.json();
     },
     enabled: !!workspaceId,
-    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    staleTime: 60 * 1000, // Consider data fresh for 60 seconds (reduced DB reads)
+    // Keep refetch on window focus for pending tasks (user expects fresh data when returning)
     refetchOnWindowFocus: true,
   });
 };

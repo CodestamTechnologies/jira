@@ -29,6 +29,10 @@ export const useDeleteComment = () => {
         queryKey: ['leads', variables.workspaceId],
         exact: false,
       })
+      queryClient.invalidateQueries({
+        queryKey: ['lead', variables.leadId],
+        exact: false,
+      })
     },
     onError: (error) => {
       console.error('[DELETE_COMMENT]: ', error)
@@ -38,4 +42,3 @@ export const useDeleteComment = () => {
 
   return mutation
 }
-

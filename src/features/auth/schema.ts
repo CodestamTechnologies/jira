@@ -5,7 +5,7 @@ export const signInFormSchema = z.object({
     message: 'Invalid email.',
   }),
   password: z.string({
-    required_error: 'Password is required.',
+    message: 'Password is required.',
   }),
 });
 

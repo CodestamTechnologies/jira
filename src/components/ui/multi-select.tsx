@@ -108,9 +108,10 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="p-0"
+          className="p-0 z-[100]"
           align="start"
           sideOffset={4}
+          onOpenAutoFocus={(e) => e.preventDefault()}
           style={{
             width: width ? `${width}px` : 'auto',
             padding: 0,
@@ -129,13 +130,18 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
           >
             <div className="p-1">
               {options.map((option) => (
-                <div
+                <button
                   key={option.value}
+                  type="button"
                   className={cn(
-                    'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
+                    'relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
                     selected.includes(option.value) && 'bg-accent',
                   )}
-                  onClick={() => handleSelect(option.value)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelect(option.value);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
@@ -144,14 +150,13 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
                   }}
                   role="option"
                   aria-selected={selected.includes(option.value)}
-                  tabIndex={0}
                 >
                   <div className="flex flex-1 items-center gap-2">
                     {option.avatar && <span>{option.avatar}</span>}
                     <span>{option.label}</span>
                   </div>
                   {selected.includes(option.value) && <Check className="h-4 w-4 shrink-0" />}
-                </div>
+                </button>
               ))}
             </div>
           </div>

@@ -19,7 +19,7 @@ export const createPaymentLinkSchema = z.object({
     })
     .optional(),
   notes: z
-    .record(z.string())
+    .record(z.string(), z.string())
     .optional(),
   expireBy: z
     .number()

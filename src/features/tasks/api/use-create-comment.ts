@@ -1,6 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 import { client } from '@/lib/hono';
+import { createMutation } from '@/lib/react-query/mutation-factory';
+import { invalidateCommentQueries } from '@/lib/react-query/cache-utils';
 
 interface RequestType {
   taskId: string;
@@ -17,29 +17,36 @@ interface RequestType {
   }>;
 }
 
-export const useCreateComment = () => {
-  const queryClient = useQueryClient();
-
-  const mutation = useMutation({
-    mutationFn: async ({ taskId, content, authorId, username, parentId, mentions, attachments }: RequestType) => {
-      const response = await (client.api as any)['tasks/:taskId/comments'].$post({
-        param: { taskId },
-        json: { content, authorId, username, parentId, mentions, attachments },
-      });
-      if (!response.ok) throw new Error('Failed to add comment.');
-      return await response.json();
-    },
-    onSuccess: (_data, variables) => {
-      toast.success(variables.parentId ? 'Reply added.' : 'Comment added.');
-      queryClient.invalidateQueries({
-        queryKey: ['comments', variables.taskId],
-      });
-    },
-    onError: (error) => {
-      console.error('[CREATE_COMMENT]: ', error);
-      toast.error('Failed to add comment.');
-    },
-  });
-
-  return mutation;
-}; 
+/**
+ * Hook to create a comment on a task
+ * 
+ * Uses the mutation factory for consistent error handling and cache invalidation.
+ * Automatically invalidates comment queries for the task.
+ * 
+ * @example
+ * ```tsx
+ * const createComment = useCreateComment();
+ * createComment.mutate({
+ *   taskId: 'task-123',
+ *   content: 'This is a comment',
+ *   authorId: 'user-123',
+ *   username: 'John Doe'
+ * });
+ * ```
+ */
+export const useCreateComment = createMutation<unknown, Error, RequestType>({
+  mutationFn: async ({ taskId, content, authorId, username, parentId, mentions, attachments }) => {
+    const response = await (client.api as any)['tasks/:taskId/comments'].$post({
+      param: { taskId },
+      json: { content, authorId, username, parentId, mentions, attachments },
+    });
+    if (!response.ok) throw new Error('Failed to add comment.');
+    return await response.json();
+  },
+  successMessage: (_, variables) => variables.parentId ? 'Reply added.' : 'Comment added.',
+  logPrefix: '[CREATE_COMMENT]',
+  onSuccessInvalidate: (queryClient, _data, variables) => {
+    // Use centralized cache invalidation utility
+    invalidateCommentQueries(queryClient, variables.taskId);
+  },
+}); 

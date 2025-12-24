@@ -31,3 +31,5 @@ export interface PaymentLinkResponse {
   reminderEnable: boolean
   createdAt: number
 }
+
+

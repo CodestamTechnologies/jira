@@ -52,10 +52,13 @@ export const Navbar = () => {
   // Handle sub-routes for invoices
   if (pathnameKey === 'invoices' && subRoute === 'create') {
     return (
-      <nav className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4">
-        <div className="hidden flex-col lg:flex">
-          <h1 className="text-2xl font-semibold">Create Invoice</h1>
-          <p className="text-muted-foreground">Generate and download invoices for your clients</p>
+      <nav 
+        className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4 pb-2 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40"
+        aria-label="Main navigation"
+      >
+        <div className="hidden flex-col lg:flex gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Create Invoice</h1>
+          <p className="text-sm text-muted-foreground">Generate and download invoices for your clients</p>
         </div>
 
         <div className="flex items-center gap-x-2.5">
@@ -69,10 +72,13 @@ export const Navbar = () => {
   // Handle member detail pages
   if (pathnameKey === 'members' && pathnameParts[4]) {
     return (
-      <nav className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4">
-        <div className="hidden flex-col lg:flex">
-          <h1 className="text-lg font-semibold">Member Profile</h1>
-          <p className="text-muted-foreground">View member details and generate documents</p>
+      <nav 
+        className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4 pb-2 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40"
+        aria-label="Main navigation"
+      >
+        <div className="hidden flex-col lg:flex gap-1">
+          <h1 className="text-lg font-semibold tracking-tight">Member Profile</h1>
+          <p className="text-sm text-muted-foreground">View member details and generate documents</p>
         </div>
 
         <div className="flex items-center gap-x-2.5">
@@ -86,10 +92,13 @@ export const Navbar = () => {
   const { title, description } = pathnameMap[pathnameKey] || defaultMap;
 
   return (
-    <nav className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4">
-      <div className="hidden flex-col lg:flex">
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        <p className="text-muted-foreground">{description}</p>
+    <nav 
+      className="flex items-center justify-end lg:justify-between px-4 md:px-6 pt-4 pb-2 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40"
+      aria-label="Main navigation"
+    >
+      <div className="hidden flex-col lg:flex gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
 
       <div className="flex items-center gap-x-2.5">

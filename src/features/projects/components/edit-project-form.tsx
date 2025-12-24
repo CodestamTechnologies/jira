@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -109,7 +109,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
         </CardHeader>
 
         <div className="px-7">
-          <DottedSeparator />
+          <Separator />
         </div>
 
         <CardContent className="p-7">
@@ -175,7 +175,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                               type="button"
                               disabled={isPending}
                               variant="destructive"
-                              size="xs"
+                              size="sm"
                               className="mt-2 w-fit"
                               onClick={() => {
                                 field.onChange('');
@@ -189,8 +189,8 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                             <Button
                               type="button"
                               disabled={isPending}
-                              variant="tertiary"
-                              size="xs"
+                              variant="outline"
+                              size="sm"
                               className="mt-2 w-fit"
                               onClick={() => inputRef.current?.click()}
                             >
@@ -205,7 +205,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                   )}
                 />
 
-                <DottedSeparator />
+                <Separator />
 
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold">Client Information (for Invoicing)</h3>
@@ -257,7 +257,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                 </div>
               </div>
 
-              <DottedSeparator className="py-7" />
+              <Separator className="py-7" />
 
               <div className="flex items-center justify-between">
                 <Button
@@ -287,7 +287,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
 
             <p className="text-sm text-muted-foreground">Deleting a project is irreversible and will remove all associated data.</p>
 
-            <DottedSeparator className="py-7" />
+            <Separator className="py-7" />
 
             <Button
               size="sm"

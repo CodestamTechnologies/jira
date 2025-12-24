@@ -32,6 +32,10 @@ export const useAddComment = () => {
         queryKey: ['leads', variables.workspaceId],
         exact: false,
       })
+      queryClient.invalidateQueries({
+        queryKey: ['lead', variables.leadId],
+        exact: false,
+      })
     },
     onError: (error) => {
       console.error('[ADD_COMMENT]: ', error)
@@ -41,4 +45,3 @@ export const useAddComment = () => {
 
   return mutation
 }
-

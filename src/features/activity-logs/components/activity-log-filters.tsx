@@ -12,6 +12,8 @@ import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { ActivityAction, ActivityEntityType } from '../types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
+export type ActivityFilterScope = 'all_workspace' | 'my_tasks' | 'my_projects' | 'team_activity';
+
 interface ActivityLogFiltersProps {
   filters: {
     entityType?: ActivityEntityType;
@@ -20,11 +22,13 @@ interface ActivityLogFiltersProps {
     endDate?: string;
     action?: ActivityAction;
     projectId?: string;
+    scope?: ActivityFilterScope;
   };
   onFiltersChange: (filters: ActivityLogFiltersProps['filters']) => void;
+  showScopeFilter?: boolean;
 }
 
-export const ActivityLogFilters = ({ filters, onFiltersChange }: ActivityLogFiltersProps) => {
+export const ActivityLogFilters = ({ filters, onFiltersChange, showScopeFilter = false }: ActivityLogFiltersProps) => {
   const workspaceId = useWorkspaceId();
   const { data: members } = useGetMembers({ workspaceId, includeInactive: 'true' });
   const { data: projects } = useGetProjects({ workspaceId });
@@ -55,6 +59,26 @@ export const ActivityLogFilters = ({ filters, onFiltersChange }: ActivityLogFilt
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-3">
+          {showScopeFilter && (
+            <Select
+              value={filters.scope || 'all_workspace'}
+              onValueChange={(value) => handleFilterChange('scope', value === 'all_workspace' ? undefined : value)}
+            >
+              <SelectTrigger className="h-9 w-full sm:w-[180px]">
+                <div className="flex items-center">
+                  <Filter className="mr-2 size-4" />
+                  <SelectValue placeholder="Scope" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all_workspace">All Workspace</SelectItem>
+                <SelectItem value="my_tasks">My Tasks</SelectItem>
+                <SelectItem value="my_projects">My Projects</SelectItem>
+                <SelectItem value="team_activity">Team Activity</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+
           <Select
             value={filters.entityType || 'all'}
             onValueChange={(value) => handleFilterChange('entityType', value === 'all' ? undefined : value)}

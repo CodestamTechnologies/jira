@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { AlertCircle, Info } from 'lucide-react';
 
 import { DatePicker } from '@/components/date-picker';
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -80,7 +80,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
       </CardHeader>
 
       <div className="px-7">
-        <DottedSeparator />
+        <Separator />
       </div>
 
       <CardContent className="p-7">
@@ -247,7 +247,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
               />
             </div>
 
-            <DottedSeparator className="py-7" />
+            <Separator className="py-7" />
 
             <FormMessage />
 

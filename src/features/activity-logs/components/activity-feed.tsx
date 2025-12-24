@@ -1,14 +1,19 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ActivityLogItem } from './activity-log-item';
 import type { ActivityLog } from '../types';
 
 interface ActivityFeedProps {
   logs: ActivityLog[];
   isLoading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }
 
-export const ActivityFeed = ({ logs, isLoading }: ActivityFeedProps) => {
+export const ActivityFeed = ({ logs, isLoading, hasMore, onLoadMore, isLoadingMore }: ActivityFeedProps) => {
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -59,6 +64,24 @@ export const ActivityFeed = ({ logs, isLoading }: ActivityFeedProps) => {
       {logs.map((log) => (
         <ActivityLogItem key={log.$id} log={log} />
       ))}
+      {hasMore && onLoadMore && (
+        <div className="flex justify-center pt-4">
+          <Button
+            variant="outline"
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Load more'
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

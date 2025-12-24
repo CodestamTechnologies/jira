@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DottedSeparator } from '@/components/dotted-separator'
+import { Separator } from '@/components/ui/separator'
 import { useGetAttendanceStats } from '@/features/attendance/api/use-get-attendance-stats'
 import { MemberAvatar } from '@/features/members/components/member-avatar'
 import type { Member } from '@/features/members/types'
@@ -154,13 +154,13 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
     const status = attendance.status.toLowerCase()
     switch (status) {
       case 'present':
-        return <Badge className="bg-green-100 text-green-800 text-xs">Present</Badge>
+        return <Badge variant="default" className="text-xs">Present</Badge>
       case 'late':
-        return <Badge className="bg-yellow-100 text-yellow-800 text-xs">Late</Badge>
+        return <Badge variant="outline" className="text-xs">Late</Badge>
       case 'absent':
-        return <Badge className="bg-red-100 text-red-800 text-xs">Absent</Badge>
+        return <Badge variant="destructive" className="text-xs">Absent</Badge>
       case 'half-day':
-        return <Badge className="bg-orange-100 text-orange-800 text-xs">Half Day</Badge>
+        return <Badge variant="secondary" className="text-xs">Half Day</Badge>
       default:
         return <Badge variant="secondary" className="text-xs">{attendance.status}</Badge>
     }
@@ -171,20 +171,20 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
     return new Date(timeString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case TaskStatus.TODO:
-        return 'bg-blue-100 text-blue-800'
+        return 'secondary'
       case TaskStatus.IN_PROGRESS:
-        return 'bg-purple-100 text-purple-800'
+        return 'default'
       case TaskStatus.IN_REVIEW:
-        return 'bg-orange-100 text-orange-800'
+        return 'outline'
       case TaskStatus.DONE:
-        return 'bg-green-100 text-green-800'
+        return 'secondary'
       case TaskStatus.BACKLOG:
-        return 'bg-gray-100 text-gray-800'
+        return 'secondary'
       default:
-        return 'bg-muted text-muted-foreground'
+        return 'secondary'
     }
   }
 
@@ -208,7 +208,7 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
         </Button>
       </div>
 
-      <DottedSeparator className="my-6" />
+      <Separator className="my-6" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Attendance Card - Clickable */}
@@ -225,37 +225,40 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
               {getAttendanceStatusBadge()}
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-bold">{attendanceStats?.totalDays ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Total days</p>
+              {attendance?.status ? (
+                <>
+                  <div className="text-2xl font-bold capitalize">{attendance.status}</div>
+                  <p className="text-xs text-muted-foreground">Today's status</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">Not checked in</div>
+                  <p className="text-xs text-muted-foreground">Check in to start</p>
+                </>
+              )}
             </div>
 
-            {/* Main Stats - Present and Absent */}
-            <div className="grid grid-cols-2 gap-3 mt-4 p-2 bg-muted/50 rounded-md">
-              <div className="text-center">
-                <div className="text-lg font-bold text-green-600">{attendanceStats?.presentDays ?? 0}</div>
-                <p className="text-xs text-muted-foreground">Present</p>
+            {/* Main Stats - Today's Time */}
+            {attendance?.checkInTime && (
+              <div className="grid grid-cols-2 gap-3 mt-4 p-2 bg-muted/50 rounded-md">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-foreground">{formatTime(attendance.checkInTime) || 'N/A'}</div>
+                  <p className="text-xs text-muted-foreground">Check In</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-primary">
+                    {attendance.checkOutTime ? formatTime(attendance.checkOutTime) : 'Active'}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{attendance.checkOutTime ? 'Check Out' : 'Working'}</p>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-red-600">{attendanceStats?.absentDays ?? 0}</div>
-                <p className="text-xs text-muted-foreground">Absent</p>
-              </div>
-            </div>
+            )}
 
-            {/* Detailed Breakdown */}
-            {attendanceStats && (attendanceStats.lateDays > 0 || attendanceStats.totalDays > 0) && (
-              <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-                {attendanceStats.lateDays > 0 && (
-                  <div>
-                    <span className="font-medium text-yellow-600">{attendanceStats.lateDays}</span>
-                    <span className="text-muted-foreground ml-1">Late</span>
-                  </div>
-                )}
-                {attendanceStats.averageHours > 0 && (
-                  <div>
-                    <span className="font-medium text-blue-600">{attendanceStats.averageHours.toFixed(1)}h</span>
-                    <span className="text-muted-foreground ml-1">Avg Hours</span>
-                  </div>
-                )}
+            {/* Today's Hours */}
+            {attendance?.totalHours && (
+              <div className="mt-3 text-xs">
+                <span className="font-medium text-foreground">{attendance.totalHours.toFixed(1)}h</span>
+                <span className="text-muted-foreground ml-1">today</span>
               </div>
             )}
           </CardContent>
@@ -272,49 +275,29 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
               <span className="text-sm font-medium">Tasks</span>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-bold">{stats.tasks.total}</div>
-              <p className="text-xs text-muted-foreground">Total assigned</p>
+              <div className="text-2xl font-bold">{stats.tasks.pending}</div>
+              <p className="text-xs text-muted-foreground">Active tasks</p>
             </div>
 
-            {/* Main Stats - Pending and Completed */}
+            {/* Main Stats - In Progress and Todo */}
             <div className="grid grid-cols-2 gap-3 mt-4 p-2 bg-muted/50 rounded-md">
               <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">{stats.tasks.pending}</div>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <div className="text-lg font-bold text-primary">{stats.tasks.inProgress}</div>
+                <p className="text-xs text-muted-foreground">In Progress</p>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-green-600">{stats.tasks.completed}</div>
-                <p className="text-xs text-muted-foreground">Completed</p>
+                <div className="text-lg font-bold text-foreground">{stats.tasks.todo}</div>
+                <p className="text-xs text-muted-foreground">Todo</p>
               </div>
             </div>
 
-            {/* Detailed Breakdown */}
-            <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-              {stats.tasks.todo > 0 && (
-                <div>
-                  <span className="font-medium text-blue-600">{stats.tasks.todo}</span>
-                  <span className="text-muted-foreground ml-1">Todo</span>
-                </div>
-              )}
-              {stats.tasks.inProgress > 0 && (
-                <div>
-                  <span className="font-medium text-purple-600">{stats.tasks.inProgress}</span>
-                  <span className="text-muted-foreground ml-1">In Progress</span>
-                </div>
-              )}
-              {stats.tasks.inReview > 0 && (
-                <div>
-                  <span className="font-medium text-orange-600">{stats.tasks.inReview}</span>
-                  <span className="text-muted-foreground ml-1">In Review</span>
-                </div>
-              )}
-              {stats.tasks.backlog > 0 && (
-                <div>
-                  <span className="font-medium text-gray-600">{stats.tasks.backlog}</span>
-                  <span className="text-muted-foreground ml-1">Backlog</span>
-                </div>
-              )}
-            </div>
+            {/* Additional Status */}
+            {stats.tasks.inReview > 0 && (
+              <div className="mt-3 text-xs">
+                <span className="font-medium text-foreground">{stats.tasks.inReview}</span>
+                <span className="text-muted-foreground ml-1">in review</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -329,31 +312,22 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
               <span className="text-sm font-medium">Leads</span>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-bold">{stats.leads}</div>
-              <p className="text-xs text-muted-foreground">Total leads</p>
+              <div className="text-2xl font-bold">{stats.leadStats.inProgress + stats.leadStats.new}</div>
+              <p className="text-xs text-muted-foreground">Active leads</p>
             </div>
 
-            {/* Main Stats - Closed and New */}
+            {/* Main Stats - In Progress and New */}
             <div className="grid grid-cols-2 gap-3 mt-4 p-2 bg-muted/50 rounded-md">
               <div className="text-center">
-                <div className="text-lg font-bold text-green-600">{stats.leadStats.closed}</div>
-                <p className="text-xs text-muted-foreground">Closed</p>
+                <div className="text-lg font-bold text-primary">{stats.leadStats.inProgress}</div>
+                <p className="text-xs text-muted-foreground">In Progress</p>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-blue-600">{stats.leadStats.new}</div>
+                <div className="text-lg font-bold text-foreground">{stats.leadStats.new}</div>
                 <p className="text-xs text-muted-foreground">New</p>
               </div>
             </div>
 
-            {/* Detailed Breakdown */}
-            {stats.leadStats.inProgress > 0 && (
-              <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-                <div>
-                  <span className="font-medium text-purple-600">{stats.leadStats.inProgress}</span>
-                  <span className="text-muted-foreground ml-1">In Progress</span>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -368,31 +342,18 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
               <span className="text-sm font-medium">Projects</span>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-bold">{stats.projects}</div>
-              <p className="text-xs text-muted-foreground">Total projects</p>
+              <div className="text-2xl font-bold">{stats.projectStats.withPendingTasks}</div>
+              <p className="text-xs text-muted-foreground">Active projects</p>
             </div>
 
-            {/* Main Stats - With Tasks and With Pending */}
-            <div className="grid grid-cols-2 gap-3 mt-4 p-2 bg-muted/50 rounded-md">
+            {/* Main Stats - With Pending Tasks */}
+            <div className="grid grid-cols-1 gap-3 mt-4 p-2 bg-muted/50 rounded-md">
               <div className="text-center">
-                <div className="text-lg font-bold text-blue-600">{stats.projectStats.withTasks}</div>
-                <p className="text-xs text-muted-foreground">With Tasks</p>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">{stats.projectStats.withPendingTasks}</div>
-                <p className="text-xs text-muted-foreground">With Pending</p>
+                <div className="text-lg font-bold text-foreground">{stats.projectStats.withPendingTasks}</div>
+                <p className="text-xs text-muted-foreground">Projects with pending tasks</p>
               </div>
             </div>
 
-            {/* Detailed Breakdown */}
-            {stats.projectStats.withCompletedTasks > 0 && (
-              <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-                <div>
-                  <span className="font-medium text-green-600">{stats.projectStats.withCompletedTasks}</span>
-                  <span className="text-muted-foreground ml-1">Completed</span>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
@@ -429,7 +390,7 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-2">
                                 <h3 className="font-medium text-sm line-clamp-2">{task.name}</h3>
-                                <Badge className={`text-xs ${getStatusColor(task.status)}`}>
+                                <Badge variant={getStatusVariant(task.status)} className="text-xs">
                                   {task.status.replace('_', ' ')}
                                 </Badge>
                               </div>
@@ -488,4 +449,3 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
     </div>
   )
 }
-

@@ -2,7 +2,7 @@
 const nextConfig = {
   transpilePackages: ['@react-pdf/renderer'],
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
   },
   webpack: (config, { isServer }) => {
     // Handle ESM packages

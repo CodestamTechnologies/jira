@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { DottedSeparator } from './dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import InvoicePDF, { InvoiceData } from './invoice-pdf';
 import { useCreateInvoice } from '@/features/invoices/api/use-create-invoice';
 import { useGetNextInvoiceNumber } from '@/features/invoices/api/use-get-next-invoice-number';
@@ -339,7 +339,7 @@ export const InvoiceGenerator = () => {
             <CardDescription className="text-xs sm:text-sm">Create and download invoices for your clients</CardDescription>
           </div>
           <Button
-            variant="primary"
+            variant="default"
             size="sm"
             onClick={handleDownloadPDF}
             disabled={isGeneratingOrCreating || !selectedProjectId}
@@ -396,7 +396,7 @@ export const InvoiceGenerator = () => {
           </div>
         </div>
 
-        <DottedSeparator />
+        <Separator />
 
         {/* Project Selection */}
         <div className="space-y-4">
@@ -424,7 +424,7 @@ export const InvoiceGenerator = () => {
         {/* Client Information - Auto-filled from project */}
         {selectedProject && (
           <>
-            <DottedSeparator />
+            <Separator />
             <div className="space-y-4">
               <h3 className="text-sm font-semibold">Client Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -454,7 +454,7 @@ export const InvoiceGenerator = () => {
           </>
         )}
 
-        <DottedSeparator />
+        <Separator />
 
         {/* Services */}
         <div className="space-y-4">
@@ -505,7 +505,7 @@ export const InvoiceGenerator = () => {
           </div>
         </div>
 
-        <DottedSeparator />
+        <Separator />
 
         {/* Summary */}
         <div className="space-y-2">

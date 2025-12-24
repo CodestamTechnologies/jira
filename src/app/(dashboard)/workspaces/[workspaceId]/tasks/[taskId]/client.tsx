@@ -1,7 +1,7 @@
 'use client';
 
 import { useOptimistic } from 'react';
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
 import { useGetTask } from '@/features/tasks/api/use-get-task';
@@ -39,7 +39,7 @@ export const TaskIdClient = () => {
     <div className="flex flex-col">
       <TaskBreadcrumbs project={displayTask.project} task={displayTask} />
 
-      <DottedSeparator className="my-6" />
+      <Separator className="my-6" />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <TaskOverview task={displayTask} />

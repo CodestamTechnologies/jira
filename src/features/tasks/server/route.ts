@@ -18,10 +18,56 @@ import { type Task, TaskStatus, type Comment } from '@/features/tasks/types';
 import { createAdminClient } from '@/lib/appwrite';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import commentsRoute from './comments';
-import { validateTaskSchema } from './ai-validation';
-import { createTaskValidationService } from '@/lib/ai';
 import { NotificationService } from '@/lib/email/services/notification-service';
 import type { Workspace } from '@/features/workspaces/types';
+import { validateTaskSchema } from './ai-validation';
+import { createTaskValidationService } from '@/lib/ai/services/task-validation.service';
+
+// Helper function to batch queries for large arrays to avoid Appwrite limits
+// Appwrite limits: max 100 items in query array, max 4096 chars per query string
+async function batchQueryContains<T extends Models.Document>(
+  databases: any,
+  databaseId: string,
+  collectionId: string,
+  ids: string[],
+  chunkSize: number = 50,
+): Promise<Models.DocumentList<T>> {
+  if (ids.length === 0) {
+    return { documents: [], total: 0 };
+  }
+
+  // If array is small enough, make a single query
+  if (ids.length <= chunkSize) {
+    return (await databases.listDocuments(databaseId, collectionId, [
+      Query.contains('$id', ids),
+    ])) as Models.DocumentList<T>;
+  }
+
+  // Otherwise, batch into chunks and combine results
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    chunks.push(ids.slice(i, i + chunkSize));
+  }
+
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      databases.listDocuments(databaseId, collectionId, [
+        Query.contains('$id', chunk),
+      ]) as Promise<Models.DocumentList<T>>,
+    ),
+  );
+
+  // Combine all results and deduplicate by $id
+  const allDocuments = results.flatMap((result) => result.documents);
+  const uniqueDocuments = Array.from(
+    new Map(allDocuments.map((doc) => [doc.$id, doc])).values(),
+  );
+
+  return {
+    documents: uniqueDocuments,
+    total: uniqueDocuments.length,
+  };
+}
 
 const app = new Hono()
   .get(
@@ -189,19 +235,24 @@ const app = new Hono()
       const projectIds = filteredTasks.documents.map((task) => task.projectId);
       const allAssigneeIds = filteredTasks.documents.flatMap((task) => task.assigneeIds || []);
 
-      const projects = await databases.listDocuments<Project>(
+      // Use batch query to avoid Appwrite limits when dealing with large arrays
+      const uniqueProjectIds = Array.from(new Set(projectIds.filter(Boolean)));
+      const projects = await batchQueryContains<Project>(
+        databases,
         DATABASE_ID,
         PROJECTS_ID,
-        projectIds.length > 0 ? [Query.contains('$id', projectIds)] : [],
+        uniqueProjectIds,
       );
 
       // Fix for Set iteration compatibility: avoid using spread operator directly on Set
       const uniqueAssigneeIds: string[] = Array.from(new Set(allAssigneeIds));
 
-      const members = await databases.listDocuments(
+      // Use batch query to avoid Appwrite limits when dealing with large arrays
+      const members = await batchQueryContains(
+        databases,
         DATABASE_ID,
         MEMBERS_ID,
-        uniqueAssigneeIds.length > 0 ? [Query.contains('$id', uniqueAssigneeIds)] : [],
+        uniqueAssigneeIds,
       );
 
       const assignees = await Promise.all(
@@ -534,12 +585,14 @@ const app = new Hono()
       const user = ctx.get('user');
       const { tasks } = ctx.req.valid('json');
 
-      const tasksToUpdate = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
-        Query.contains(
-          '$id',
-          tasks.map((task) => task.$id),
-        ),
-      ]);
+      // Use batch query to avoid Appwrite limits when dealing with large arrays
+      const taskIds = tasks.map((task) => task.$id);
+      const tasksToUpdate = await batchQueryContains<Task>(
+        databases,
+        DATABASE_ID,
+        TASKS_ID,
+        taskIds,
+      );
 
       const workspaceIds = new Set(tasksToUpdate.documents.map((task) => task.workspaceId));
 
@@ -637,25 +690,16 @@ const app = new Hono()
 
     return ctx.json({ data: task });
   })
-  .post('/validate', sessionMiddleware, zValidator('json', validateTaskSchema), async (ctx) => {
-    const { name, description } = ctx.req.valid('json');
-
-    try {
+  .post(
+    '/validate',
+    zValidator('json', validateTaskSchema),
+    async (ctx) => {
+      const { name, description } = ctx.req.valid('json');
       const validationService = createTaskValidationService();
       const result = await validationService.validateTask({ name, description });
-
       return ctx.json({ data: result });
-    } catch (error) {
-      console.error('[validateTaskHandler] Error:', error);
-
-      return ctx.json(
-        {
-          error: 'Failed to validate task. Please try again.',
-        },
-        500,
-      );
     }
-  });
+  );
 
 app.route('/:taskId/comments', commentsRoute);
 

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export const useConfirm = (
   title: string,
   message: string,
-  variant: ButtonProps['variant'] = 'primary',
+  variant: ButtonProps['variant'] = 'default',
 ): [() => JSX.Element, () => Promise<unknown>] => {
   const [promise, setPromise] = useState<{ resolve: (value: boolean) => void } | null>(null);
 

@@ -9,6 +9,7 @@ export const INVOICES_ID = process.env.NEXT_PUBLIC_APPWRITE_INVOICES_ID || '';
 export const ACTIVITY_LOGS_ID = process.env.NEXT_PUBLIC_APPWRITE_ACTIVITY_LOGS_ID || '';
 export const PDF_TEMPLATES_ID = process.env.NEXT_PUBLIC_APPWRITE_PDF_TEMPLATES_ID || '';
 export const LEADS_ID = process.env.NEXT_PUBLIC_APPWRITE_LEADS_ID || '';
+export const NOTIFICATIONS_ID = process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_ID || '';
 
 // Validate critical IDs
 if (!INVOICES_ID) {

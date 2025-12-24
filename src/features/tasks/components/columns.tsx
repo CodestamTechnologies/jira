@@ -12,6 +12,24 @@ import { cn, snakeCaseToTitleCase } from '@/lib/utils';
 
 import { TaskActions } from './task-actions';
 import { TaskDate } from './task-date';
+import { TaskStatus } from '@/features/tasks/types';
+
+export const getStatusVariant = (status: TaskStatus): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  switch (status) {
+    case TaskStatus.DONE:
+      return 'default';
+    case TaskStatus.IN_PROGRESS:
+      return 'secondary';
+    case TaskStatus.IN_REVIEW:
+      return 'outline';
+    case TaskStatus.TODO:
+      return 'outline';
+    case TaskStatus.BACKLOG:
+      return 'secondary';
+    default:
+      return 'secondary';
+  }
+};
 
 export const columns: ColumnDef<Task>[] = [
   {
@@ -91,7 +109,9 @@ export const columns: ColumnDef<Task>[] = [
               </p>
             </>
           ) : (
-            <p className="text-muted-foreground">Unassigned</p>
+            <div className="flex items-center gap-1 rounded-full border border-dashed border-muted-foreground/30 bg-muted/30 px-2 py-0.5">
+              <span className="text-xs font-medium text-muted-foreground">Unassigned</span>
+            </div>
           )}
         </div>
       );
@@ -126,7 +146,7 @@ export const columns: ColumnDef<Task>[] = [
     cell: ({ row }) => {
       const status = row.original.status;
 
-      return <Badge variant={status}>{snakeCaseToTitleCase(status)}</Badge>;
+      return <Badge variant={getStatusVariant(status)}>{snakeCaseToTitleCase(status)}</Badge>;
     },
   },
   {

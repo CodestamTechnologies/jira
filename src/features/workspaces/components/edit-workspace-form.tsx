@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -129,7 +129,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
         </CardHeader>
 
         <div className="px-7">
-          <DottedSeparator />
+          <Separator />
         </div>
 
         <CardContent className="p-7">
@@ -195,7 +195,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                               type="button"
                               disabled={isPending}
                               variant="destructive"
-                              size="xs"
+                              size="sm"
                               className="mt-2 w-fit"
                               onClick={() => {
                                 field.onChange('');
@@ -209,8 +209,8 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                             <Button
                               type="button"
                               disabled={isPending}
-                              variant="tertiary"
-                              size="xs"
+                              variant="outline"
+                              size="sm"
                               className="mt-2 w-fit"
                               onClick={() => inputRef.current?.click()}
                             >
@@ -226,7 +226,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                 />
               </div>
 
-              <DottedSeparator className="py-7" />
+              <Separator className="py-7" />
 
               <div className="flex items-center justify-between">
                 <Button
@@ -266,7 +266,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
               </div>
             </div>
 
-            <DottedSeparator className="py-7" />
+            <Separator className="py-7" />
 
             <Button
               size="sm"
@@ -289,7 +289,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
 
             <p className="text-sm text-muted-foreground">Deleting a workspace is irreversible and will remove all associated data.</p>
 
-            <DottedSeparator className="py-7" />
+            <Separator className="py-7" />
 
             <Button
               size="sm"

@@ -1,16 +1,14 @@
 'use client';
 
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isBefore, isToday, startOfToday } from 'date-fns';
 import { ArrowDownUp, CalendarIcon, Folder, ListChecks, PlusIcon, SettingsIcon, UserIcon, Users, Briefcase, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
-import { Analytics } from '@/components/analytics';
 import { DatePicker } from '@/components/date-picker';
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
-import { TodayAttendanceStats } from '@/components/today-attendance-stats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,7 +28,6 @@ import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
 import { TaskStatus } from '@/features/tasks/types';
 import type { Task } from '@/features/tasks/types';
-import { useGetWorkspaceAnalytics } from '@/features/workspaces/api/use-get-workspace-analytics';
 import { useWorkspaceFilters, type ProjectSortBy, type TaskSortBy } from '@/features/workspaces/hooks/use-workspace-filters';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useGetLeads } from '@/features/leads/api/use-get-leads';
@@ -45,13 +42,12 @@ export const WorkspaceIdClient = () => {
   const { data: isAdmin, isLoading: isAdminLoading } = useAdminStatus();
   const { data: user } = useCurrent();
 
-  const { data: workspaceAnalytics, isLoading: isLoadingAnalytics } = useGetWorkspaceAnalytics({ workspaceId });
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({ workspaceId });
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
   const { data: leads, isLoading: isLoadingLeads } = useGetLeads({ workspaceId });
 
-  const isLoading = isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers || isLoadingLeads || isAdminLoading;
+  const isLoading = isLoadingTasks || isLoadingProjects || isLoadingMembers || isLoadingLeads || isAdminLoading;
 
   // Get today's date for team attendance
   const today = new Date().toISOString().split('T')[0];
@@ -175,12 +171,10 @@ export const WorkspaceIdClient = () => {
 
     let filtered = [...tasksToUse];
 
-    // For non-admin users, tasks are already filtered by assigneeId in myTasksData
-    // But if using regular tasks query, filter by assignee
-    if (isAdmin && !taskAssigneeId) {
-      // Admins see all tasks when no assignee filter is set
-    } else if (!isAdmin && currentMember && !taskAssigneeId) {
-      // If using regular tasks (fallback), filter to show only their assigned tasks
+    // By default, show only current user's tasks for everyone
+    // Users can change the filter to see all tasks or other assignees
+    if (!taskAssigneeId && currentMember) {
+      // Default to current user's tasks when no assignee filter is set
       filtered = filtered.filter((task) => task.assigneeIds?.includes(currentMember.$id));
     }
 
@@ -203,9 +197,68 @@ export const WorkspaceIdClient = () => {
       });
     }
 
-    // Apply sorting
-    const sortBy = taskSortBy || 'created-desc';
+    // Apply sorting - default to urgency-based sorting
+    const sortBy = taskSortBy || 'urgency';
     filtered.sort((a, b) => {
+      // Urgency-based sorting (default): overdue > due today > in progress > due soon > others
+      if (sortBy === 'urgency' || !taskSortBy) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const getUrgency = (task: Task) => {
+          // Overdue tasks (highest priority)
+          if (task.dueDate && new Date(task.dueDate) < today && task.status !== TaskStatus.DONE) {
+            return 0;
+          }
+          // Due today
+          if (task.dueDate) {
+            const dueDate = new Date(task.dueDate);
+            if (dueDate.getTime() >= today.getTime() && dueDate.getTime() < today.getTime() + 86400000) {
+              return 1;
+            }
+          }
+          // In progress (active work)
+          if (task.status === TaskStatus.IN_PROGRESS) {
+            return 2;
+          }
+          // In review
+          if (task.status === TaskStatus.IN_REVIEW) {
+            return 3;
+          }
+          // Due soon (within 7 days)
+          if (task.dueDate) {
+            const dueDate = new Date(task.dueDate);
+            const weekFromNow = today.getTime() + 7 * 86400000;
+            if (dueDate.getTime() <= weekFromNow) {
+              return 4;
+            }
+          }
+          // Todo
+          if (task.status === TaskStatus.TODO) {
+            return 5;
+          }
+          // Others
+          return 6;
+        };
+
+        const urgencyA = getUrgency(a);
+        const urgencyB = getUrgency(b);
+
+        if (urgencyA !== urgencyB) {
+          return urgencyA - urgencyB;
+        }
+
+        // If same urgency, sort by due date (earlier first)
+        if (a.dueDate && b.dueDate) {
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        }
+        if (a.dueDate) return -1;
+        if (b.dueDate) return 1;
+
+        // Then by creation date (newer first)
+        return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+      }
+
       switch (sortBy) {
         case 'created-desc':
           return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
@@ -270,8 +323,7 @@ export const WorkspaceIdClient = () => {
   }, [projects?.documents, projectSearch, projectSortBy, projectTaskCounts]);
 
   if (isLoading) return <PageLoader />;
-  // Analytics is only required for admins
-  if ((isAdmin && !workspaceAnalytics) || !tasks || !projects || !members || isAdmin === undefined) return <PageError message="Failed to load workspace data." />;
+  if (!tasks || !projects || !members || isAdmin === undefined) return <PageError message="Failed to load workspace data." />;
 
   // Backend already filters tasks and projects based on role:
   // - Admins see all tasks/projects
@@ -280,23 +332,24 @@ export const WorkspaceIdClient = () => {
 
   return (
     <div className="flex h-full flex-col space-y-6">
-      {/* Analytics - Only show full analytics to admins */}
-      {isAdmin && workspaceAnalytics ? <Analytics data={workspaceAnalytics} /> : null}
-      {isAdmin && <TodayAttendanceStats />}
+      {/* Priority Section - What needs attention right now */}
+      <div className="space-y-6">
+        {/* My Details - Show current status */}
+        {currentMember && (
+          <MyMemberDetails
+            member={currentMember}
+            tasks={myTasksData?.documents || tasksForStats}
+            leads={leads?.documents || []}
+            projects={projects?.documents || []}
+            attendance={currentMemberAttendance}
+            workspaceId={workspaceId}
+            totalTasks={myTasksData?.total}
+          />
+        )}
 
-      {/* My Details - Show for all logged-in members */}
-      {currentMember && (
-        <MyMemberDetails
-          member={currentMember}
-          tasks={myTasksData?.documents || tasksForStats}
-          leads={leads?.documents || []}
-          projects={projects?.documents || []}
-          attendance={currentMemberAttendance}
-          workspaceId={workspaceId}
-          totalTasks={myTasksData?.total}
-        />
-      )}
+      </div>
 
+      {/* Active Work Section */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:gap-x-6 xl:gap-y-6">
         <div className="flex flex-col gap-6">
           <TaskList
@@ -376,16 +429,21 @@ export const TaskList = ({ data, total, isAdmin, projects, members, filters, onF
     <div className="col-span-1 flex flex-col gap-y-4">
       <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center justify-between">
-          <p className="text-lg font-semibold">
-            {isAdmin ? 'All Tasks' : 'My Tasks'} ({total})
-          </p>
+          <div>
+            <p className="text-lg font-semibold">
+              {isAdmin ? 'All Tasks' : 'My Tasks'} ({total})
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Sorted by urgency: overdue → due today → in progress
+            </p>
+          </div>
 
           <Button title="Create Task" variant="secondary" size="icon" onClick={() => createTask(TaskStatus.TODO)}>
             <PlusIcon className="size-4 text-muted-foreground" />
           </Button>
         </div>
 
-        <DottedSeparator className="my-4" />
+        <Separator className="my-4" />
 
         {/* Filters and Sort */}
         <div className="mb-4 flex flex-col gap-2">
@@ -460,10 +518,11 @@ export const TaskList = ({ data, total, isAdmin, projects, members, filters, onF
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="created-desc">Newest first</SelectItem>
-                <SelectItem value="created-asc">Oldest first</SelectItem>
+                <SelectItem value="urgency">By urgency (default)</SelectItem>
                 <SelectItem value="due-asc">Due soonest</SelectItem>
                 <SelectItem value="due-desc">Due latest</SelectItem>
+                <SelectItem value="created-desc">Newest first</SelectItem>
+                <SelectItem value="created-asc">Oldest first</SelectItem>
                 <SelectItem value="status">By status</SelectItem>
                 <SelectItem value="project">By project</SelectItem>
               </SelectContent>
@@ -471,29 +530,54 @@ export const TaskList = ({ data, total, isAdmin, projects, members, filters, onF
           </div>
         </div>
 
-        <DottedSeparator className="my-4" />
+        <Separator className="my-4" />
 
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
           {data.length === 0 && (
             <li className="col-span-full text-center text-sm text-muted-foreground">No tasks found.</li>
           )}
-          {data.map((task) => (
-            <li key={task.$id}>
-              <Link href={`/workspaces/${workspaceId}/tasks/${task.$id}`}>
-                <Card className="rounded-lg shadow-none transition hover:opacity-75">
-                  <CardContent className="flex flex-col gap-y-2 p-4 items-start">
-                    <p className="line-clamp-1 text-sm font-medium">{task.name}</p>
-                    <div className="flex items-center gap-x-2 text-xs text-muted-foreground min-w-0">
-                      <span className="line-clamp-2 block min-w-0 flex-1">{task.project?.name}</span>
-                      <div aria-hidden className="size-1 rounded-full bg-muted shrink-0" />
-                      <CalendarIcon className="size-3 shrink-0" />
-                      <span className="truncate shrink-0">{formatDistanceToNow(new Date(task.dueDate))}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </li>
-          ))}
+          {data.map((task) => {
+            const now = startOfToday();
+            const isOverdue = task.dueDate && isBefore(new Date(task.dueDate), now) && task.status !== TaskStatus.DONE;
+            const isDueToday = task.dueDate && isToday(new Date(task.dueDate));
+            const isUrgent = isOverdue || (isDueToday && task.status !== TaskStatus.DONE);
+
+            return (
+              <li key={task.$id}>
+                <Link href={`/workspaces/${workspaceId}/tasks/${task.$id}`}>
+                  <Card className={`rounded-lg shadow-none transition hover:opacity-75 ${isOverdue ? 'border-destructive' : isDueToday ? 'border-accent' : ''}`}>
+                    <CardContent className="flex flex-col gap-y-2 p-4 items-start">
+                      <div className="flex items-center gap-2 w-full">
+                        <p className="line-clamp-1 text-sm font-medium flex-1">{task.name}</p>
+                        {isUrgent && (
+                          <Badge variant={isOverdue ? 'destructive' : 'outline'} className="text-xs shrink-0">
+                            {isOverdue ? 'Overdue' : 'Due Today'}
+                          </Badge>
+                        )}
+                        {task.status === TaskStatus.IN_PROGRESS && (
+                          <Badge variant="default" className="text-xs shrink-0">
+                            Active
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-x-2 text-xs text-muted-foreground min-w-0 w-full">
+                        <span className="line-clamp-2 block min-w-0 flex-1">{task.project?.name}</span>
+                        {task.dueDate && (
+                          <>
+                            <div aria-hidden className="size-1 rounded-full bg-muted shrink-0" />
+                            <CalendarIcon className="size-3 shrink-0" />
+                            <span className={`truncate shrink-0 ${isOverdue ? 'text-destructive font-medium' : isDueToday ? 'text-foreground font-medium' : ''}`}>
+                              {isOverdue ? 'Overdue' : isDueToday ? 'Due today' : formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         <Button variant="secondary" className="mt-4 w-full" asChild>
@@ -532,7 +616,7 @@ export const ProjectList = ({ data, total, projectTaskCounts, isAdmin, filters, 
           )}
         </div>
 
-        <DottedSeparator className="my-4" />
+        <Separator className="my-4" />
 
         {/* Filters and Sort */}
         <div className="mb-4 flex flex-col gap-2">
@@ -563,7 +647,7 @@ export const ProjectList = ({ data, total, projectTaskCounts, isAdmin, filters, 
           </div>
         </div>
 
-        <DottedSeparator className="my-4" />
+        <Separator className="my-4" />
 
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
           {data.length === 0 && (
@@ -706,13 +790,13 @@ export const MemberList = ({ data, total, tasks, leads, projects, teamAttendance
     const status = attendance.status.toLowerCase();
     switch (status) {
       case 'present':
-        return <Badge className="bg-green-100 text-green-800 text-xs">Present</Badge>;
+        return <Badge variant="default" className="text-xs">Present</Badge>;
       case 'late':
-        return <Badge className="bg-yellow-100 text-yellow-800 text-xs">Late</Badge>;
+        return <Badge variant="outline" className="text-xs">Late</Badge>;
       case 'absent':
-        return <Badge className="bg-red-100 text-red-800 text-xs">Absent</Badge>;
+        return <Badge variant="destructive" className="text-xs">Absent</Badge>;
       case 'half-day':
-        return <Badge className="bg-orange-100 text-orange-800 text-xs">Half Day</Badge>;
+        return <Badge variant="secondary" className="text-xs">Half Day</Badge>;
       default:
         return <Badge variant="secondary" className="text-xs">{attendance.status}</Badge>;
     }
@@ -731,7 +815,7 @@ export const MemberList = ({ data, total, tasks, leads, projects, teamAttendance
           </Button>
         </div>
 
-        <DottedSeparator className="my-4" />
+        <Separator className="my-4" />
 
         <ul className="grid grid-cols-1 gap-4">
           {data.length === 0 && (
@@ -766,7 +850,7 @@ export const MemberList = ({ data, total, tasks, leads, projects, teamAttendance
                               <span className="text-muted-foreground">Tasks:</span>
                               <span className="font-medium">{stats.tasks.total}</span>
                               {stats.tasks.inProgress > 0 && (
-                                <span className="text-blue-600">({stats.tasks.inProgress} active)</span>
+                                <span className="text-primary">({stats.tasks.inProgress} active)</span>
                               )}
                             </div>
 
@@ -800,17 +884,17 @@ export const MemberList = ({ data, total, tasks, leads, projects, teamAttendance
                             <div className="flex items-center gap-2 mt-2 pt-2 border-t">
                               {stats.tasks.todo > 0 && (
                                 <span className="text-xs text-muted-foreground">
-                                  <span className="font-medium text-blue-600">{stats.tasks.todo}</span> todo
+                                  <span className="font-medium text-foreground">{stats.tasks.todo}</span> todo
                                 </span>
                               )}
                               {stats.tasks.inProgress > 0 && (
                                 <span className="text-xs text-muted-foreground">
-                                  <span className="font-medium text-purple-600">{stats.tasks.inProgress}</span> in progress
+                                  <span className="font-medium text-primary">{stats.tasks.inProgress}</span> in progress
                                 </span>
                               )}
                               {stats.tasks.done > 0 && (
                                 <span className="text-xs text-muted-foreground">
-                                  <span className="font-medium text-green-600">{stats.tasks.done}</span> done
+                                  <span className="font-medium text-muted-foreground">{stats.tasks.done}</span> done
                                 </span>
                               )}
                             </div>

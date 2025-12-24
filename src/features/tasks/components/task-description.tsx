@@ -1,7 +1,7 @@
 import { Pencil, XIcon } from 'lucide-react';
 import { useState, useOptimistic, startTransition } from 'react';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useUpdateTask } from '@/features/tasks/api/use-update-task';
@@ -73,7 +73,7 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
         </Button>
       </div>
 
-      <DottedSeparator className="my-4" />
+      <Separator className="my-4" />
 
       {isEditing ? (
         <div className="flex flex-col gap-y-4">

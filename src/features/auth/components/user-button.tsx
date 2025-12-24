@@ -3,7 +3,7 @@
 import { Loader2, LogOut, User } from 'lucide-react';
 import { useState } from 'react';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useCurrent } from '@/features/auth/api/use-current';
@@ -60,7 +60,7 @@ export const UserButton = () => {
             </div>
           </div>
 
-          <DottedSeparator className="mb-1" />
+          <Separator className="mb-1" />
 
           <DropdownMenuItem
             disabled={isPending}

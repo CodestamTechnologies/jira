@@ -1,12 +1,13 @@
 import { Pencil } from 'lucide-react';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useEditTaskModal } from '@/features/tasks/hooks/use-edit-task-modal';
 import type { Task } from '@/features/tasks/types';
 import { snakeCaseToTitleCase } from '@/lib/utils';
+import { getStatusVariant } from './columns';
 
 import { OverviewProperty } from './overview-property';
 import { TaskDate } from './task-date';
@@ -30,7 +31,7 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
           </Button>
         </div>
 
-        <DottedSeparator className="my-4" />
+        <Separator className="my-4" />
 
         <div className="flex flex-col gap-y-4">
           <OverviewProperty label="Assignees">
@@ -53,7 +54,7 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
           </OverviewProperty>
 
           <OverviewProperty label="Status">
-            <Badge variant={task.status}>{snakeCaseToTitleCase(task.status)}</Badge>
+            <Badge variant={getStatusVariant(task.status)}>{snakeCaseToTitleCase(task.status)}</Badge>
           </OverviewProperty>
         </div>
       </div>

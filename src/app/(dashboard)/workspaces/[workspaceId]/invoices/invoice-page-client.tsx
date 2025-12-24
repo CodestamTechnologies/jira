@@ -43,7 +43,7 @@ export function InvoicePageClient() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end">
-        <Button asChild>
+        <Button asChild size={'sm'}>
           <Link href={`/workspaces/${workspaceId}/invoices/create`}>
             <Plus className="mr-2 size-4" />
             Create New Invoice

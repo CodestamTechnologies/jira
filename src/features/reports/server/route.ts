@@ -48,7 +48,7 @@ app.post(
           {
             success: false,
             error: 'Invalid input data',
-            details: error.errors,
+            details: error.issues,
           },
           400
         )
@@ -66,4 +66,3 @@ app.post(
 )
 
 export default app
-

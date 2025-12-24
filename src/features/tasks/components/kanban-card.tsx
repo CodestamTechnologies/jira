@@ -1,6 +1,6 @@
 import { MoreHorizontal } from 'lucide-react';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import type { Task } from '@/features/tasks/types';
@@ -23,25 +23,31 @@ export const KanbanCard = ({ task }: KanbanCardProps) => {
         </TaskActions>
       </div>
 
-      <DottedSeparator />
+      <Separator />
 
       <div className="flex items-center gap-x-1.5">
         <div className="flex items-center -space-x-1.5">
           {task.assignees && task.assignees.length > 0 ? (
-            task.assignees.slice(0, 3).map((assignee, index) => (
-              <MemberAvatar
-                key={assignee.$id}
-                name={assignee.name}
-                fallbackClassName="text-[10px]"
-                className={index > 0 ? '-ml-1.5' : ''}
-              />
-            ))
+            <>
+              {task.assignees.slice(0, 3).map((assignee, index) => (
+                <MemberAvatar
+                  key={assignee.$id}
+                  name={assignee.name}
+                  fallbackClassName="text-[10px]"
+                  className={index > 0 ? '-ml-1.5' : ''}
+                />
+              ))}
+              {task.assignees.length > 3 && (
+                <div className="flex size-5 items-center justify-center rounded-full bg-muted text-[8px] font-medium text-muted-foreground">
+                  +{task.assignees.length - 3}
+                </div>
+              )}
+            </>
           ) : task.assignee ? (
             <MemberAvatar name={task.assignee.name} fallbackClassName="text-[10px]" />
-          ) : null}
-          {task.assignees && task.assignees.length > 3 && (
-            <div className="flex size-5 items-center justify-center rounded-full bg-muted text-[8px] font-medium text-muted-foreground">
-              +{task.assignees.length - 3}
+          ) : (
+            <div className="flex items-center gap-1 rounded-full border border-dashed border-muted-foreground/30 bg-muted/30 px-2 py-0.5">
+              <span className="text-[10px] font-medium text-muted-foreground">Unassigned</span>
             </div>
           )}
         </div>

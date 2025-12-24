@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-import { DottedSeparator } from '@/components/dotted-separator'
+import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
@@ -84,7 +84,7 @@ export function JoinWorkspaceForm({ onCancel, initialValues }: JoinWorkspaceForm
         </CardHeader>
 
         <div className="px-7">
-          <DottedSeparator />
+          <Separator />
         </div>
 
         <CardContent className="p-7">
@@ -109,7 +109,7 @@ export function JoinWorkspaceForm({ onCancel, initialValues }: JoinWorkspaceForm
       </CardHeader>
 
       <div className="px-7">
-        <DottedSeparator />
+        <Separator />
       </div>
 
       <CardContent className="p-7">
@@ -147,7 +147,7 @@ export function JoinWorkspaceForm({ onCancel, initialValues }: JoinWorkspaceForm
               />
             </div>
 
-            <DottedSeparator className="py-7" />
+            <Separator className="py-7" />
 
             <div className="flex items-center justify-between">
               <Button

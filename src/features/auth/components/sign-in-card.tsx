@@ -10,7 +10,7 @@ import { FcGoogle } from 'react-icons/fc';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
@@ -67,7 +67,7 @@ export const SignInCard = () => {
       </CardHeader>
 
       <div className="px-7">
-        <DottedSeparator />
+        <Separator />
       </div>
 
       <CardContent className="p-7">
@@ -111,7 +111,7 @@ export const SignInCard = () => {
       </CardContent>
 
       <div className="px-7">
-        <DottedSeparator />
+        <Separator />
       </div>
 
       <CardContent className="flex flex-col gap-y-4 p-7">
@@ -125,7 +125,7 @@ export const SignInCard = () => {
       </CardContent>
 
       <div className="px-7">
-        <DottedSeparator />
+        <Separator />
       </div>
 
       <CardContent className="flex items-center justify-center p-7">

@@ -1,6 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 
-export const useGetTodayAttendance = (workspaceId: string, userId?: string) => {
+interface UseGetTodayAttendanceOptions {
+  enabled?: boolean;
+}
+
+export const useGetTodayAttendance = (
+  workspaceId: string,
+  userId?: string,
+  options?: UseGetTodayAttendanceOptions
+) => {
   return useQuery({
     queryKey: ['today-attendance', workspaceId, userId],
     queryFn: async () => {
@@ -16,6 +24,6 @@ export const useGetTodayAttendance = (workspaceId: string, userId?: string) => {
 
       return response.json();
     },
-    enabled: !!workspaceId,
+    enabled: options?.enabled !== undefined ? options.enabled : !!workspaceId,
   });
 };

@@ -4,7 +4,7 @@ import { Loader2, PlusIcon } from 'lucide-react';
 import { useQueryState } from 'nuqs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -63,13 +63,14 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
     return members.documents.find((m) => m.userId === user.$id) || null;
   }, [user, members?.documents]);
 
-  // For non-admin users, automatically set assigneeId to their member ID if not already set
-  // This ensures they see all their assigned tasks (bypasses project filtering)
+  // By default, show only current user's tasks for everyone
+  // Users can change the filter to "All assignees" to see all tasks
   const effectiveAssigneeId = useMemo(() => {
-    if (assigneeId) return assigneeId; // Use filter if set
-    if (!isAdmin && currentMember) return currentMember.$id; // Auto-set for non-admin users
-    return null; // Admins see all tasks
-  }, [assigneeId, isAdmin, currentMember]);
+    if (assigneeId === 'all') return null; // "all" means show all tasks
+    if (assigneeId) return assigneeId; // Use filter if explicitly set to a member ID
+    if (currentMember) return currentMember.$id; // Default to current user's tasks
+    return null; // Fallback if no current member
+  }, [assigneeId, currentMember]);
 
   const { open } = useCreateTaskModal();
 
@@ -105,10 +106,13 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
   }, [status, assigneeId, projectId, filteredProjectId, dueDate, search, pageNumber, handlePageChange]);
 
   // Fetch ALL tasks (without filters) for accurate statistics
+  // Use a large limit to get all tasks for accurate status breakdowns
   const { data: allTasksForStats } = useGetTasks({
     workspaceId,
     assigneeId: effectiveAssigneeId,
     showAll: true, // Get all tasks including old done ones
+    page: 1,
+    limit: 10000, // Large limit to fetch all tasks for statistics
   });
 
   const { mutate: bulkUpdateTasks } = useBulkUpdateTasks();
@@ -204,7 +208,7 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
             New
           </Button>
         </div>
-        <DottedSeparator className="my-4" />
+        <Separator className="my-4" />
 
         {/* Task Statistics */}
         <Card className="mb-4">
@@ -274,7 +278,7 @@ export const TaskViewSwitcher = ({ projectId, hideProjectFilter }: TaskViewSwitc
           <DataSearch />
         </div>
 
-        <DottedSeparator className="my-4" />
+        <Separator className="my-4" />
         {isLoadingTasks ? (
           <div className="flex h-[200px] w-full flex-col items-center justify-center rounded-lg border">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />

@@ -7,13 +7,9 @@ export const createTaskSchema = z.object({
     .string()
     .trim()
     .min(3, 'Task name must be at least 3 characters.')
-    .max(200, 'Task name must be less than 200 characters.')
-    .refine(
-      (val) => val.trim().split(/\s+/).length >= 2 || val.length >= 10,
-      'Task name should be more descriptive. Include at least 2 words or be at least 10 characters long.',
-    ),
+    .max(200, 'Task name must be less than 200 characters.'),
   status: z.nativeEnum(TaskStatus, {
-    required_error: 'Task status is required.',
+    message: 'Task status is required.',
   }),
   workspaceId: z.string().trim().min(1, 'Workspace id is required.'),
   projectId: z.string().trim().min(1, 'Project id is required.'),

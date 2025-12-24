@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -64,7 +64,7 @@ export const EditLeadForm = ({ onCancel, memberOptions, initialValues }: EditLea
         <CardTitle className="text-xl font-bold">Edit a lead</CardTitle>
       </CardHeader>
       <div className="px-7">
-        <DottedSeparator />
+        <Separator />
       </div>
       <CardContent className="p-7">
         <Form {...editLeadForm}>
@@ -276,7 +276,7 @@ export const EditLeadForm = ({ onCancel, memberOptions, initialValues }: EditLea
               )}
             />
 
-            <DottedSeparator />
+            <Separator />
 
             <div className="flex items-center justify-between">
               <Button type="button" size="lg" variant="secondary" onClick={onCancel} disabled={isPending}>

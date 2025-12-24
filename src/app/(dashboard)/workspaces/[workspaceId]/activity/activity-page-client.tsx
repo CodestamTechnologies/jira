@@ -1,11 +1,10 @@
 'use client';
 
-import { Clock, History } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useState } from 'react';
 
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ActivityLogTable } from '@/features/activity-logs/components/activity-log-table';
 import { createActivityLogColumns } from '@/features/activity-logs/components/activity-log-columns';
@@ -21,7 +20,7 @@ import { useAdminRedirect } from '@/features/attendance/hooks/use-admin-redirect
 export const ActivityLogPageClient = () => {
   const workspaceId = useWorkspaceId();
   const { isAdminLoading } = useAdminRedirect(`/workspaces/${workspaceId}`);
-  
+
   const [filters, setFilters] = useState<{
     entityType?: ActivityEntityType;
     userId?: string;
@@ -65,7 +64,6 @@ export const ActivityLogPageClient = () => {
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <History className="size-7 text-primary" />
             Activity Log
           </h1>
           <p className="text-muted-foreground">
@@ -89,7 +87,6 @@ export const ActivityLogPageClient = () => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-xl">
-                <Clock className="size-5 text-muted-foreground" />
                 Activity Feed
               </CardTitle>
               <CardDescription className="mt-1.5">

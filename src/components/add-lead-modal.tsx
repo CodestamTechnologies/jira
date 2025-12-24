@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,6 +29,7 @@ import { CreateLeadData, LeadSource, LeadStatus, LeadPriority, validateCreateLea
 import { useCreateLead } from "@/features/leads/api/use-create-lead"
 import { useWorkspaceId } from "@/features/workspaces/hooks/use-workspace-id"
 import { useGetMembers } from "@/features/members/api/use-get-members"
+import { useCurrent } from "@/features/auth/api/use-current"
 
 interface AddLeadModalProps {
     onSuccess?: () => void
@@ -38,6 +39,7 @@ export function AddLeadModal({ onSuccess }: AddLeadModalProps) {
     const workspaceId = useWorkspaceId()
     const { mutate: createLead, isPending: isSubmitting } = useCreateLead()
     const { data: members } = useGetMembers({ workspaceId })
+    const { data: currentUser } = useCurrent()
     const [open, setOpen] = useState(false)
     const [formData, setFormData] = useState<CreateLeadData>({
         name: "",
@@ -53,6 +55,31 @@ export function AddLeadModal({ onSuccess }: AddLeadModalProps) {
         assigneeIds: [],
     })
     const [errors, setErrors] = useState<Partial<Record<keyof CreateLeadData, string>>>({})
+    const hasSetDefaultAssignee = useRef(false)
+
+    // Set default assignee to the creator when modal opens
+    useEffect(() => {
+        if (open && currentUser && members?.documents && !hasSetDefaultAssignee.current) {
+            const currentMember = members.documents.find((member) => member.userId === currentUser.$id)
+            if (currentMember && currentMember.isActive !== false) {
+                setFormData(prev => {
+                    // Only set if assigneeIds is currently empty
+                    if (prev.assigneeIds.length === 0) {
+                        hasSetDefaultAssignee.current = true
+                        return {
+                            ...prev,
+                            assigneeIds: [currentMember.$id]
+                        }
+                    }
+                    return prev
+                })
+            }
+        }
+        // Reset the flag when modal closes
+        if (!open) {
+            hasSetDefaultAssignee.current = false
+        }
+    }, [open, currentUser, members?.documents])
 
     const handleInputChange = (field: keyof CreateLeadData, value: string | string[]) => {
         setFormData(prev => ({ ...prev, [field]: value }))

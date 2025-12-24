@@ -412,7 +412,6 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
         <Button variant="secondary" size="sm" asChild>
           <Link href={`/workspaces/${workspaceId}/members`}>
             <ArrowLeft className="mr-2 size-4" />
-            Back to Members
           </Link>
         </Button>
         <div className="flex items-center gap-4">

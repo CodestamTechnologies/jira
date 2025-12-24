@@ -4,7 +4,7 @@ import { PlusIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
-import { DottedSeparator } from '@/components/dotted-separator';
+import { Separator } from '@/components/ui/separator';
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
 import { Button } from '@/components/ui/button';
@@ -85,14 +85,14 @@ export const ProjectsPageClient = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button title="Create Project" variant="primary" onClick={createProject}>
+            <Button title="Create Project" variant="default" onClick={createProject}>
               <PlusIcon className="size-4 mr-2" />
               New Project
             </Button>
           </div>
         </div>
 
-        <DottedSeparator className="my-6" />
+        <Separator className="my-6" />
 
         {projects.documents.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -194,7 +194,7 @@ export const EditProfileDialog = ({ open, onOpenChange }: EditProfileDialogProps
                           type="button"
                           disabled={isPending}
                           variant="destructive"
-                          size="xs"
+                          size="sm"
                           className="mt-2 w-fit"
                           onClick={() => {
                             if (previewUrl) {
@@ -211,8 +211,8 @@ export const EditProfileDialog = ({ open, onOpenChange }: EditProfileDialogProps
                         <Button
                           type="button"
                           disabled={isPending}
-                          variant="tertiary"
-                          size="xs"
+                          variant="outline"
+                          size="sm"
                           className="mt-2 w-fit"
                           onClick={() => inputRef.current?.click()}
                         >

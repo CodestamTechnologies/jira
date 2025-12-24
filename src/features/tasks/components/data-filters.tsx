@@ -1,7 +1,9 @@
 import { Folder, ListChecks, UserIcon } from 'lucide-react';
+import { useMemo } from 'react';
 
 import { DatePicker } from '@/components/date-picker';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCurrent } from '@/features/auth/api/use-current';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
@@ -14,11 +16,18 @@ interface DataFiltersProps {
 
 export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
   const workspaceId = useWorkspaceId();
+  const { data: user } = useCurrent();
 
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 
   const isLoading = isLoadingProjects || isLoadingMembers;
+
+  // Get current user's member
+  const currentMember = useMemo(() => {
+    if (!user || !members?.documents) return null;
+    return members.documents.find((m) => m.userId === user.$id) || null;
+  }, [user, members?.documents]);
 
   const projectOptions = projects?.documents.map((project) => ({
     value: project.$id,
@@ -35,12 +44,19 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
 
   const [{ status, assigneeId, projectId, dueDate }, setFilters] = useTaskFilters();
 
+  // For display: show current user if no filter is set, but show "all" if explicitly set to null
+  // We use a special check: if assigneeId is explicitly "all" or if it's null and we want to show all
+  // Actually, we need to distinguish between "not set" (show current user) and "explicitly all" (show all)
+  // Since nuqs removes null from URL, we'll use "all" as a string value
+  const effectiveAssigneeIdForDisplay = assigneeId === 'all' ? 'all' : (assigneeId ?? currentMember?.$id ?? 'all');
+
   const onStatusChange = (value: string) => {
     setFilters({ status: value === 'all' ? null : (value as TaskStatus) });
   };
 
   const onAssigneeChange = (value: string) => {
-    setFilters({ assigneeId: value === 'all' ? null : (value as string) });
+    // Use "all" as a special value to indicate "show all tasks"
+    setFilters({ assigneeId: value === 'all' ? 'all' : (value as string) });
   };
 
   const onProjectChange = (value: string) => {
@@ -71,7 +87,7 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
         </SelectContent>
       </Select>
 
-      <Select defaultValue={assigneeId ?? undefined} onValueChange={onAssigneeChange}>
+      <Select value={effectiveAssigneeIdForDisplay} onValueChange={onAssigneeChange}>
         <SelectTrigger className="h-8 w-full lg:w-auto">
           <div className="flex items-center pr-2">
             <UserIcon className="mr-2 size-4" />
