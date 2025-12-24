@@ -17,6 +17,7 @@ import leads from '@/features/leads/server/route';
 import reports from '@/features/reports/server/route';
 import payments from '@/features/payments/server/route';
 import notifications from '@/features/notifications/server/route';
+import expenses from '@/features/expenses/server/route';
 
 export const runtime = 'nodejs';
 
@@ -38,7 +39,8 @@ const routes = app
   .route('/leads', leads)
   .route('/reports', reports)
   .route('/payments', payments)
-  .route('/notifications', notifications);
+  .route('/notifications', notifications)
+  .route('/expenses', expenses);
 
 export type AppType = typeof routes;
 

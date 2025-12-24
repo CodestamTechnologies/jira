@@ -15,11 +15,12 @@ import { ActivityAction, ActivityEntityType, type ActivityLog } from '@/features
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { Separator } from '@/components/ui/separator';
 import { ActivityLogDetailsDialog } from '@/features/activity-logs/components/activity-log-details-dialog';
-import { useAdminRedirect } from '@/features/attendance/hooks/use-admin-redirect';
+import { useHasActivityLogsAccess } from '@/features/members/hooks/use-has-activity-logs-access';
+import { AlertCircle } from 'lucide-react';
 
 export const ActivityLogPageClient = () => {
   const workspaceId = useWorkspaceId();
-  const { isAdminLoading } = useAdminRedirect(`/workspaces/${workspaceId}`);
+  const { data: hasAccess, isLoading: isAccessLoading } = useHasActivityLogsAccess();
 
   const [filters, setFilters] = useState<{
     entityType?: ActivityEntityType;
@@ -40,8 +41,24 @@ export const ActivityLogPageClient = () => {
     offset: 0,
   });
 
-  if (isAdminLoading) {
+  if (isAccessLoading) {
     return <PageLoader />;
+  }
+
+  if (!hasAccess) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="size-5 text-destructive" />
+            Access Denied
+          </CardTitle>
+          <CardDescription>
+            You do not have permission to access this page. Please contact an administrator to grant you activity logs access.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   const logs = data?.data?.documents || [];

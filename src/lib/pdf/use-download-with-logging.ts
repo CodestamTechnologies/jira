@@ -5,7 +5,7 @@ import { downloadPDF, generateSafeFilename } from './utils';
 import { useLogDownload } from '@/features/activity-logs/api/use-log-download';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
-type DocumentType = 'NDA' | 'JOINING_LETTER' | 'SALARY_SLIP' | 'INVOICE';
+type DocumentType = 'NDA' | 'JOINING_LETTER' | 'SALARY_SLIP' | 'INVOICE' | 'EXPENSE';
 
 interface DownloadWithLoggingOptions {
   documentType: DocumentType;

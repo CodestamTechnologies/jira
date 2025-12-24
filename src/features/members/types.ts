@@ -13,6 +13,9 @@ export type Member = Models.Document & {
   role: MemberRole
   isActive?: boolean // Defaults to true, false for inactive/former members
   hasLeadsAccess?: boolean // Permission to access leads feature
+  hasInvoicesAccess?: boolean // Permission to access invoices feature
+  hasExpensesAccess?: boolean // Permission to access expenses feature
+  hasActivityLogsAccess?: boolean // Permission to access activity logs feature
   // Additional information fields
   position?: string
   address?: string

@@ -10,6 +10,7 @@ export const ACTIVITY_LOGS_ID = process.env.NEXT_PUBLIC_APPWRITE_ACTIVITY_LOGS_I
 export const PDF_TEMPLATES_ID = process.env.NEXT_PUBLIC_APPWRITE_PDF_TEMPLATES_ID || '';
 export const LEADS_ID = process.env.NEXT_PUBLIC_APPWRITE_LEADS_ID || '';
 export const NOTIFICATIONS_ID = process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_ID || '';
+export const EXPENSES_ID = process.env.NEXT_PUBLIC_APPWRITE_EXPENSES_ID || '';
 
 // Validate critical IDs
 if (!INVOICES_ID) {
@@ -17,6 +18,9 @@ if (!INVOICES_ID) {
 }
 if (!LEADS_ID) {
   console.error('NEXT_PUBLIC_APPWRITE_LEADS_ID is not set in environment variables');
+}
+if (!EXPENSES_ID) {
+  console.error('NEXT_PUBLIC_APPWRITE_EXPENSES_ID is not set in environment variables');
 }
 
 export const IMAGES_BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_IMAGES_BUCKET_ID!;

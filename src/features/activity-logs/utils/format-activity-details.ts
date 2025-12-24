@@ -112,6 +112,53 @@ export const formatActivityDetails = (log: ActivityLog): string => {
       }
     }
 
+    // Expense activities
+    if (log.entityType === ActivityEntityType.EXPENSE) {
+      if (log.action === ActivityAction.CREATE) {
+        const amount = newData.amount as number;
+        const description = newData.description as string;
+        const category = newData.category as string;
+        const date = newData.date as string;
+        let details = `₹${amount?.toFixed(2) || '0.00'} - ${description || 'New expense'}`;
+        if (category) {
+          details += `\nCategory: ${category}`;
+        }
+        if (date) {
+          details += `\nDate: ${format(new Date(date), 'MMM dd, yyyy')}`;
+        }
+        return details;
+      } else if (log.action === ActivityAction.UPDATE) {
+        const details: string[] = [];
+        
+        if (newData.amount && newData.amount !== oldData.amount) {
+          details.push(`Amount: ₹${oldData.amount || '0.00'} → ₹${(newData.amount as number).toFixed(2)}`);
+        }
+        
+        if (newData.description && newData.description !== oldData.description) {
+          details.push(`Description: "${oldData.description || 'N/A'}" → "${newData.description}"`);
+        }
+        
+        if (newData.category && newData.category !== oldData.category) {
+          details.push(`Category: ${oldData.category || 'N/A'} → ${newData.category}`);
+        }
+        
+        if (newData.date && newData.date !== oldData.date) {
+          const date = format(new Date(newData.date as string), 'MMM dd, yyyy');
+          details.push(`Date: ${date}`);
+        }
+        
+        if (newData.status && newData.status !== oldData.status) {
+          details.push(`Status: ${oldData.status || 'N/A'} → ${newData.status}`);
+        }
+
+        return details.length > 0 ? details.join('\n') : 'Expense updated';
+      } else if (log.action === ActivityAction.DELETE) {
+        const amount = oldData.amount as number;
+        const description = oldData.description as string;
+        return `Deleted expense: ₹${amount?.toFixed(2) || '0.00'} - ${description || 'N/A'}`;
+      }
+    }
+
     // Invoice activities
     if (log.entityType === ActivityEntityType.INVOICE) {
       if (log.action === ActivityAction.CREATE) {

@@ -15,7 +15,7 @@ import { Attendance } from '../types';
 import { getMember } from '@/features/members/utils';
 import { TaskStatus } from '@/features/tasks/types';
 import type { Task, Comment } from '@/features/tasks/types';
-import { getTodayDateRange, getTodayDateString } from '../utils/date-helpers';
+import { getTodayDateRange, getTodayDateString } from '@/utils/date-helpers';
 import { groupCommentsByTaskId, generateSummaryFromTasks } from '../utils/summary-generator';
 
 // Validate environment variables
@@ -202,8 +202,6 @@ app.post('/check-in', zValidator('json', createAttendanceSchema), async (c) => {
       Query.equal('userId', user.$id),
       Query.equal('date', today)
     ];
-
-    console.log('Check-in query:', checkInQueries); // Debug log
 
     const existingAttendance = await databases.listDocuments(
       DATABASE_ID,
@@ -415,8 +413,6 @@ app.put('/check-out', zValidator('json', updateAttendanceSchema), async (c) => {
       Query.equal('date', today)
     ];
 
-    console.log('Check-out query:', checkOutQueries); // Debug log
-
     const existingAttendance = await databases.listDocuments(
       DATABASE_ID,
       ATTENDANCE_ID,
@@ -571,8 +567,6 @@ app.get('/today', async (c) => {
       Query.equal('date', today)
     ];
 
-    console.log('Today query:', queries); // Debug log
-
     const { databases } = await createSessionClient();
     const response = await databases.listDocuments(
       DATABASE_ID,
@@ -618,10 +612,6 @@ app.get('/stats', async (c) => {
       Query.equal('workspaceId', workspaceId.trim()),
       Query.equal('userId', userId.trim())
     ];
-
-    console.log('Stats query:', queries); // Debug log
-    console.log('Database ID:', DATABASE_ID); // Debug log
-    console.log('Attendance ID:', ATTENDANCE_ID); // Debug log
 
     const { databases } = await createSessionClient();
     const response = await databases.listDocuments(

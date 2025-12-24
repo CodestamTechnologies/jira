@@ -19,8 +19,10 @@ import { isMemberAssigned } from '@/features/leads/utils/parse-assignee-ids'
  */
 export enum FeaturePermission {
   LEADS = 'hasLeadsAccess',
+  INVOICES = 'hasInvoicesAccess',
+  EXPENSES = 'hasExpensesAccess',
+  ACTIVITY_LOGS = 'hasActivityLogsAccess',
   // Future features can be added here:
-  // INVOICES = 'hasInvoicesAccess',
   // REPORTS = 'hasReportsAccess',
   // etc.
 }

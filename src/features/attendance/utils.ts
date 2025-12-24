@@ -1,6 +1,12 @@
 /**
  * Utility functions for the attendance system
+ * 
+ * Note: Date formatting utilities (formatTime, formatDate, isToday) are now in @/utils/date-helpers
+ * These are re-exported here for backward compatibility
  */
+
+// Re-export shared date utilities for backward compatibility
+export { formatTime, formatDate, isToday } from '@/utils/date-helpers';
 
 export const calculateTotalHours = (checkInTime: string, checkOutTime: string): number => {
   const checkIn = new Date(checkInTime);
@@ -25,28 +31,6 @@ export const determineStatus = (checkInTime: string, totalHours?: number): 'pres
   }
 
   return 'present';
-};
-
-export const formatTime = (time: string): string => {
-  return new Date(time).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-};
-
-export const formatDate = (date: string): string => {
-  return new Date(date).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
-
-export const isToday = (date: string): boolean => {
-  const today = new Date().toISOString().split('T')[0];
-  return date === today;
 };
 
 export const getLocationDistance = (

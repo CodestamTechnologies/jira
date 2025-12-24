@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { client } from '@/lib/hono';
 
 type LogDownloadRequest = {
-  documentType: 'NDA' | 'JOINING_LETTER' | 'SALARY_SLIP' | 'INVOICE';
+  documentType: 'NDA' | 'JOINING_LETTER' | 'SALARY_SLIP' | 'INVOICE' | 'EXPENSE';
   workspaceId: string;
   documentName?: string;
   invoiceNumber?: string;

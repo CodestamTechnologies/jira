@@ -151,3 +151,8 @@ export function useHasLeadsAccess() {
     },
   })
 }
+
+// Re-export permission hooks for convenience
+export { useHasInvoicesAccess } from './use-has-invoices-access'
+export { useHasExpensesAccess } from './use-has-expenses-access'
+export { useHasActivityLogsAccess } from './use-has-activity-logs-access'

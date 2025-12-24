@@ -9,7 +9,7 @@
  */
 "use client"
 
-import { Clock, FileText, History, Folder, Users, Settings } from "lucide-react"
+import { Clock, FileText, History, Folder, Users, Settings, Receipt } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 
@@ -41,6 +41,11 @@ const ADMIN_ROUTES = [
     title: "Invoices",
     url: "/invoices",
     icon: FileText,
+  },
+  {
+    title: "Expenses",
+    url: "/expenses",
+    icon: Receipt,
   },
   {
     title: "Activity Log",
