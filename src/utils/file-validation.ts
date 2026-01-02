@@ -42,3 +42,7 @@ export const validateBillFile = (file: File): { valid: boolean; error?: string }
 export const getFileTypeDescription = (): string => {
   return 'PDF, JPG, JPEG, or PNG file (max 10MB)';
 };
+
+
+
+

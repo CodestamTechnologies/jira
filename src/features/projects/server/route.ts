@@ -14,10 +14,12 @@ import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import { createProjectSchema, updateProjectSchema } from '@/features/projects/schema';
 import type { Project } from '@/features/projects/types';
+import { isProjectClosed } from '@/features/projects/utils';
 import { type Task, TaskStatus } from '@/features/tasks/types';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import { NotificationService } from '@/lib/email/services/notification-service';
 import type { Workspace } from '@/features/workspaces/types';
+import { getCachedImageDataUrl, getCachedImagesBatch } from '@/lib/cache/image-cache';
 
 const app = new Hono()
   .post('/', sessionMiddleware, zValidator('form', createProjectSchema), async (ctx) => {
@@ -66,6 +68,7 @@ const app = new Hono()
       clientEmail: clientEmail || undefined,
       clientAddress: clientAddress || undefined,
       clientPhone: clientPhone || undefined,
+      isClosed: false, // Explicitly set to false so the field exists for queries
     });
 
     // Create initial task for the project
@@ -141,9 +144,11 @@ const app = new Hono()
 
       if (isAdmin) {
         // Admins see all projects - fetch with pagination to get all
+        // Exclude closed projects at database level (all projects now have isClosed set)
         let allProjects: Project[] = [];
         let projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
           Query.equal('workspaceId', workspaceId),
+          Query.notEqual('isClosed', true),
           Query.orderDesc('$createdAt'),
           Query.limit(100), // Get up to 100 projects at a time
         ]);
@@ -153,14 +158,16 @@ const app = new Hono()
         // Handle pagination if there are more projects
         while (projectsResponse.documents.length === 100) {
           projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
-          Query.equal('workspaceId', workspaceId),
-          Query.orderDesc('$createdAt'),
+            Query.equal('workspaceId', workspaceId),
+            Query.notEqual('isClosed', true),
+            Query.orderDesc('$createdAt'),
             Query.limit(100),
             Query.offset(allProjects.length),
           ]);
           allProjects = [...allProjects, ...projectsResponse.documents];
         }
 
+        // No need to filter - already excluded at DB level
         projects = {
           ...projectsResponse,
           documents: allProjects,
@@ -217,12 +224,14 @@ const app = new Hono()
           });
         }
 
-        // Fetch all projects in the workspace and filter by projectIds in memory
-        // Appwrite doesn't support Query.in for $id, so we fetch all and filter
-        // Use pagination to fetch all projects
+        // Fetch projects with pagination, excluding closed projects at DB level
+        // Use Query.contains to filter by projectIds (Appwrite supports this for $id)
+        // All projects now have isClosed set (migration ensures this)
         let allProjectsList: Project[] = [];
         let projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
           Query.equal('workspaceId', workspaceId),
+          Query.notEqual('isClosed', true),
+          Query.contains('$id', projectIds),
           Query.orderDesc('$createdAt'),
           Query.limit(100), // Get up to 100 projects at a time
         ]);
@@ -232,8 +241,10 @@ const app = new Hono()
         // Handle pagination if there are more projects
         while (projectsResponse.documents.length === 100) {
           projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
-          Query.equal('workspaceId', workspaceId),
-          Query.orderDesc('$createdAt'),
+            Query.equal('workspaceId', workspaceId),
+            Query.notEqual('isClosed', true),
+            Query.contains('$id', projectIds),
+            Query.orderDesc('$createdAt'),
             Query.limit(100),
             Query.offset(allProjectsList.length),
           ]);
@@ -243,8 +254,8 @@ const app = new Hono()
         console.log('[Projects API] All projects in workspace:', allProjectsList.length);
         console.log('[Projects API] All project IDs:', allProjectsList.map(p => p.$id));
 
-        // Filter to only include projects where user has tasks
-        const filteredProjects = allProjectsList.filter((project) => projectIds.includes(project.$id));
+        // No need to filter - already excluded closed projects and filtered by projectIds at DB level
+        const filteredProjects = allProjectsList;
 
         console.log('[Projects API] Filtered projects:', filteredProjects.length);
         console.log('[Projects API] Filtered project IDs:', filteredProjects.map(p => p.$id));
@@ -256,21 +267,19 @@ const app = new Hono()
         };
       }
 
-      const projectsWithImages: Project[] = await Promise.all(
-        projects.documents.map(async (project) => {
-          let imageUrl: string | undefined = undefined;
+      // Batch fetch all project images at once (much more efficient)
+      const projectImageIds = projects.documents
+        .map((p) => p.imageId)
+        .filter((id): id is string => Boolean(id));
+      const projectImages = await getCachedImagesBatch(storage, IMAGES_BUCKET_ID, projectImageIds);
 
-          if (project.imageId) {
-            const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, project.imageId);
-            imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
-          }
-
-          return {
-            ...project,
-            imageUrl,
-          };
-        }),
-      );
+      const projectsWithImages: Project[] = projects.documents.map((project) => {
+        const imageUrl = project.imageId ? projectImages.get(project.imageId) : undefined;
+        return {
+          ...project,
+          imageUrl,
+        };
+      });
 
       return ctx.json({
         data: {
@@ -288,6 +297,16 @@ const app = new Hono()
     const { projectId } = ctx.req.param();
 
     const project = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
+
+    // Don't allow access to closed projects (if isClosed is not defined, it's open)
+    if (isProjectClosed(project)) {
+      return ctx.json(
+        {
+          error: 'This project is closed and cannot be accessed.',
+        },
+        403,
+      );
+    }
 
     const member = await getMember({
       databases,
@@ -327,8 +346,7 @@ const app = new Hono()
     let imageUrl: string | undefined = undefined;
 
     if (project.imageId) {
-      const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, project.imageId);
-      imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+      imageUrl = await getCachedImageDataUrl(storage, IMAGES_BUCKET_ID, project.imageId);
     }
 
     return ctx.json({
@@ -344,7 +362,7 @@ const app = new Hono()
     const user = ctx.get('user');
 
     const { projectId } = ctx.req.param();
-    const { name, image, clientEmail, clientAddress, clientPhone } = ctx.req.valid('form');
+    const { name, image, clientEmail, clientAddress, clientPhone, isClosed } = ctx.req.valid('form');
 
     const existingProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
 
@@ -393,6 +411,7 @@ const app = new Hono()
     if (clientEmail !== undefined) updateData.clientEmail = clientEmail || undefined;
     if (clientAddress !== undefined) updateData.clientAddress = clientAddress || undefined;
     if (clientPhone !== undefined) updateData.clientPhone = clientPhone || undefined;
+    if (isClosed !== undefined) updateData.isClosed = isClosed;
 
     const project = await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, updateData);
 

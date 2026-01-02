@@ -13,8 +13,9 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useDeleteProject } from '@/features/projects/api/use-delete-project';
 import { useUpdateProject } from '@/features/projects/api/use-update-project';
 import { updateProjectSchema } from '@/features/projects/schema';
@@ -44,17 +45,23 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
       clientEmail: initialValues.clientEmail ?? '',
       clientAddress: initialValues.clientAddress ?? '',
       clientPhone: initialValues.clientPhone ?? '',
+      isClosed: initialValues.isClosed ?? false,
     },
   });
 
   const onSubmit = (values: z.infer<typeof updateProjectSchema>) => {
-    const finalValues = {
+    const finalValues: Record<string, unknown> = {
       ...values,
       image: values.image instanceof File ? values.image : '',
     };
 
+    // Convert boolean to string for FormData compatibility
+    if (values.isClosed !== undefined) {
+      finalValues.isClosed = String(values.isClosed);
+    }
+
     updateProject({
-      form: finalValues,
+      form: finalValues as any,
       param: { projectId: initialValues.$id },
     });
   };
@@ -251,6 +258,34 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                           <Input {...field} type="text" placeholder="123 Main St, City, State, ZIP" />
                         </FormControl>
                         <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold">Project Status</h3>
+
+                  <FormField
+                    disabled={isPending}
+                    control={updateProjectForm.control}
+                    name="isClosed"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Mark project as closed</FormLabel>
+                          <FormDescription>
+                            Closed projects and their tasks will not be shown in the workspace. This action can be reversed.
+                          </FormDescription>
+                        </div>
                       </FormItem>
                     )}
                   />

@@ -23,3 +23,7 @@ export default function EditExpensePage({ params }: EditExpensePageProps) {
     </div>
   );
 }
+
+
+
+

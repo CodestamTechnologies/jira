@@ -13,6 +13,7 @@ import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-m
 import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import type { Project } from '@/features/projects/types';
+import { isProjectClosed } from '@/features/projects/utils';
 import { createTaskSchema } from '@/features/tasks/schema';
 import { type Task, TaskStatus, type Comment } from '@/features/tasks/types';
 import { createAdminClient } from '@/lib/appwrite';
@@ -22,52 +23,11 @@ import { NotificationService } from '@/lib/email/services/notification-service';
 import type { Workspace } from '@/features/workspaces/types';
 import { validateTaskSchema } from './ai-validation';
 import { createTaskValidationService } from '@/lib/ai/services/task-validation.service';
+import { getCachedImageDataUrl, getCachedImagesBatch } from '@/lib/cache/image-cache';
+import { getCachedUsersBatch } from '@/lib/cache/user-cache';
 
-// Helper function to batch queries for large arrays to avoid Appwrite limits
-// Appwrite limits: max 100 items in query array, max 4096 chars per query string
-async function batchQueryContains<T extends Models.Document>(
-  databases: any,
-  databaseId: string,
-  collectionId: string,
-  ids: string[],
-  chunkSize: number = 50,
-): Promise<Models.DocumentList<T>> {
-  if (ids.length === 0) {
-    return { documents: [], total: 0 };
-  }
-
-  // If array is small enough, make a single query
-  if (ids.length <= chunkSize) {
-    return (await databases.listDocuments(databaseId, collectionId, [
-      Query.contains('$id', ids),
-    ])) as Models.DocumentList<T>;
-  }
-
-  // Otherwise, batch into chunks and combine results
-  const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += chunkSize) {
-    chunks.push(ids.slice(i, i + chunkSize));
-  }
-
-  const results = await Promise.all(
-    chunks.map((chunk) =>
-      databases.listDocuments(databaseId, collectionId, [
-        Query.contains('$id', chunk),
-      ]) as Promise<Models.DocumentList<T>>,
-    ),
-  );
-
-  // Combine all results and deduplicate by $id
-  const allDocuments = results.flatMap((result) => result.documents);
-  const uniqueDocuments = Array.from(
-    new Map(allDocuments.map((doc) => [doc.$id, doc])).values(),
-  );
-
-  return {
-    documents: uniqueDocuments,
-    total: uniqueDocuments.length,
-  };
-}
+// Import batch query utility
+import { batchQueryContains } from '@/lib/db/batch-queries';
 
 const app = new Hono()
   .get(
@@ -119,6 +79,30 @@ const app = new Hono()
       // This fixes the circular dependency where projects require tasks, but tasks are filtered by projects
       const bypassProjectFilter = !!assigneeId && assigneeId === member.$id;
 
+      // Fetch all open (non-closed) project IDs to include only their tasks
+      // All projects now have isClosed set (migration ensures this)
+      let allOpenProjects: Project[] = [];
+      let openProjectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+        Query.equal('workspaceId', workspaceId),
+        Query.notEqual('isClosed', true),
+        Query.limit(100), // Get up to 100 projects at a time
+      ]);
+
+      allOpenProjects = [...openProjectsResponse.documents];
+
+      // Handle pagination if there are more open projects
+      while (openProjectsResponse.documents.length === 100) {
+        openProjectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
+          Query.equal('workspaceId', workspaceId),
+          Query.notEqual('isClosed', true),
+          Query.limit(100),
+          Query.offset(allOpenProjects.length),
+        ]);
+        allOpenProjects = [...allOpenProjects, ...openProjectsResponse.documents];
+      }
+
+      const openProjectIds = new Set(allOpenProjects.map((p) => p.$id));
+
       if (!isAdmin && !bypassProjectFilter) {
         // Find all tasks where the user is assigned to get project IDs
         const userTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
@@ -126,8 +110,14 @@ const app = new Hono()
           Query.contains('assigneeIds', member.$id),
         ]);
 
-        // Get unique project IDs from user's tasks
-        allowedProjectIds = Array.from(new Set(userTasks.documents.map((task) => task.projectId)));
+        // Get unique project IDs from user's tasks, only including open projects
+        allowedProjectIds = Array.from(
+          new Set(
+            userTasks.documents
+              .map((task) => task.projectId)
+              .filter((id): id is string => Boolean(id) && openProjectIds.has(id))
+          )
+        );
 
         // If user has no tasks, return empty result
         if (allowedProjectIds.length === 0) {
@@ -142,8 +132,39 @@ const app = new Hono()
 
       const query = [Query.equal('workspaceId', workspaceId), Query.orderDesc('$createdAt')];
 
+      // Exclude tasks from closed projects at database level
+      // Note: Appwrite Query.contains has a limit of 100 items
+      // If there are more than 100 open projects, we'll use the first 100
+      if (openProjectIds.size > 0) {
+        const openProjectIdsArray = Array.from(openProjectIds);
+        if (openProjectIdsArray.length > 100) {
+          // If more than 100 open projects, use first 100 (edge case)
+          // TODO: Implement batching for > 100 open projects if needed
+          console.warn(`[TASKS] More than 100 open projects (${openProjectIdsArray.length}), using first 100 for filtering`);
+          query.push(Query.contains('projectId', openProjectIdsArray.slice(0, 100)));
+        } else {
+          query.push(Query.contains('projectId', openProjectIdsArray));
+        }
+      } else {
+        // No open projects, return empty
+        return ctx.json({
+          data: {
+            documents: [],
+            total: 0,
+          },
+        });
+      }
+
       if (projectId) {
-        // If filtering by specific project, verify user has access (if not admin and not bypassing)
+        // If filtering by specific project, verify it's open and user has access
+        if (!openProjectIds.has(projectId)) {
+          return ctx.json({
+            data: {
+              documents: [],
+              total: 0,
+            },
+          });
+        }
         if (!isAdmin && !bypassProjectFilter && allowedProjectIds && !allowedProjectIds.includes(projectId)) {
           return ctx.json({
             data: {
@@ -172,13 +193,21 @@ const app = new Hono()
       ]);
 
       // Filter tasks by allowed project IDs if user is not admin and not bypassing project filter
+      // Tasks are already filtered by open projects at DB level
       let filteredTasks = tasks;
       if (!isAdmin && !bypassProjectFilter && allowedProjectIds && allowedProjectIds.length > 0) {
         filteredTasks = {
           ...tasks,
-          documents: tasks.documents.filter((task) => allowedProjectIds!.includes(task.projectId)),
-          total: tasks.documents.filter((task) => allowedProjectIds!.includes(task.projectId)).length,
+          documents: tasks.documents.filter(
+            (task) => allowedProjectIds!.includes(task.projectId)
+          ),
+          total: tasks.documents.filter(
+            (task) => allowedProjectIds!.includes(task.projectId)
+          ).length,
         };
+      } else {
+        // For admins or when bypassing project filter, tasks are already filtered by open projects at DB level
+        filteredTasks = tasks;
       }
 
       // Filter out tasks marked as DONE for more than 7 days when viewing all tasks (not project-specific)
@@ -195,6 +224,7 @@ const app = new Hono()
 
         // For server-side pagination with 7-day filter, we need accurate total
         // Fetch all matching tasks to get accurate count (this is expensive but necessary for accurate pagination)
+        // Query already includes open projects filter at DB level
         const allMatchingTasks = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
           ...query,
           Query.limit(10000), // Large limit to get all
@@ -255,46 +285,47 @@ const app = new Hono()
         uniqueAssigneeIds,
       );
 
-      const assignees = await Promise.all(
-        members.documents.map(async (member) => {
-          const user = await users.get(member.userId);
+      // Batch fetch all users with caching (much more efficient)
+      const userIds = members.documents.map((m) => m.userId);
+      const cachedUsers = await getCachedUsersBatch(users, userIds);
 
-          // Only return safe, non-sensitive fields
-          return {
-            $id: member.$id,
-            userId: member.userId,
-            name: user.name,
-            email: user.email,
-            role: member.role,
-          };
-        }),
-      );
+      const assignees = members.documents.map((member) => {
+        const user = cachedUsers.get(member.userId);
 
-      const populatedTasks: (Models.Document & Task)[] = await Promise.all(
-        filteredTasks.documents.map(async (task) => {
-          const project = projects.documents.find((project) => project.$id === task.projectId);
-          const taskAssignees = (task.assigneeIds || []).map((assigneeId) =>
-            assignees.find((assignee) => assignee.$id === assigneeId),
-          ).filter(Boolean) as Array<{ $id: string; name: string; email?: string }>;
+        // Only return safe, non-sensitive fields
+        return {
+          $id: member.$id,
+          userId: member.userId,
+          name: user?.name || 'Unknown',
+          email: user?.email || '',
+          role: member.role,
+        };
+      });
 
-          let imageUrl: string | undefined = undefined;
+      // Batch fetch all project images at once (much more efficient)
+      const projectImageIds = projects.documents
+        .map((p) => p.imageId)
+        .filter((id): id is string => Boolean(id));
+      const projectImages = await getCachedImagesBatch(storage, IMAGES_BUCKET_ID, projectImageIds);
 
-          if (project?.imageId) {
-            const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, project.imageId);
-            imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
-          }
+      const populatedTasks: (Models.Document & Task)[] = filteredTasks.documents.map((task) => {
+        const project = projects.documents.find((project) => project.$id === task.projectId);
+        const taskAssignees = (task.assigneeIds || []).map((assigneeId) =>
+          assignees.find((assignee) => assignee.$id === assigneeId),
+        ).filter(Boolean) as Array<{ $id: string; name: string; email?: string }>;
 
-          return {
-            ...task,
-            project: {
-              ...project,
-              imageUrl,
-            },
-            assignees: taskAssignees,
-            assignee: taskAssignees[0], // For backward compatibility
-          };
-        }),
-      );
+        const imageUrl = project?.imageId ? projectImages.get(project.imageId) : undefined;
+
+        return {
+          ...task,
+          project: {
+            ...project,
+            imageUrl,
+          },
+          assignees: taskAssignees,
+          assignee: taskAssignees[0], // For backward compatibility
+        };
+      });
 
       return ctx.json({
         data: {
@@ -313,6 +344,26 @@ const app = new Hono()
 
     const task = await databases.getDocument<Task>(DATABASE_ID, TASKS_ID, taskId);
 
+    // Check if the task belongs to a closed project and fetch project data
+    let project: Project | null = null;
+    if (task.projectId) {
+      try {
+        project = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, task.projectId);
+        // If isClosed is not defined, it's open
+        if (isProjectClosed(project)) {
+          return ctx.json(
+            {
+              error: 'This task belongs to a closed project and cannot be accessed.',
+            },
+            403,
+          );
+        }
+      } catch (error) {
+        // Project might not exist - log but continue
+        console.error(`[TASKS] Project ${task.projectId} not found for task ${taskId}:`, error);
+      }
+    }
+
     const currentMember = await getMember({
       databases,
       workspaceId: task.workspaceId,
@@ -326,48 +377,70 @@ const app = new Hono()
     // Admins can access all tasks, regular members only access tasks from projects they have tasks in
     const isAdmin = currentMember.role === MemberRole.ADMIN;
 
-    if (!isAdmin) {
+    if (!isAdmin && task.projectId) {
       // Check if user has tasks in this project
-      const userTasksInProject = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
-        Query.equal('projectId', task.projectId),
-        Query.contains('assigneeIds', currentMember.$id),
-      ]);
+      try {
+        const userTasksInProject = await databases.listDocuments<Task>(DATABASE_ID, TASKS_ID, [
+          Query.equal('projectId', task.projectId),
+          Query.contains('assigneeIds', currentMember.$id),
+        ]);
 
-      if (userTasksInProject.total === 0) {
-        return ctx.json(
-          {
-            error: 'Unauthorized. You do not have access to this task.',
-          },
-          403,
-        );
+        if (userTasksInProject.total === 0) {
+          return ctx.json(
+            {
+              error: 'Unauthorized. You do not have access to this task.',
+            },
+            403,
+          );
+        }
+      } catch (error) {
+        console.error(`[TASKS] Error checking user access for task ${taskId}:`, error);
+        return ctx.json({ error: 'Error checking access.' }, 500);
       }
     }
 
-    const project = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, task.projectId);
-
     const assigneeIds = task.assigneeIds || [];
     const members = await Promise.all(
-      assigneeIds.map((assigneeId) => databases.getDocument(DATABASE_ID, MEMBERS_ID, assigneeId)),
+      assigneeIds.map((assigneeId) =>
+        databases.getDocument(DATABASE_ID, MEMBERS_ID, assigneeId).catch((error) => {
+          console.error(`[TASKS] Member ${assigneeId} not found:`, error);
+          return null;
+        })
+      ),
     );
 
+    // Filter out null members (members that don't exist)
+    const validMembers = members.filter((m): m is NonNullable<typeof m> => m !== null);
+
     const assignees = await Promise.all(
-      members.map(async (member) => {
-        const user = await users.get(member.userId);
-        // Only return safe, non-sensitive fields
-        return {
-          $id: member.$id,
-          userId: member.userId,
-          name: user.name,
-          email: user.email,
-          role: member.role,
-        };
+      validMembers.map(async (member) => {
+        try {
+          const user = await users.get(member.userId);
+          // Only return safe, non-sensitive fields
+          return {
+            $id: member.$id,
+            userId: member.userId,
+            name: user.name || 'Unknown',
+            email: user.email || '',
+            role: member.role,
+          };
+        } catch (error) {
+          console.error(`[TASKS] User ${member.userId} not found:`, error);
+          return {
+            $id: member.$id,
+            userId: member.userId,
+            name: 'Unknown',
+            email: '',
+            role: member.role,
+          };
+        }
       }),
     );
 
     return ctx.json({
       data: {
         ...task,
-        project,
+        project: project || undefined,
         assignees,
         assignee: assignees[0], // For backward compatibility
       },
@@ -387,6 +460,24 @@ const app = new Hono()
 
     if (!member) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    // Check if project is closed (if projectId is provided)
+    if (projectId) {
+      try {
+        const project = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
+        // If isClosed is not defined, it's open
+        if (isProjectClosed(project)) {
+          return ctx.json(
+            {
+              error: 'Cannot create tasks in a closed project.',
+            },
+            400,
+          );
+        }
+      } catch (error) {
+        return ctx.json({ error: 'Project not found.' }, 404);
+      }
     }
 
     const highestPositionTask = await databases.listDocuments(DATABASE_ID, TASKS_ID, [
@@ -459,6 +550,42 @@ const app = new Hono()
 
     if (!member) {
       return ctx.json({ error: 'Unauthorized.' }, 401);
+    }
+
+    // Check if trying to move task to a closed project
+    if (projectId && projectId !== existingTask.projectId) {
+      try {
+        const targetProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
+        // If isClosed is not defined, it's open
+        if (isProjectClosed(targetProject)) {
+          return ctx.json(
+            {
+              error: 'Cannot move task to a closed project.',
+            },
+            400,
+          );
+        }
+      } catch (error) {
+        return ctx.json({ error: 'Target project not found.' }, 404);
+      }
+    }
+
+    // Check if current project is closed (prevent updates to tasks in closed projects)
+    if (existingTask.projectId) {
+      try {
+        const currentProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, existingTask.projectId);
+        // If isClosed is not defined, it's open
+        if (isProjectClosed(currentProject)) {
+          return ctx.json(
+            {
+              error: 'Cannot update tasks in a closed project.',
+            },
+            400,
+          );
+        }
+      } catch (error) {
+        // If project doesn't exist, allow update (edge case)
+      }
     }
 
     // Validate: If moving to IN_REVIEW or DONE, require a comment

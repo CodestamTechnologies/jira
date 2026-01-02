@@ -1,7 +1,6 @@
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ModeToggle } from "@/components/ui/mode-toggle"
-import { NotificationBell } from "@/features/notifications/components/notification-bell"
 import { DownloadsButton } from "@/components/downloads-button"
 import { CheckInButton } from "@/components/check-in-button"
 
@@ -15,12 +14,10 @@ export function SiteHeader() {
             orientation="vertical"
             className="h-4"
           />
-          <h1 className="text-sm font-semibold">Documents</h1>
         </div>
         <div className="flex items-center gap-1">
           <CheckInButton />
           <DownloadsButton />
-          <NotificationBell />
           <ModeToggle />
         </div>
       </div>

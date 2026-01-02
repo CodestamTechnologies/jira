@@ -9,7 +9,8 @@
     "lint": "next lint && eslint .",
     "lint:fix": "next lint --fix && eslint . --fix",
     "format": "prettier --check . --config .prettierrc.mjs",
-    "format:fix": "prettier --write . --config .prettierrc.mjs"
+    "format:fix": "prettier --write . --config .prettierrc.mjs",
+    "migrate:project-isclosed": "tsx scripts/migrate-project-isclosed.ts"
   },
   "author": {
     "name": "Codestam Technologies",

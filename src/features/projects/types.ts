@@ -8,4 +8,5 @@ export type Project = Models.Document & {
   clientEmail?: string;
   clientAddress?: string;
   clientPhone?: string;
+  isClosed?: boolean;
 };

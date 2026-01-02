@@ -14,6 +14,9 @@ import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useUpdateMember } from '@/features/members/api/use-update-member';
 import { useUpdateMemberStatus } from '@/features/members/api/use-update-member-status';
 import { useUpdateLeadsAccess } from '@/features/members/api/use-update-leads-access';
+import { useUpdateInvoicesAccess } from '@/features/members/api/use-update-invoices-access';
+import { useUpdateExpensesAccess } from '@/features/members/api/use-update-expenses-access';
+import { useUpdateActivityLogsAccess } from '@/features/members/api/use-update-activity-logs-access';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { MemberRole } from '@/features/members/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
@@ -34,6 +37,9 @@ export const MembersList = () => {
   const { mutate: updateMember, isPending: isUpdatingMember } = useUpdateMember();
   const { mutate: updateMemberStatus, isPending: isUpdatingStatus } = useUpdateMemberStatus();
   const { mutate: updateLeadsAccess, isPending: isUpdatingLeadsAccess } = useUpdateLeadsAccess();
+  const { mutate: updateInvoicesAccess, isPending: isUpdatingInvoicesAccess } = useUpdateInvoicesAccess();
+  const { mutate: updateExpensesAccess, isPending: isUpdatingExpensesAccess } = useUpdateExpensesAccess();
+  const { mutate: updateActivityLogsAccess, isPending: isUpdatingActivityLogsAccess } = useUpdateActivityLogsAccess();
 
   const handleDeleteMember = async (memberId: string) => {
     const ok = await confirm();
@@ -64,12 +70,42 @@ export const MembersList = () => {
     });
   };
 
-  const isPending = isDeletingMember || isUpdatingMember || isUpdatingStatus || isUpdatingLeadsAccess || allMembers?.documents.length === 1;
+  const isPending = 
+    isDeletingMember || 
+    isUpdatingMember || 
+    isUpdatingStatus || 
+    isUpdatingLeadsAccess || 
+    isUpdatingInvoicesAccess || 
+    isUpdatingExpensesAccess || 
+    isUpdatingActivityLogsAccess || 
+    allMembers?.documents.length === 1;
 
+  // Feature access toggle handlers - following DRY principle
   const handleToggleLeadsAccess = (memberId: string, currentAccess: boolean) => {
     updateLeadsAccess({
       param: { memberId },
       json: { hasLeadsAccess: !currentAccess },
+    });
+  };
+
+  const handleToggleInvoicesAccess = (memberId: string, currentAccess: boolean) => {
+    updateInvoicesAccess({
+      param: { memberId },
+      json: { hasInvoicesAccess: !currentAccess },
+    });
+  };
+
+  const handleToggleExpensesAccess = (memberId: string, currentAccess: boolean) => {
+    updateExpensesAccess({
+      param: { memberId },
+      json: { hasExpensesAccess: !currentAccess },
+    });
+  };
+
+  const handleToggleActivityLogsAccess = (memberId: string, currentAccess: boolean) => {
+    updateActivityLogsAccess({
+      param: { memberId },
+      json: { hasActivityLogsAccess: !currentAccess },
     });
   };
 
@@ -213,6 +249,7 @@ export const MembersList = () => {
 
                   {isAdmin && !isAdminLoading && (
                     <>
+                      {/* Feature Access Controls */}
                       <DropdownMenuItem
                         className="font-medium"
                         onClick={() => handleToggleLeadsAccess(member.$id, member.hasLeadsAccess || false)}
@@ -230,6 +267,58 @@ export const MembersList = () => {
                           </>
                         )}
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="font-medium"
+                        onClick={() => handleToggleInvoicesAccess(member.$id, member.hasInvoicesAccess || false)}
+                        disabled={isPending}
+                      >
+                        {member.hasInvoicesAccess ? (
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Revoke Invoices Access
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Grant Invoices Access
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="font-medium"
+                        onClick={() => handleToggleExpensesAccess(member.$id, member.hasExpensesAccess || false)}
+                        disabled={isPending}
+                      >
+                        {member.hasExpensesAccess ? (
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Revoke Expenses Access
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Grant Expenses Access
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="font-medium"
+                        onClick={() => handleToggleActivityLogsAccess(member.$id, member.hasActivityLogsAccess || false)}
+                        disabled={isPending}
+                      >
+                        {member.hasActivityLogsAccess ? (
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Revoke Activity Logs Access
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="h-4 w-4 mr-2" />
+                            Grant Activity Logs Access
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem
                         className="font-medium text-orange-600"
                         onClick={() => handleToggleMemberStatus(member.$id, member.isActive !== false)}

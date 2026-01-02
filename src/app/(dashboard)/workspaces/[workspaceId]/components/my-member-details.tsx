@@ -100,7 +100,10 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
     }
 
     // Calculate project statistics
-    // Projects where member has tasks
+    // All accessible projects (not just where member has tasks)
+    const allAccessibleProjects = projects
+
+    // Projects where member has tasks (for task-related stats)
     const myProjects = projects.filter((project) => memberStats.projects.has(project.$id))
 
     // Count tasks per project for statistics
@@ -122,7 +125,7 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
 
     // Calculate project stats
     const projectStats = {
-      total: myProjects.length,
+      total: allAccessibleProjects.length, // Total accessible projects
       withTasks: myProjects.filter((project) => {
         const stats = projectTaskMap.get(project.$id)
         return stats && stats.total > 0
@@ -342,7 +345,7 @@ export const MyMemberDetails = ({ member, tasks, leads, projects, attendance, wo
               <span className="text-sm font-medium">Projects</span>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-bold">{stats.projectStats.withPendingTasks}</div>
+              <div className="text-2xl font-bold">{stats.projectStats.total}</div>
               <p className="text-xs text-muted-foreground">Active projects</p>
             </div>
 

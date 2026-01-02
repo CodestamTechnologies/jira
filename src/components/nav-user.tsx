@@ -14,7 +14,6 @@ import {
   IconCreditCard,
   IconDotsVertical,
   IconLogout,
-  IconNotification,
 } from "@tabler/icons-react"
 import { CreditCard, LogOut, User } from "lucide-react"
 import { useState, useMemo } from "react"
@@ -125,10 +124,6 @@ export function NavUser() {
                 <DropdownMenuItem disabled={isPending}>
                   <CreditCard className="size-4" />
                   Billing
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled={isPending}>
-                  <IconNotification className="size-4" />
-                  Notifications
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

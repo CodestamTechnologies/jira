@@ -13,3 +13,7 @@ interface ExpenseListProps {
 export const ExpenseList = ({ projectId }: ExpenseListProps) => {
   return <ExpenseTable projectId={projectId} />;
 };
+
+
+
+

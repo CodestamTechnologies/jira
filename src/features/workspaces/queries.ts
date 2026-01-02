@@ -4,6 +4,7 @@ import { type Models, Query } from 'node-appwrite';
 
 import { DATABASE_ID, IMAGES_BUCKET_ID, MEMBERS_ID, WORKSPACES_ID } from '@/config/db';
 import { createSessionClient } from '@/lib/appwrite';
+import { getCachedImagesBatch } from '@/lib/cache/image-cache';
 
 export const getWorkspaces = async () => {
   try {
@@ -21,21 +22,19 @@ export const getWorkspaces = async () => {
       Query.orderDesc('$createdAt'),
     ]);
 
-    const workspacesWithImages: Models.Document[] = await Promise.all(
-      workspaces.documents.map(async (workspace) => {
-        let imageUrl: string | undefined = undefined;
+    // Batch fetch all workspace images at once (much more efficient)
+    const workspaceImageIds = workspaces.documents
+      .map((w) => w.imageId)
+      .filter((id): id is string => Boolean(id));
+    const workspaceImages = await getCachedImagesBatch(storage, IMAGES_BUCKET_ID, workspaceImageIds);
 
-        if (workspace.imageId) {
-          const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, workspace.imageId);
-          imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
-        }
-
-        return {
-          ...workspace,
-          imageUrl,
-        };
-      }),
-    );
+    const workspacesWithImages: Models.Document[] = workspaces.documents.map((workspace) => {
+      const imageUrl = workspace.imageId ? workspaceImages.get(workspace.imageId) : undefined;
+      return {
+        ...workspace,
+        imageUrl,
+      };
+    });
 
     return {
       documents: workspacesWithImages,

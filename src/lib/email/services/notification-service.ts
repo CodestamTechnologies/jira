@@ -9,22 +9,13 @@ import type { Member } from '@/features/members/types'
 import type { Workspace } from '@/features/workspaces/types'
 import type { Project } from '@/features/projects/types'
 import type { Task } from '@/features/tasks/types'
-import { InAppNotificationService } from '@/features/notifications/server/notification-service'
-import { NotificationType } from '@/features/notifications/types'
-import { getMemberUserIds } from '@/features/notifications/utils/get-member-user-ids'
-import { createNotificationBackground } from '@/lib/notifications/utils/create-notification-background'
-
 /**
  * Notification service following SOLID principles
- * Single Responsibility: Handles all email and in-app notifications
+ * Single Responsibility: Handles email notifications only
  * Dependency Injection: Receives dependencies as parameters
  */
 export class NotificationService {
-  private inAppNotificationService: InAppNotificationService
-
-  constructor(private databases: Databases) {
-    this.inAppNotificationService = new InAppNotificationService(databases)
-  }
+  constructor(private databases: Databases) {}
 
   /**
    * Send email to a single member
@@ -218,30 +209,6 @@ export class NotificationService {
   ): Promise<void> {
     if (assigneeIds.length === 0) return
 
-    // Create in-app notifications (non-blocking)
-    createNotificationBackground(async () => {
-      const { users } = await createAdminClient()
-      const creatorUser = await users.get(createdBy)
-      const creatorName = creatorUser.name || creatorUser.email || 'Team Member'
-
-      // Convert member IDs to user IDs using utility function
-      const userIds = await getMemberUserIds(this.databases, assigneeIds)
-
-      const taskName = task.name || 'Untitled Task'
-      await this.inAppNotificationService.createNotificationsForUsers(
-        userIds,
-        NotificationType.TASK_ASSIGNED,
-        `New Task Assigned: ${taskName}`,
-        `${creatorName} assigned you a new task "${taskName}" in ${projectName}`,
-        `/workspaces/${task.workspaceId}/tasks/${task.$id}`,
-        {
-          taskId: task.$id,
-          projectId: task.projectId,
-          workspaceId: task.workspaceId,
-        }
-      )
-    })
-
     // Send email notifications
     sendEmailBackground(async () => {
       const { getTaskCreatedEmailTemplate } = await import('@/lib/email/templates/task-email-templates')
@@ -274,29 +241,6 @@ export class NotificationService {
     newAssigneeIds: string[]
   ): Promise<void> {
     if (newAssigneeIds.length === 0) return
-
-    // Create in-app notifications (non-blocking)
-    createNotificationBackground(async () => {
-      const { users } = await createAdminClient()
-      const assignerUser = await users.get(assignedBy)
-      const assignerName = assignerUser.name || assignerUser.email || 'Team Member'
-
-      // Convert member IDs to user IDs using utility function
-      const userIds = await getMemberUserIds(this.databases, newAssigneeIds)
-
-      await this.inAppNotificationService.createNotificationsForUsers(
-        userIds,
-        NotificationType.TASK_ASSIGNED,
-        `Task Assigned: ${task.name}`,
-        `${assignerName} assigned you the task "${task.name}" in ${projectName}`,
-        `/workspaces/${task.workspaceId}/tasks/${task.$id}`,
-        {
-          taskId: task.$id,
-          projectId: task.projectId,
-          workspaceId: task.workspaceId,
-        }
-      )
-    })
 
     // Send email notifications
     sendEmailBackground(async () => {
@@ -332,29 +276,6 @@ export class NotificationService {
     assigneeIds: string[]
   ): Promise<void> {
     if (assigneeIds.length === 0) return
-
-    // Create in-app notifications (non-blocking)
-    createNotificationBackground(async () => {
-      const { users } = await createAdminClient()
-      const changerUser = await users.get(changedBy)
-      const changerName = changerUser.name || changerUser.email || 'Team Member'
-
-      // Convert member IDs to user IDs using utility function
-      const userIds = await getMemberUserIds(this.databases, assigneeIds)
-
-      await this.inAppNotificationService.createNotificationsForUsers(
-        userIds,
-        NotificationType.TASK_UPDATED,
-        `Task Status Updated: ${task.name}`,
-        `${changerName} changed the status of "${task.name}" from ${oldStatus} to ${newStatus}`,
-        `/workspaces/${task.workspaceId}/tasks/${task.$id}`,
-        {
-          taskId: task.$id,
-          projectId: task.projectId,
-          workspaceId: task.workspaceId,
-        }
-      )
-    })
 
     // Send email notifications
     sendEmailBackground(async () => {
@@ -428,29 +349,6 @@ export class NotificationService {
   ): Promise<void> {
     if (mentionedMemberIds.length === 0) return
 
-    // Create in-app notifications (non-blocking)
-    createNotificationBackground(async () => {
-      const { users } = await createAdminClient()
-      const authorUser = await users.get(commentAuthor)
-      const authorName = authorUser.name || authorUser.email || 'Team Member'
-
-      // Convert member IDs to user IDs using utility function
-      const userIds = await getMemberUserIds(this.databases, Array.from(mentionedMemberIds))
-
-      await this.inAppNotificationService.createNotificationsForUsers(
-        userIds,
-        NotificationType.TASK_MENTIONED,
-        `You were mentioned in: ${task.name}`,
-        `${authorName} mentioned you in a comment on "${task.name}"`,
-        `/workspaces/${task.workspaceId}/tasks/${task.$id}`,
-        {
-          taskId: task.$id,
-          projectId: task.projectId,
-          workspaceId: task.workspaceId,
-        }
-      )
-    })
-
     // Send email notifications
     sendEmailBackground(async () => {
       const { getTaskMentionedEmailTemplate } = await import('@/lib/email/templates/comment-email-templates')
@@ -484,34 +382,6 @@ export class NotificationService {
     excludeUserId?: string
   ): Promise<void> {
     if (assigneeIds.length === 0) return
-
-    // Create in-app notifications (non-blocking)
-    createNotificationBackground(async () => {
-      const { users } = await createAdminClient()
-      const authorUser = await users.get(commentAuthor)
-      const authorName = authorUser.name || authorUser.email || 'Team Member'
-
-      // Get all member user IDs first
-      const allUserIds = await getMemberUserIds(this.databases, assigneeIds)
-      
-      // Filter out the comment author's user ID
-      const userIds = allUserIds.filter((userId) => userId !== excludeUserId)
-
-      if (userIds.length > 0) {
-        await this.inAppNotificationService.createNotificationsForUsers(
-          userIds,
-          NotificationType.TASK_COMMENTED,
-          `New comment on: ${task.name}`,
-          `${authorName} commented on "${task.name}"`,
-          `/workspaces/${task.workspaceId}/tasks/${task.$id}`,
-          {
-            taskId: task.$id,
-            projectId: task.projectId,
-            workspaceId: task.workspaceId,
-          }
-        )
-      }
-    })
 
     // Send email notifications
     sendEmailBackground(async () => {

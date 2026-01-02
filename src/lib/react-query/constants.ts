@@ -21,7 +21,7 @@ export const CACHE_TIMES = {
   /** Frequently changing data (e.g., tasks, comments) */
   FREQUENT: 60 * 1000, // 1 minute
 
-  /** Time-sensitive data (e.g., notifications, pending tasks) */
+  /** Time-sensitive data (e.g., pending tasks) */
   TIME_SENSITIVE: 30 * 1000, // 30 seconds
 
   /** Generated/summarized data that's expensive to compute */
@@ -33,9 +33,6 @@ export const CACHE_TIMES = {
  * How often to automatically refetch data
  */
 export const REFETCH_INTERVALS = {
-  /** Real-time feel for notifications */
-  NOTIFICATIONS: 60 * 1000, // 60 seconds
-
   /** Dashboard data refresh */
   DASHBOARD: 2 * 60 * 1000, // 2 minutes
 } as const;
@@ -71,5 +68,3 @@ export const QUERY_LIMITS = {
   /** Maximum safe limit (avoid going higher) */
   MAX_SAFE: 1000,
 } as const;
-
-

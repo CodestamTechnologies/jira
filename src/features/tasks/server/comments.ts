@@ -14,6 +14,7 @@ import z from 'zod';
 import { NotificationService } from '@/lib/email/services/notification-service';
 import type { Workspace } from '@/features/workspaces/types';
 import type { Project } from '@/features/projects/types';
+import { getCachedImageDataUrl } from '@/lib/cache/image-cache';
 
 const app = new Hono()
   // Upload file for comment
@@ -70,17 +71,21 @@ const app = new Hono()
       commentDocs.documents.map(async (comment) => {
         const parsedAttachments = parseAttachments(comment.attachments);
 
-        // Add image URLs for image attachments
+        // Add image URLs for image attachments (with caching)
         const attachmentsWithUrls = parsedAttachments
           ? await Promise.all(
             parsedAttachments.map(async (attachment) => {
               if (attachment.fileType.startsWith('image/')) {
                 try {
-                  const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, attachment.fileId);
-                  const base64 = Buffer.from(arrayBuffer).toString('base64');
+                  const fileUrl = await getCachedImageDataUrl(
+                    storage,
+                    IMAGES_BUCKET_ID,
+                    attachment.fileId,
+                    attachment.fileType
+                  );
                   return {
                     ...attachment,
-                    fileUrl: `data:${attachment.fileType};base64,${base64}`,
+                    fileUrl: fileUrl || attachment.fileUrl, // Fallback to original if cache fails
                   };
                 } catch (error) {
                   console.error(`[GET_COMMENT_IMAGE]: Failed to load image ${attachment.fileId}:`, error);
@@ -153,11 +158,16 @@ const app = new Hono()
           if (attachment.fileType.startsWith('image/')) {
             try {
               const storage = ctx.get('storage');
-              const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, attachment.fileId);
-              const base64 = Buffer.from(arrayBuffer).toString('base64');
+              // Use cached image fetching to reduce storage API calls
+              const fileUrl = await getCachedImageDataUrl(
+                storage,
+                IMAGES_BUCKET_ID,
+                attachment.fileId,
+                attachment.fileType
+              );
               return {
                 ...attachment,
-                fileUrl: `data:${attachment.fileType};base64,${base64}`,
+                fileUrl: fileUrl || attachment.fileUrl, // Fallback to original if cache fails
               };
             } catch (error) {
               console.error(`[CREATE_COMMENT_IMAGE]: Failed to load image ${attachment.fileId}:`, error);

@@ -13,3 +13,7 @@ export const DEFAULT_EXPENSE_STATUS = 'approved' as const;
  * Default expense category when creating new expenses
  */
 export const DEFAULT_EXPENSE_CATEGORY = 'other' as const;
+
+
+
+

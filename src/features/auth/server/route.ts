@@ -5,6 +5,7 @@ import { ID } from 'node-appwrite';
 import { z } from 'zod';
 
 import { IMAGES_BUCKET_ID } from '@/config/db';
+import { getCachedImageDataUrl } from '@/lib/cache/image-cache';
 import { AUTH_COOKIE } from '@/features/auth/constants';
 import { signInFormSchema, signUpFormSchema, updateProfileSchema } from '@/features/auth/schema';
 import { createAdminClient } from '@/lib/appwrite';
@@ -45,12 +46,8 @@ const app = new Hono()
     let imageUrl: string | undefined = undefined;
     const imageId = (user.prefs as { imageId?: string })?.imageId;
     if (imageId) {
-      try {
-        const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, imageId);
-        imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
-      } catch (error) {
-        // Ignore error if file doesn't exist
-      }
+      // Use cached image fetching to reduce storage API calls
+      imageUrl = await getCachedImageDataUrl(storage, IMAGES_BUCKET_ID, imageId);
     }
 
     return ctx.json({
@@ -165,8 +162,8 @@ const app = new Hono()
     const imageId = (updatedUser.prefs as { imageId?: string })?.imageId;
     if (imageId) {
       try {
-        const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, imageId);
-        imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+        // Use cached image fetching to reduce storage API calls
+        imageUrl = await getCachedImageDataUrl(storage, IMAGES_BUCKET_ID, imageId);
       } catch (error) {
         // Ignore error if file doesn't exist
       }

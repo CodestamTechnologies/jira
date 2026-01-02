@@ -164,15 +164,6 @@ export function invalidateAttendanceQueries(
   }
 }
 
-/**
- * Invalidates queries related to notifications
- * Use this when notification data changes
- * 
- * @param queryClient - React Query client instance
- */
-export function invalidateNotificationQueries(queryClient: QueryClient) {
-  queryClient.invalidateQueries({ queryKey: ['notifications'] });
-}
 
 /**
  * Invalidates queries related to leads
@@ -231,11 +222,23 @@ export function invalidateMemberQueries(
     exact: true,
   });
 
-  // Invalidate feature access queries (permissions)
-  queryClient.invalidateQueries({
-    queryKey: ['has-leads-access'],
-    exact: false,
-  });
+  // Invalidate all feature access queries (permissions)
+  // Note: Feature access hooks compute access from member data, so invalidating members
+  // automatically refreshes access. However, we invalidate these patterns for completeness
+  // and future-proofing in case direct queries are added.
+  const featureAccessPatterns = [
+    'has-leads-access',
+    'has-invoices-access',
+    'has-expenses-access',
+    'has-activity-logs-access',
+  ]
+  
+  featureAccessPatterns.forEach((pattern) => {
+    queryClient.invalidateQueries({
+      queryKey: [pattern],
+      exact: false,
+    })
+  })
 }
 
 /**

@@ -31,7 +31,7 @@ function makeQueryClient() {
 
         // Don't refetch on window focus by default
         // This reduces unnecessary DB reads when user switches tabs
-        // Individual queries can override this for time-sensitive data (e.g., notifications)
+        // Individual queries can override this for time-sensitive data
         refetchOnWindowFocus: false,
 
         // Don't refetch on reconnect by default

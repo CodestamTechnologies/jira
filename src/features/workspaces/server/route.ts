@@ -19,6 +19,7 @@ import { sessionMiddleware } from '@/lib/session-middleware';
 import { generateInviteCode } from '@/lib/utils';
 import { NotificationService } from '@/lib/email/services/notification-service';
 import { logActivityBackground } from '@/lib/activity-logs/utils/log-activity-background';
+import { getCachedImageDataUrl, getCachedImagesBatch } from '@/lib/cache/image-cache';
 
 const app = new Hono()
   .get('/', sessionMiddleware, async (ctx) => {
@@ -37,21 +38,19 @@ const app = new Hono()
       Query.orderDesc('$createdAt'),
     ]);
 
-    const workspacesWithImages: Models.Document[] = await Promise.all(
-      workspaces.documents.map(async (workspace) => {
-        let imageUrl: string | undefined = undefined;
+    // Batch fetch all workspace images at once (much more efficient)
+    const workspaceImageIds = workspaces.documents
+      .map((w) => w.imageId)
+      .filter((id): id is string => Boolean(id));
+    const workspaceImages = await getCachedImagesBatch(storage, IMAGES_BUCKET_ID, workspaceImageIds);
 
-        if (workspace.imageId) {
-          const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, workspace.imageId);
-          imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
-        }
-
-        return {
-          ...workspace,
-          imageUrl,
-        };
-      }),
-    );
+    const workspacesWithImages: Models.Document[] = workspaces.documents.map((workspace) => {
+      const imageUrl = workspace.imageId ? workspaceImages.get(workspace.imageId) : undefined;
+      return {
+        ...workspace,
+        imageUrl,
+      };
+    });
 
     return ctx.json({
       data: {
@@ -144,12 +143,10 @@ const app = new Hono()
 
     const workspace = await databases.getDocument<Workspace>(DATABASE_ID, WORKSPACES_ID, workspaceId);
 
-    let imageUrl: string | undefined = undefined;
-
-    if (workspace.imageId) {
-      const arrayBuffer = await storage.getFileView(IMAGES_BUCKET_ID, workspace.imageId);
-      imageUrl = `data:image/png;base64,${Buffer.from(arrayBuffer).toString('base64')}`;
-    }
+    // Use cached image fetching to reduce storage API calls
+    const imageUrl = workspace.imageId
+      ? await getCachedImageDataUrl(storage, IMAGES_BUCKET_ID, workspace.imageId)
+      : undefined;
 
     return ctx.json({
       data: {

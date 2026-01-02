@@ -17,3 +17,7 @@ export const getBillUrl = (fileId: string): string => {
   
   return `${endpoint}/storage/buckets/${IMAGES_BUCKET_ID}/files/${fileId}/view?project=${projectId}`;
 };
+
+
+
+
