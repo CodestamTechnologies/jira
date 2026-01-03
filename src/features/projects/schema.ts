@@ -20,5 +20,5 @@ export const updateProjectSchema = z.object({
   clientEmail: z.string().email('Invalid email address.').optional().or(z.literal('')),
   clientAddress: z.string().optional(),
   clientPhone: z.string().optional(),
-  isClosed: z.boolean().optional(),
+  isClosed: z.coerce.boolean().optional(),
 });
