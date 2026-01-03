@@ -18,7 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDeleteProject } from '@/features/projects/api/use-delete-project';
 import { useUpdateProject } from '@/features/projects/api/use-update-project';
-import { updateProjectSchema } from '@/features/projects/schema';
+import { useUpdateProjectStatus } from '@/features/projects/api/use-update-project-status';
+import { updateProjectSchema, updateProjectStatusSchema } from '@/features/projects/schema';
 import type { Project } from '@/features/projects/types';
 import { useConfirm } from '@/hooks/use-confirm';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
   const [DeleteDialog, confirmDelete] = useConfirm('Delete project', 'This action cannot be undone.', 'destructive');
 
   const { mutate: updateProject, isPending: isUpdatingProject } = useUpdateProject();
+  const { mutate: updateProjectStatus, isPending: isUpdatingStatus } = useUpdateProjectStatus();
   const { mutate: deleteProject, isPending: isDeletingProject } = useDeleteProject();
 
   const updateProjectForm = useForm<z.infer<typeof updateProjectSchema>>({
@@ -45,6 +47,13 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
       clientEmail: initialValues.clientEmail ?? '',
       clientAddress: initialValues.clientAddress ?? '',
       clientPhone: initialValues.clientPhone ?? '',
+    },
+  });
+
+  const updateStatusForm = useForm<z.infer<typeof updateProjectStatusSchema>>({
+    resolver: zodResolver(updateProjectStatusSchema),
+    defaultValues: {
+      workspaceId: initialValues.workspaceId,
       isClosed: initialValues.isClosed ?? false,
     },
   });
@@ -55,13 +64,18 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
       image: values.image instanceof File ? values.image : '',
     };
 
-    // Convert boolean to string for FormData compatibility
-    if (values.isClosed !== undefined) {
-      finalValues.isClosed = String(values.isClosed);
-    }
-
     updateProject({
       form: finalValues as any,
+      param: { projectId: initialValues.$id },
+    });
+  };
+
+  const handleStatusChange = (checked: boolean) => {
+    updateProjectStatus({
+      form: {
+        workspaceId: initialValues.workspaceId,
+        isClosed: String(checked),
+      },
       param: { projectId: initialValues.$id },
     });
   };
@@ -94,7 +108,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
     );
   };
 
-  const isPending = isUpdatingProject || isDeletingProject;
+  const isPending = isUpdatingProject || isDeletingProject || isUpdatingStatus;
 
   return (
     <div className="flex flex-col gap-y-4">
@@ -270,14 +284,17 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
 
                   <FormField
                     disabled={isPending}
-                    control={updateProjectForm.control}
+                    control={updateStatusForm.control}
                     name="isClosed"
                     render={({ field }) => (
                       <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
-                            onCheckedChange={field.onChange}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              handleStatusChange(checked as boolean);
+                            }}
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none">

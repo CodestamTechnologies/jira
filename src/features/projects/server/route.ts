@@ -12,7 +12,7 @@ import { logActivityBackground } from '@/lib/activity-logs/utils/log-activity-ba
 import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
-import { createProjectSchema, updateProjectSchema } from '@/features/projects/schema';
+import { createProjectSchema, updateProjectSchema, updateProjectStatusSchema } from '@/features/projects/schema';
 import type { Project } from '@/features/projects/types';
 import { isProjectClosed } from '@/features/projects/utils';
 import { type Task, TaskStatus } from '@/features/tasks/types';
@@ -362,7 +362,7 @@ const app = new Hono()
     const user = ctx.get('user');
 
     const { projectId } = ctx.req.param();
-    const { name, image, clientEmail, clientAddress, clientPhone, isClosed } = ctx.req.valid('form');
+    const { name, image, clientEmail, clientAddress, clientPhone } = ctx.req.valid('form');
 
     const existingProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
 
@@ -411,7 +411,6 @@ const app = new Hono()
     if (clientEmail !== undefined) updateData.clientEmail = clientEmail || undefined;
     if (clientAddress !== undefined) updateData.clientAddress = clientAddress || undefined;
     if (clientPhone !== undefined) updateData.clientPhone = clientPhone || undefined;
-    if (isClosed !== undefined) updateData.isClosed = isClosed;
 
     const project = await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, updateData);
 
@@ -442,6 +441,55 @@ const app = new Hono()
         metadata,
       });
     }
+
+    return ctx.json({ data: project });
+  })
+  .patch('/:projectId/status', sessionMiddleware, zValidator('form', updateProjectStatusSchema), async (ctx) => {
+    const databases = ctx.get('databases');
+    const user = ctx.get('user');
+
+    const { projectId } = ctx.req.param();
+    const { isClosed } = ctx.req.valid('form');
+
+    const existingProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
+
+    const member = await getMember({
+      databases,
+      workspaceId: existingProject.workspaceId,
+      userId: user.$id,
+    });
+
+    if (!member) {
+      return ctx.json(
+        {
+          error: 'Unauthorized.',
+        },
+        401,
+      );
+    }
+
+    const project = await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, {
+      isClosed,
+    });
+
+    // Log activity
+    const userInfo = getUserInfoForLogging(user);
+    const metadata = getRequestMetadata(ctx);
+    logActivityBackground({
+      databases,
+      action: ActivityAction.UPDATE,
+      entityType: ActivityEntityType.PROJECT,
+      entityId: project.$id,
+      workspaceId: existingProject.workspaceId,
+      userId: userInfo.userId,
+      username: userInfo.username,
+      userEmail: userInfo.userEmail,
+      changes: {
+        old: { isClosed: existingProject.isClosed },
+        new: { isClosed },
+      },
+      metadata,
+    });
 
     return ctx.json({ data: project });
   })
