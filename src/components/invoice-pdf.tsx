@@ -223,9 +223,13 @@ const InvoicePDF: React.FC<InvoiceData> = ({
         <View style={{ marginTop: 6, marginBottom: 6 }}>
           <Text>
             <Text style={styles.key}>SUBTOTAL    : </Text>
-            <Text style={styles.value}>₹{subtotal.toFixed(2)}{"\n"}</Text>
+            <Text style={styles.value}>Rs.{subtotal.toFixed(2)}{"\n"}</Text>
+          </Text>
+          <Text>
             <Text style={styles.key}>TAX ({taxRate}%)    : </Text>
-            <Text style={styles.value}>₹{taxAmount.toFixed(2)}{"\n"}</Text>
+            <Text style={styles.value}>Rs.{taxAmount.toFixed(2)}{"\n"}</Text>
+          </Text>
+          <Text>
             <Text style={{ ...styles.key, fontWeight: 'bold' }}>TOTAL       : </Text>
             <Text style={{ ...styles.value, fontWeight: 'bold' }}>Rs.{total.toFixed(2)}{"\n"}</Text>
           </Text>

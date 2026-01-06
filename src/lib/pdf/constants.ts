@@ -25,7 +25,7 @@ export const BANK_DETAILS = {
   accountNumber: '50200116657331',
   ifsc: 'HDFC0000719',
   branch: 'RANCHI 2ND - RANCHI - JHARKHAND',
-  upi: 'kushwaha.priyanshu@ptyes',
+  upi: null,
 }
 
 // Terms and Conditions - Shared across invoices

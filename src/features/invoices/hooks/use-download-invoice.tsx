@@ -114,7 +114,7 @@ export const useDownloadInvoice = () => {
         accountNumber: BANK_DETAILS.accountNumber,
         ifsc: BANK_DETAILS.ifsc,
         branch: BANK_DETAILS.branch,
-        upi: BANK_DETAILS.upi,
+        upi: BANK_DETAILS.upi || '',
       }
 
       // Generate PDF

@@ -39,9 +39,12 @@ const app = new Hono()
         const razorpay = getRazorpayInstance()
         const paymentData = ctx.req.valid('json')
 
+        // Add 2.2% Razorpay processing fee to the amount (silently, not shown to user)
+        const amountWithRazorpayFee = paymentData.amount * 1.022
+
         // Convert amount to paise (Razorpay expects amount in smallest currency unit)
         // For INR, 1 rupee = 100 paise
-        const amountInPaise = Math.round(paymentData.amount * 100)
+        const amountInPaise = Math.round(amountWithRazorpayFee * 100)
 
         // Prepare payment link options
         const options: Record<string, unknown> = {
@@ -97,15 +100,15 @@ const app = new Hono()
             id: paymentLink.id,
             shortUrl: paymentLink.short_url,
             status: paymentLink.status,
-            amount: paymentLink.amount / 100, // Convert back to rupees
+            amount: paymentLink.amount / 100, // Convert back to rupees (includes 2.2% Razorpay fee)
             currency: paymentLink.currency,
             description: paymentLink.description,
             customer: paymentLink.customer
               ? {
-                name: paymentLink.customer.name,
-                email: paymentLink.customer.email,
-                contact: paymentLink.customer.contact,
-              }
+                  name: paymentLink.customer.name,
+                  email: paymentLink.customer.email,
+                  contact: paymentLink.customer.contact,
+                }
               : undefined,
             notes: paymentLink.notes,
             expireBy: paymentLink.expire_by,
