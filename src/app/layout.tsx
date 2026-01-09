@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import { Antic } from 'next/font/google';
 import type { PropsWithChildren } from 'react';
 
@@ -15,7 +15,24 @@ const antic = Antic({
   weight: '400',
 });
 
-export const metadata: Metadata = siteConfig;
+export const metadata: Metadata = {
+  ...siteConfig,
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Jira Clone',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0052cc',
+};
+
+
 
 const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
   return (
