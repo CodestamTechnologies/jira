@@ -94,7 +94,7 @@ export const WorkCalendar = ({ isAdmin }: WorkCalendarProps) => {
             <CardTitle>Work Calendar</CardTitle>
             <CardDescription>
               {isAdmin
-                ? "Click on dates to toggle their status."
+                ? "Mon-Sat are working days by default. Click to mark exceptions (holidays on weekdays or working Sundays)."
                 : "View working days and holidays."}
             </CardDescription>
           </div>
@@ -103,15 +103,19 @@ export const WorkCalendar = ({ isAdmin }: WorkCalendarProps) => {
         <div className="flex gap-2 text-xs mt-2 flex-wrap">
           <div className="flex items-center gap-1">
             <div className="size-3 rounded border border-green-200 bg-green-100"></div>
-            <span>Holiday (Custom)</span>
+            <span>Holiday (Override)</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="size-3 rounded border border-blue-200 bg-blue-100"></div>
-            <span>Working Day (Custom)</span>
+            <span>Working Sunday (Override)</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="size-3 text-red-500 font-bold">Sun</div>
             <span>Sunday (Default Holiday)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="size-3 text-gray-700">Mon-Sat</div>
+            <span>Default Working Days</span>
           </div>
         </div>
       </CardHeader>
@@ -127,7 +131,7 @@ export const WorkCalendar = ({ isAdmin }: WorkCalendarProps) => {
             modifiers={modifiers}
             modifiersClassNames={{
               customHoliday: "bg-green-100 text-green-700 font-bold border border-green-200 rounded-md hover:bg-green-200",
-              customWorking: "bg-blue-100 text-blue-700 font-bold border border-blue-200 rounded-md hover:bg-blue-200",
+              
               defaultHoliday: "text-red-500 font-medium"
             }}
             className="pointer-events-auto"

@@ -119,7 +119,7 @@ export const countWorkingDays = (startDate: string, endDate: string, specialDays
 
   daysResult.forEach((day) => {
     const dateStr = format(day, 'yyyy-MM-dd');
-    const specialDay = specialDays.find((sd) => sd.date === dateStr);
+    const specialDay = specialDays.find((sd) => sd.date.split('T')[0] === dateStr);
 
     if (specialDay) {
       if (specialDay.type === 'working') {
@@ -143,7 +143,7 @@ export const countWorkingDays = (startDate: string, endDate: string, specialDays
 export const isWorkingDay = (date: string, specialDays: SpecialDay[] = []): boolean => {
   const day = new Date(date);
   const dateStr = format(day, 'yyyy-MM-dd');
-  const specialDay = specialDays.find((sd) => sd.date === dateStr);
+  const specialDay = specialDays.find((sd) => sd.date.split('T')[0] === dateStr);
 
   if (specialDay) {
     return specialDay.type === 'working';
