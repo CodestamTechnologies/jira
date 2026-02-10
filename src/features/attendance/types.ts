@@ -48,3 +48,12 @@ export interface AttendanceFilters {
   status?: 'present' | 'absent' | 'late' | 'half-day';
   userId?: string;
 }
+
+import { Models } from 'node-appwrite';
+
+export interface SpecialDay extends Models.Document {
+  workspaceId: string;
+  date: string;
+  type: 'holiday' | 'working';
+  description?: string;
+}

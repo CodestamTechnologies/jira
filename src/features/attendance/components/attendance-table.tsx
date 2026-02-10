@@ -168,7 +168,7 @@ export const AttendanceTable = () => {
           <>
             <ScrollArea className="w-full whitespace-nowrap rounded-md border">
               <div className="min-w-full inline-block">
-                <Table>
+                <Table className="w-[60vw] overflow-x-auto">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[120px]">Date</TableHead>
@@ -176,9 +176,9 @@ export const AttendanceTable = () => {
                       <TableHead className="w-[100px]">Check In</TableHead>
                       <TableHead className="w-[100px]">Check Out</TableHead>
                       <TableHead className="w-[100px]">Hours</TableHead>
-                      <TableHead className="min-w-[200px]">Check In Location</TableHead>
-                      <TableHead className="min-w-[200px]">Check Out Location</TableHead>
-                      <TableHead className="min-w-[300px]">Daily Summary</TableHead>
+                      <TableHead className="w-[100px]">Check In Location</TableHead>
+                      <TableHead className="w-[100px]">Check Out Location</TableHead>
+                      <TableHead className="w-[100px]">Daily Summary</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -203,10 +203,14 @@ export const AttendanceTable = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                            <span>{format(new Date(record.checkInTime), 'HH:mm')}</span>
-                          </div>
+                          {record.checkInTime ? (
+                            <div className="flex items-center gap-1.5">
+                              <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                              <span>{format(new Date(record.checkInTime), 'HH:mm')}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {record.checkOutTime ? (
