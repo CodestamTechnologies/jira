@@ -106,15 +106,15 @@ export const WorkCalendar = ({ isAdmin }: WorkCalendarProps) => {
             <span>Holiday (Override)</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="size-3 rounded border border-blue-200 bg-blue-100"></div>
+            <div className="size-3 rounded border "></div>
             <span>Working Sunday (Override)</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="size-3 text-red-500 font-bold">Sun</div>
+            {/* <div className="size-3 text-red-500 font-bold">Sun</div> */}
             <span>Sunday (Default Holiday)</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="size-3 text-gray-700">Mon-Sat</div>
+            {/* <div className="size-3 text-gray-700">Mon-Sat</div> */}
             <span>Default Working Days</span>
           </div>
         </div>
