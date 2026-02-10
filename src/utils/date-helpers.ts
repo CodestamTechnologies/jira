@@ -1,4 +1,5 @@
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, eachDayOfInterval, isSaturday, isSunday, isSameDay } from 'date-fns';
+import type { SpecialDay } from '@/features/attendance/types';
 
 /**
  * Date utility functions
@@ -26,7 +27,7 @@ export const getTodayDateRange = (): { start: string; end: string } => {
   const now = new Date();
   const start = startOfDay(now);
   const end = endOfDay(now);
-  
+
   return {
     start: start.toISOString(),
     end: end.toISOString(),
@@ -101,4 +102,72 @@ export const formatDate = (date: string): string => {
 export const isToday = (date: string): boolean => {
   const today = getTodayDateString();
   return date === today;
+};
+
+/**
+ * Counts working days in a range, considering special days.
+ * Default: Mon-Sat working, Sun holiday.
+ */
+export const countWorkingDays = (startDate: string, endDate: string, specialDays: SpecialDay[] = []): number => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (start > end) return 0;
+
+  const daysResult = eachDayOfInterval({ start, end });
+  let count = 0;
+
+  daysResult.forEach((day) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const specialDay = specialDays.find((sd) => sd.date === dateStr);
+
+    if (specialDay) {
+      if (specialDay.type === 'working') {
+        count++;
+      }
+      // If 'holiday', do nothing (don't count)
+    } else {
+      // Default logic: Mon-Sat are working days, Sunday is holiday
+      if (!isSunday(day)) {
+        count++;
+      }
+    }
+  });
+
+  return count;
+};
+
+/**
+ * Checks if a specific date is a working day.
+ */
+export const isWorkingDay = (date: string, specialDays: SpecialDay[] = []): boolean => {
+  const day = new Date(date);
+  const dateStr = format(day, 'yyyy-MM-dd');
+  const specialDay = specialDays.find((sd) => sd.date === dateStr);
+
+  if (specialDay) {
+    return specialDay.type === 'working';
+  }
+
+  // Default: Mon-Sat working
+  return !isSunday(day);
+};
+
+export const getWorkingDaysInRange = (startDate: string, endDate: string, specialDays: SpecialDay[] = []): string[] => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (start > end) return [];
+
+  const daysResult = eachDayOfInterval({ start, end });
+  const workingDays: string[] = [];
+
+  daysResult.forEach((day) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    if (isWorkingDay(dateStr, specialDays)) {
+      workingDays.push(dateStr);
+    }
+  });
+
+  return workingDays;
 };

@@ -59,6 +59,11 @@ const NAV_MAIN_ITEMS: NavItem[] = [
     icon: TrendingUp,
   },
   {
+    title: "Calendar",
+    url: "/calendar",
+    icon: Clock,
+  },
+  {
     title: "Attendance",
     url: "/attendance",
     icon: Clock,

@@ -12,6 +12,7 @@ import { useCheckIn } from '../api/use-check-in';
 import { useCheckOut } from '../api/use-check-out';
 import { useGetTodayAttendance } from '../api/use-get-today-attendance';
 import { useGetPendingTasks } from '../api/use-get-pending-tasks';
+import { useGetSpecialDays } from '../api/use-get-special-days';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useCurrent } from '@/features/auth/api/use-current';
 import { Attendance } from '../types';
@@ -19,6 +20,7 @@ import { CheckoutDialog } from './checkout-dialog';
 import { PendingTasksDialog } from './pending-tasks-dialog';
 import { useLocation } from '../hooks/use-location';
 import { formatHoursAndMinutes } from '../utils';
+import { getTodayDateString, isWorkingDay } from '@/utils/date-helpers';
 
 interface UncommentedTask {
   id: string;
@@ -40,6 +42,7 @@ export const AttendanceCard = () => {
   const { data: user } = useCurrent();
   const { data: todayAttendance, refetch: refetchToday } = useGetTodayAttendance(workspaceId, user?.$id);
   const { data: pendingTasksData, refetch: refetchPendingTasks } = useGetPendingTasks(workspaceId);
+  const { data: specialDays } = useGetSpecialDays({ workspaceId });
   const checkInMutation = useCheckIn();
   const checkOutMutation = useCheckOut();
 
@@ -258,15 +261,31 @@ export const AttendanceCard = () => {
 
           {/* Action Buttons */}
           <div className="space-y-2">
-            {!todayAttendance && (
-              <Button
-                onClick={handleCheckIn}
-                disabled={checkInMutation.isPending || isLoadingLocation}
-                className="w-full"
-              >
-                {isLoadingLocation ? 'Getting Location...' : 'Check In'}
-              </Button>
-            )}
+            {!todayAttendance && (() => {
+              const today = getTodayDateString();
+              const isTodayWorkingDay = isWorkingDay(today, specialDays || []);
+
+              if (!isTodayWorkingDay) {
+                return (
+                  <Alert>
+                    <Calendar className="h-4 w-4" />
+                    <AlertDescription>
+                      Today is a holiday. Attendance is not required.
+                    </AlertDescription>
+                  </Alert>
+                );
+              }
+
+              return (
+                <Button
+                  onClick={handleCheckIn}
+                  disabled={checkInMutation.isPending || isLoadingLocation}
+                  className="w-full"
+                >
+                  {isLoadingLocation ? 'Getting Location...' : 'Check In'}
+                </Button>
+              );
+            })()}
 
             {isCheckedIn && (
               <>
@@ -276,11 +295,11 @@ export const AttendanceCard = () => {
                   variant="outline"
                   className="w-full"
                 >
-                  {isLoadingLocation 
-                    ? 'Getting Location...' 
+                  {isLoadingLocation
+                    ? 'Getting Location...'
                     : uncommentedTasks.length > 0
-                    ? `Check Out (${uncommentedTasks.length} task${uncommentedTasks.length === 1 ? '' : 's'} pending)`
-                    : 'Check Out'}
+                      ? `Check Out (${uncommentedTasks.length} task${uncommentedTasks.length === 1 ? '' : 's'} pending)`
+                      : 'Check Out'}
                 </Button>
                 <CheckoutDialog
                   open={checkoutDialogOpen}

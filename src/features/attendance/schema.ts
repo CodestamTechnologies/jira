@@ -51,3 +51,12 @@ export const attendanceFiltersSchema = z.object({
 export type CreateAttendanceInput = z.infer<typeof createAttendanceSchema>;
 export type UpdateAttendanceInput = z.infer<typeof updateAttendanceSchema>;
 export type AttendanceFiltersInput = z.infer<typeof attendanceFiltersSchema>;
+
+export const specialDaysSchema = z.object({
+  workspaceId: z.string().min(1, 'Workspace ID is required'),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  type: z.enum(['holiday', 'working']),
+  description: z.string().optional(),
+});
+
+export type SpecialDaysInput = z.infer<typeof specialDaysSchema>;
