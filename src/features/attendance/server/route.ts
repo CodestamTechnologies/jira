@@ -150,16 +150,16 @@ app.get('/', async (c) => {
     }
 
     // Order by latest date first (descending)
-    // queries.push(Query.orderDesc('date')); // We will sort manually after filling gaps
+    queries.push(Query.orderDesc('date')); // We will sort manually after filling gaps
 
     // Parse pagination parameters
-    // const pageNumber = page ? parseInt(page, 10) : 1;
-    // const pageSize = limit ? parseInt(limit, 10) : 10;
-    // const offset = (pageNumber - 1) * pageSize;
+    const pageNumber = page ? parseInt(page, 10) : 1;
+    const pageSize = limit ? parseInt(limit, 10) : 10;
+    const offset = (pageNumber - 1) * pageSize;
 
-    // Add pagination to queries - DISABLED for now to handle gap filling
-    // queries.push(Query.limit(pageSize));
-    // queries.push(Query.offset(offset));
+    // Add pagination to queries
+    queries.push(Query.limit(pageSize));
+    queries.push(Query.offset(offset));
 
     // Fetch all records for the range to fill gaps correctly
     // If no range is provided, we might want to limit to current month or similar default?
@@ -831,12 +831,29 @@ app.get('/stats', async (c) => {
 
     const specialDays = specialDaysResponse.documents;
 
+    // Deduplicate attendance records - keep only one record per day (the latest one)
+    const recordsByDate = new Map<string, Attendance>();
+    for (const record of attendanceRecords) {
+      const dateKey = record.date.split('T')[0]; // Extract YYYY-MM-DD
+      const existing = recordsByDate.get(dateKey);
+
+      // Keep the record with the latest update time or the one with checkout if available
+      if (!existing ||
+        (record.checkOutTime && !existing.checkOutTime) ||
+        (record.$updatedAt > existing.$updatedAt)) {
+        recordsByDate.set(dateKey, record);
+      }
+    }
+
+    // Use deduplicated records for all calculations
+    const uniqueAttendanceRecords = Array.from(recordsByDate.values());
+
     const totalWorkingDays = countWorkingDays(joinDate, todayStr, specialDays);
 
-    const presentRecords = attendanceRecords.filter(r => r.status === 'present' || r.status === 'late' || r.status === 'half-day');
-    const presentCount = attendanceRecords.filter(r => r.status === 'present').length;
-    const lateCount = attendanceRecords.filter(r => r.status === 'late').length;
-    const halfDayCount = attendanceRecords.filter(r => r.status === 'half-day').length;
+    const presentRecords = uniqueAttendanceRecords.filter(r => r.status === 'present' || r.status === 'late' || r.status === 'half-day');
+    const presentCount = uniqueAttendanceRecords.filter(r => r.status === 'present').length;
+    const lateCount = uniqueAttendanceRecords.filter(r => r.status === 'late').length;
+    const halfDayCount = uniqueAttendanceRecords.filter(r => r.status === 'half-day').length;
 
     // Absent = Total Working Days - (All present types)
     // Note: This matches "if employee not mark attendance that day then the day would be count as absent"
@@ -844,12 +861,20 @@ app.get('/stats', async (c) => {
     // Ensure absent days isn't negative (in case of data anomalies)
     const absentDays = Math.max(0, totalWorkingDays - totalAttended);
 
+    // Calculate average hours only from records that have totalHours (completed check-outs)
+    const recordsWithHours = uniqueAttendanceRecords.filter(r => r.totalHours && r.totalHours > 0);
+    const totalHours = recordsWithHours.reduce((acc, r) => acc + (r.totalHours || 0), 0);
+    const averageHours = recordsWithHours.length > 0 ? totalHours / recordsWithHours.length : 0;
+    console.log('Unique records count:', uniqueAttendanceRecords.length);
+    console.log('Records with hours:', recordsWithHours.length);
+    console.log('Total hours:', totalHours);
+    console.log('Average hours:', averageHours);
     const stats = {
       totalDays: attendanceRecords.length, // This is just records count, might want to rename or clarify
       presentDays: presentCount,
       absentDays: absentDays, // Calculated!
       lateDays: lateCount,
-      averageHours: attendanceRecords.reduce((acc, r) => acc + (r.totalHours || 0), 0) / attendanceRecords.length || 0,
+      averageHours: averageHours,
       currentStreak: 0, // This would need to be calculated based on consecutive days
     };
 
