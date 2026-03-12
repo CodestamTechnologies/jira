@@ -119,7 +119,12 @@ export const ProjectsPageClient = () => {
                             className="size-10 shrink-0"
                             fallbackClassName="text-sm"
                           />
-                          <p className="line-clamp-2 text-sm font-medium flex-1">{project.name}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="line-clamp-2 text-sm font-medium">{project.name}</p>
+                            {project.projectId && (
+                              <p className="text-xs text-muted-foreground mt-0.5 font-mono">{project.projectId}</p>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-x-3 text-xs text-muted-foreground w-full flex-wrap">
                           <span className="line-clamp-1">{counts.total} tasks</span>

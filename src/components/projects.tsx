@@ -44,7 +44,12 @@ export const Projects = () => {
               )}
             >
               <ProjectAvatar image={project.imageUrl} name={project.name} />
-              <span className="truncate text-sm">{project.name}</span>
+              <div className="flex-1 min-w-0">
+                <span className="truncate block text-sm">{project.name}</span>
+                {project.projectId && (
+                  <span className="text-xs text-muted-foreground font-mono truncate block">{project.projectId}</span>
+                )}
+              </div>
             </div>
           </Link>
         );

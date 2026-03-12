@@ -4,21 +4,39 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown, Download, Loader2, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { Invoice } from '@/features/invoices/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import type { Invoice, InvoiceStatus } from '@/features/invoices/types';
 import type { Project } from '@/features/projects/types';
 
 interface InvoiceWithProject extends Invoice {
   projectName?: string;
 }
 
+const STATUS_OPTIONS: InvoiceStatus[] = ['paid', 'pending', 'invalid'];
+
+const statusVariant: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive'> = {
+  paid: 'default',
+  pending: 'secondary',
+  invalid: 'destructive',
+};
+
 interface CreateInvoiceColumnsProps {
   projectMap: Map<string, string>;
   projectsMap: Map<string, Project>;
   onDownload: (invoice: Invoice, project: Project | null) => void;
   onSend: (invoice: Invoice, project: Project | null) => void;
+  onUpdateStatus?: (invoiceId: string, status: InvoiceStatus) => void;
   downloadingInvoiceId?: string | null;
   sendingInvoiceId?: string | null;
+  updatingStatusId?: string | null;
 }
 
 export const createInvoiceColumns = ({
@@ -26,8 +44,10 @@ export const createInvoiceColumns = ({
   projectsMap,
   onDownload,
   onSend,
+  onUpdateStatus,
   downloadingInvoiceId = null,
   sendingInvoiceId = null,
+  updatingStatusId = null,
 }: CreateInvoiceColumnsProps): ColumnDef<InvoiceWithProject>[] => [
     {
       accessorKey: 'invoiceNumber',
@@ -74,6 +94,57 @@ export const createInvoiceColumns = ({
       cell: ({ row }) => {
         const projectName = row.original.projectName || projectMap.get(row.original.projectId) || 'Unknown Project';
         return <p className="text-xs sm:text-sm line-clamp-1">{projectName}</p>;
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: ({ column }) => {
+        return (
+          <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="h-8 px-2 lg:px-4">
+            Status
+            <ArrowUpDown className="ml-2 h-3 w-3" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => {
+        const invoice = row.original;
+        const status = invoice.status ?? 'pending';
+        const isUpdating = updatingStatusId === invoice.$id;
+
+        if (onUpdateStatus) {
+          return (
+            <Select
+              value={status}
+              onValueChange={(value) => onUpdateStatus(invoice.$id, value as InvoiceStatus)}
+              disabled={isUpdating}
+            >
+              <SelectTrigger className="h-8 w-[110px] border-0 bg-transparent shadow-none focus:ring-0">
+                {isUpdating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <SelectValue>
+                    <Badge variant={statusVariant[status]} className="capitalize">
+                      {status}
+                    </Badge>
+                  </SelectValue>
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt} className="capitalize">
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        }
+
+        return (
+          <Badge variant={statusVariant[status]} className="capitalize">
+            {status}
+          </Badge>
+        );
       },
     },
     {

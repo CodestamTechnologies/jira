@@ -90,7 +90,12 @@ const ProjectsList = ({ onClose }: { onClose: () => void }) => {
               <Link href={href} key={project.$id} onClick={handleProjectClick}>
                 <div className="flex cursor-pointer items-center gap-3 rounded-md p-2.5 transition text-muted-foreground hover:text-foreground hover:bg-accent">
                   <ProjectAvatar image={project.imageUrl} name={project.name} />
-                  <span className="truncate text-sm font-medium">{project.name}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="truncate block text-sm font-medium">{project.name}</span>
+                    {project.projectId && (
+                      <span className="text-xs text-muted-foreground font-mono block truncate">{project.projectId}</span>
+                    )}
+                  </div>
                 </div>
               </Link>
             )

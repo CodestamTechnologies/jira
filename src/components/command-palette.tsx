@@ -228,7 +228,10 @@ export const CommandPalette = () => {
                 return (
                   <CommandItem key={project.$id} value={project.name} onSelect={() => handleSelect(href)}>
                     <FolderKanban className="mr-2 h-4 w-4" />
-                    <span>{project.name}</span>
+                    <span className="flex-1 truncate">{project.name}</span>
+                    {project.projectId && (
+                      <span className="text-muted-foreground text-xs font-mono shrink-0 ml-2">{project.projectId}</span>
+                    )}
                     {pathname === href && (
                       <CommandShortcut>Current</CommandShortcut>
                     )}

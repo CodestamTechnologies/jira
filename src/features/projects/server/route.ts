@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator';
 import { endOfMonth, startOfMonth, subMonths } from 'date-fns';
 import { Hono } from 'hono';
+import { randomBytes } from 'node:crypto';
 import { ID, Models, Query } from 'node-appwrite';
 import { z } from 'zod';
 
@@ -61,7 +62,16 @@ const app = new Hono()
       uploadedImageId = image;
     }
 
+    const nameSlug = name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 30) || 'project';
+    const projectId = `PRJ-${nameSlug}-${randomBytes(6).toString('hex').toUpperCase()}`;
+
     const project = await databases.createDocument(DATABASE_ID, PROJECTS_ID, ID.unique(), {
+      projectId,
       name,
       imageId: uploadedImageId,
       workspaceId,

@@ -663,7 +663,12 @@ export const ProjectList = ({ data, total, projectTaskCounts, isAdmin, filters, 
                     <CardContent className="flex flex-col gap-y-2 p-4 items-start">
                       <div className="flex items-center gap-x-2 w-full">
                         <ProjectAvatar name={project.name} image={project.imageUrl} className="size-8 shrink-0" fallbackClassName="text-xs" />
-                        <p className="line-clamp-1 text-sm font-medium flex-1">{project.name}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="line-clamp-1 text-sm font-medium">{project.name}</p>
+                          {project.projectId && (
+                            <p className="text-xs text-muted-foreground font-mono truncate">{project.projectId}</p>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-x-3 text-xs text-muted-foreground w-full flex-wrap">
                         <span className="line-clamp-1">{counts.total} tasks</span>

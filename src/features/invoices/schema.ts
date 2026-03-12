@@ -1,9 +1,12 @@
 import { z } from 'zod';
 
+export const invoiceStatusSchema = z.enum(['paid', 'pending', 'invalid']);
+
 export const createInvoiceSchema = z.object({
   // invoiceNumber is IGNORED - always server-generated for security
   projectId: z.string().min(1, 'Project ID is required.'),
   workspaceId: z.string().min(1, 'Workspace ID is required.'),
+  status: invoiceStatusSchema.optional(),
   items: z
     .array(
       z.object({
@@ -19,4 +22,8 @@ export const createInvoiceSchema = z.object({
   total: z.number().optional(),
   // Payment link URL (optional - can be created before invoice creation)
   paymentLinkUrl: z.string().url('Valid payment link URL is required.').optional(),
+});
+
+export const updateInvoiceStatusSchema = z.object({
+  status: invoiceStatusSchema,
 });

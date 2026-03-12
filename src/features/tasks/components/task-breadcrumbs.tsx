@@ -43,8 +43,11 @@ export const TaskBreadcrumbs = ({ project, task }: TaskBreadcrumbsProps) => {
 
       <ProjectAvatar name={project.name} image={project.imageUrl} className="size-6 lg:size-8" />
 
-      <Link href={`/workspaces/${workspaceId}/projects/${project.$id}`} className="flex items-center">
+      <Link href={`/workspaces/${workspaceId}/projects/${project.$id}`} className="flex items-center gap-x-1.5">
         <p className="m-0 text-sm font-semibold text-muted-foreground transition hover:opacity-75 lg:text-lg leading-none">{project.name}</p>
+        {project.projectId && (
+          <span className="text-xs text-muted-foreground/80 font-mono hidden sm:inline">{project.projectId}</span>
+        )}
       </Link>
 
       <ChevronRight className="size-4 text-muted-foreground lg:size-5 flex-shrink-0" />

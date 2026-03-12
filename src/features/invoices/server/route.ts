@@ -10,7 +10,7 @@ import { getUserInfoForLogging } from '@/features/activity-logs/utils/get-user-i
 import { logActivity } from '@/features/activity-logs/utils/log-activity';
 import { getRequestMetadata } from '@/features/activity-logs/utils/get-request-metadata';
 import { getMember } from '@/features/members/utils';
-import { createInvoiceSchema } from '@/features/invoices/schema';
+import { createInvoiceSchema, updateInvoiceStatusSchema } from '@/features/invoices/schema';
 import type { Invoice } from '@/features/invoices/types';
 import type { Project } from '@/features/projects/types';
 import { generateInvoiceNumberPattern, getEnvironmentPrefix, parseInvoiceNumber } from '@/features/invoices/utils/invoice-number';
@@ -84,7 +84,7 @@ const app = new Hono()
     const user = ctx.get('user');
 
     // Get data from request - invoiceNumber is IGNORED (always server-generated)
-    const { projectId, workspaceId, items, notes, paymentLinkUrl } = ctx.req.valid('json');
+    const { projectId, workspaceId, items, notes, paymentLinkUrl, status } = ctx.req.valid('json');
 
     // Validate items array
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -170,6 +170,7 @@ const app = new Hono()
       environment: CURRENT_ENV, // Store environment for filtering
       projectId,
       workspaceId, // Validated against member access
+      status: status || 'pending', // paid | pending | invalid
       items: JSON.stringify(validItems), // Store as JSON string
       notes: notes?.trim() || undefined,
       subtotal, // Server-calculated
@@ -431,6 +432,55 @@ const app = new Hono()
       } catch (error) {
         console.error('Error updating invoice payment link:', error);
         return ctx.json({ error: 'Failed to update payment link.' }, 500);
+      }
+    },
+  )
+  .patch(
+    '/:id/status',
+    sessionMiddleware,
+    zValidator(
+      'param',
+      z.object({
+        id: z.string().min(1, 'Invoice ID is required'),
+      }),
+    ),
+    zValidator('json', updateInvoiceStatusSchema),
+    async (ctx) => {
+      if (!INVOICES_ID) {
+        return ctx.json({ error: 'Invoice collection is not configured.' }, 500);
+      }
+
+      const databases = ctx.get('databases');
+      const user = ctx.get('user');
+      const { id } = ctx.req.valid('param');
+      const { status } = ctx.req.valid('json');
+
+      try {
+        const invoice = await databases.getDocument<Invoice>(DATABASE_ID, INVOICES_ID, id);
+
+        const member = await getMember({
+          databases,
+          workspaceId: invoice.workspaceId,
+          userId: user.$id,
+        });
+
+        if (!member) {
+          return ctx.json({ error: 'Unauthorized.' }, 401);
+        }
+
+        const updatedInvoice = await databases.updateDocument(DATABASE_ID, INVOICES_ID, id, {
+          status,
+        });
+
+        const invoiceResponse = {
+          ...updatedInvoice,
+          items: typeof updatedInvoice.items === 'string' ? JSON.parse(updatedInvoice.items) : updatedInvoice.items,
+        };
+
+        return ctx.json({ data: invoiceResponse });
+      } catch (error) {
+        console.error('Error updating invoice status:', error);
+        return ctx.json({ error: 'Failed to update invoice status.' }, 500);
       }
     },
   );

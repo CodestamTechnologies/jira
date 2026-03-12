@@ -31,7 +31,12 @@ export const ProjectIdClient = () => {
         <div className="flex items-center gap-x-2">
           <ProjectAvatar name={project.name} image={project.imageUrl} className="size-8" />
 
-          <p className="text-lg font-semibold">{project.name}</p>
+          <div>
+            <p className="text-lg font-semibold">{project.name}</p>
+            {project.projectId && (
+              <p className="text-sm text-muted-foreground font-mono">{project.projectId}</p>
+            )}
+          </div>
         </div>
 
         <div>

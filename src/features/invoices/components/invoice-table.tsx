@@ -12,6 +12,8 @@ import { SendInvoiceDialog } from '@/features/invoices/components/send-invoice-d
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useDownloadInvoice } from '@/features/invoices/hooks/use-download-invoice';
 import { useSendInvoice } from '@/features/invoices/api/use-send-invoice';
+import { useUpdateInvoiceStatus } from '@/features/invoices/api/use-update-invoice-status';
+import type { InvoiceStatus } from '@/features/invoices/types';
 import { pdfBlobToBase64 } from '@/lib/pdf/utils';
 import { toast } from 'sonner';
 import type { Invoice } from '@/features/invoices/types';
@@ -31,10 +33,12 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
   const { data: projectsData } = useGetProjects({ workspaceId });
   const { downloadInvoice, generateInvoicePDF } = useDownloadInvoice();
   const { mutate: sendInvoice, isPending: isSending } = useSendInvoice();
+  const { mutate: updateInvoiceStatus, isPending: isUpdatingStatus } = useUpdateInvoiceStatus();
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<{ invoice: Invoice; project: Project | null } | null>(null);
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
   const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
   // Create a map of project IDs to project names for quick lookup
   const projectMap = useMemo(() => {
@@ -85,6 +89,19 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
       setSendDialogOpen(true);
     },
     [],
+  );
+
+  const handleUpdateStatus = useCallback(
+    (invoiceId: string, status: InvoiceStatus) => {
+      setUpdatingStatusId(invoiceId);
+      updateInvoiceStatus(
+        { param: { id: invoiceId }, json: { status } },
+        {
+          onSettled: () => setUpdatingStatusId(null),
+        },
+      );
+    },
+    [updateInvoiceStatus],
   );
 
   const handleSendInvoice = useCallback(
@@ -144,10 +161,12 @@ export const InvoiceTable = ({ projectId }: InvoiceTableProps) => {
         projectsMap,
         onDownload: handleDownload,
         onSend: handleSendClick,
+        onUpdateStatus: handleUpdateStatus,
         downloadingInvoiceId,
         sendingInvoiceId,
+        updatingStatusId,
       }),
-    [projectMap, projectsMap, handleDownload, handleSendClick, downloadingInvoiceId, sendingInvoiceId],
+    [projectMap, projectsMap, handleDownload, handleSendClick, handleUpdateStatus, downloadingInvoiceId, sendingInvoiceId, updatingStatusId],
   );
 
   if (isLoading) {

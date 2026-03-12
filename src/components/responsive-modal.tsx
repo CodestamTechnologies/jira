@@ -4,21 +4,35 @@ import { useMedia } from 'react-use';
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
+import { cn } from '@/lib/utils';
 
 interface ResponsiveModalProps {
   title: string;
   description: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  contentClassName?: string;
+  overlayClassName?: string;
 }
 
-export const ResponsiveModal = ({ children, title, description, open, onOpenChange }: PropsWithChildren<ResponsiveModalProps>) => {
+export const ResponsiveModal = ({
+  children,
+  title,
+  description,
+  open,
+  onOpenChange,
+  contentClassName,
+  overlayClassName,
+}: PropsWithChildren<ResponsiveModalProps>) => {
   const isDesktop = useMedia('(min-width: 1024px)', true);
 
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="hide-scrollbar max-h-[85vh] w-full overflow-y-auto border-none p-0 sm:max-w-lg">
+        <DialogContent
+          className={cn('hide-scrollbar max-h-[85vh] w-full overflow-y-auto border-none p-0 sm:max-w-lg', contentClassName)}
+          overlayClassName={overlayClassName}
+        >
           <VisuallyHidden.Root>
             <DialogTitle>{title}</DialogTitle>
 
@@ -32,7 +46,7 @@ export const ResponsiveModal = ({ children, title, description, open, onOpenChan
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
+      <DrawerContent className={contentClassName} overlayClassName={overlayClassName}>
         <VisuallyHidden.Root>
           <DrawerTitle>{title}</DrawerTitle>
 
