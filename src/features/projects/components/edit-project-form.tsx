@@ -126,7 +126,12 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
             Back
           </Button>
 
-          <CardTitle className="text-xl font-bold">{initialValues.name}</CardTitle>
+          <div>
+            <CardTitle className="text-xl font-bold">{initialValues.name}</CardTitle>
+            {initialValues.projectId && (
+              <p className="text-sm text-muted-foreground font-mono mt-1">ID: {initialValues.projectId}</p>
+            )}
+          </div>
         </CardHeader>
 
         <div className="px-7">

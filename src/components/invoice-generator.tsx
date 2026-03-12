@@ -23,6 +23,7 @@ import { COMPANY_INFO, BANK_DETAILS, TERMS_AND_CONDITIONS } from '@/lib/pdf/cons
 import { useDownloadWithLogging } from '@/lib/pdf/use-download-with-logging';
 import { generateSafeFilename } from '@/lib/pdf/utils';
 import type { Invoice } from '@/features/invoices/types';
+import { INVOICE_STATUS, type InvoiceStatus } from '@/features/invoices/types';
 
 interface InvoiceItem {
   id: string;
@@ -64,6 +65,7 @@ export const InvoiceGenerator = () => {
     { id: '1', description: '', price: 0 },
   ]);
   const [notes, setNotes] = useState('');
+  const [status, setStatus] = useState<InvoiceStatus>('pending');
 
   // Auto-generated invoice number
   const invoiceNumber = nextInvoiceData?.invoiceNumber || '';
@@ -147,6 +149,7 @@ export const InvoiceGenerator = () => {
       total: serverTotal,
       paymentLinkUrl: paymentLink,
       paymentLinkQrCode: qrCodeDataUrl,
+      status: invoiceData.status ?? 'pending',
     };
 
     // Generate and download PDF
@@ -186,6 +189,7 @@ export const InvoiceGenerator = () => {
     udyamRegistrationNumber: COMPANY_INFO.udyamRegistrationNumber,
     invoiceNumber: invoiceNumber || 'CS/0000/00/00/00',
     invoiceDate: format(new Date(), 'MMM dd, yyyy'),
+    status,
     clientName,
     clientEmail,
     clientAddress,
@@ -286,6 +290,7 @@ export const InvoiceGenerator = () => {
             })),
             notes: notes?.trim() || undefined,
             paymentLinkUrl: paymentLink, // Include payment link if created
+            status,
           },
         },
         {
@@ -414,6 +419,21 @@ export const InvoiceGenerator = () => {
                 {projectsData?.documents?.map((project) => (
                   <SelectItem key={project.$id} value={project.$id}>
                     {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select value={status} onValueChange={(v) => setStatus(v as InvoiceStatus)} disabled={isGeneratingOrCreating}>
+              <SelectTrigger id="status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {INVOICE_STATUS.map((opt) => (
+                  <SelectItem key={opt} value={opt} className="capitalize">
+                    {opt}
                   </SelectItem>
                 ))}
               </SelectContent>

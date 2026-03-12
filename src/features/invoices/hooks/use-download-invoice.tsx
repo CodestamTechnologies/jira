@@ -84,6 +84,7 @@ export const useDownloadInvoice = () => {
         // Invoice Information
         invoiceNumber: invoice.invoiceNumber,
         invoiceDate,
+        status: invoice.status ?? 'pending',
 
         // Client Information
         clientName: project.name || 'N/A',

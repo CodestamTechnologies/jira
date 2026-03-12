@@ -64,6 +64,7 @@ export interface InvoiceData {
   // Invoice Information
   invoiceNumber: string;
   invoiceDate: string;
+  status?: string; // paid | pending | invalid
 
   // Client Information
   clientName: string;
@@ -111,6 +112,7 @@ const InvoicePDF: React.FC<InvoiceData> = ({
   udyamRegistrationNumber,
   invoiceNumber,
   invoiceDate,
+  status,
   clientName,
   clientEmail,
   clientAddress,
@@ -179,6 +181,11 @@ const InvoicePDF: React.FC<InvoiceData> = ({
             <Text>
               <Text style={styles.key}>INVOICE #    : </Text><Text style={styles.value}>{invoiceNumber || 'INV-001'}{"\n"}</Text>
               <Text style={styles.key}>DATE         : </Text><Text style={styles.value}>{invoiceDate}{"\n"}</Text>
+              {status && (
+                <Text>
+                  <Text style={styles.key}>STATUS       : </Text><Text style={styles.value}>{status.charAt(0).toUpperCase() + status.slice(1)}{"\n"}</Text>
+                </Text>
+              )}
             </Text>
           </View>
         </View>
