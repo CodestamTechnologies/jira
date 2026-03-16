@@ -36,6 +36,9 @@ export const ProjectIdClient = () => {
             {project.projectId && (
               <p className="text-sm text-muted-foreground font-mono">{project.projectId}</p>
             )}
+            {project.description && (
+              <p className="mt-2 text-sm text-muted-foreground max-w-2xl">{project.description}</p>
+            )}
           </div>
         </div>
 

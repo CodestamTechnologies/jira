@@ -36,6 +36,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
     resolver: zodResolver(createProjectSchema),
     defaultValues: {
       name: '',
+      description: '',
       image: undefined,
       workspaceId,
     },
@@ -102,6 +103,26 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                       <Input {...field} type="text" placeholder="Enter project name" />
                     </FormControl>
 
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={createProjectForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Brief description of the project"
+                        rows={3}
+                        className="resize-none"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

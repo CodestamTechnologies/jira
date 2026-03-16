@@ -28,7 +28,7 @@ const app = new Hono()
     const storage = ctx.get('storage');
     const user = ctx.get('user');
 
-    const { name, image, workspaceId, clientEmail, clientAddress, clientPhone } = ctx.req.valid('form');
+    const { name, description, image, workspaceId, clientEmail, clientAddress, clientPhone } = ctx.req.valid('form');
 
     const member = await getMember({
       databases,
@@ -73,6 +73,7 @@ const app = new Hono()
     const project = await databases.createDocument(DATABASE_ID, PROJECTS_ID, ID.unique(), {
       projectId,
       name,
+      description: description?.trim() || undefined,
       imageId: uploadedImageId,
       workspaceId,
       clientEmail: clientEmail || undefined,
@@ -372,7 +373,7 @@ const app = new Hono()
     const user = ctx.get('user');
 
     const { projectId } = ctx.req.param();
-    const { name, image, clientEmail, clientAddress, clientPhone } = ctx.req.valid('form');
+    const { name, description, image, clientEmail, clientAddress, clientPhone } = ctx.req.valid('form');
 
     const existingProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
 
@@ -417,6 +418,7 @@ const app = new Hono()
 
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description?.trim() || undefined;
     if (uploadedImageId !== undefined) updateData.imageId = uploadedImageId;
     if (clientEmail !== undefined) updateData.clientEmail = clientEmail || undefined;
     if (clientAddress !== undefined) updateData.clientAddress = clientAddress || undefined;
