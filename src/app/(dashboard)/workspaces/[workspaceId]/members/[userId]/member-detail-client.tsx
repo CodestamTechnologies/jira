@@ -92,6 +92,10 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
   const [ndaDateOpen, setNdaDateOpen] = useState(false)
   const [joiningLetterDate, setJoiningLetterDate] = useState<Date>(new Date())
   const [joiningLetterDateOpen, setJoiningLetterDateOpen] = useState(false)
+  const [salarySlipMonth, setSalarySlipMonth] = useState<string>(
+    new Date().toLocaleString('default', { month: 'long' })
+  )
+  const [salarySlipYear, setSalarySlipYear] = useState<string>(new Date().getFullYear().toString())
   const [salarySlipPayDate, setSalarySlipPayDate] = useState<string>(() =>
     format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd')
   )
@@ -236,6 +240,22 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
 
     setIsGenerating(true)
     try {
+      // Get month index (0-based) from month name
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+      const monthIndex = monthNames.indexOf(salarySlipMonth)
+      if (monthIndex === -1) {
+        toast.error('Invalid month selected')
+        setIsGenerating(false)
+        return
+      }
+
+      const year = parseInt(salarySlipYear)
+      if (isNaN(year)) {
+        toast.error('Invalid year')
+        setIsGenerating(false)
+        return
+      }
+
       const payDateObj = new Date(salarySlipPayDate)
       if (Number.isNaN(payDateObj.getTime())) {
         toast.error('Please enter a valid pay date')
@@ -243,14 +263,7 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
         return
       }
 
-      // Derive month and year from pay date (global single source)
-      const monthIndex = payDateObj.getMonth()
-      const year = payDateObj.getFullYear()
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-      const salarySlipMonth = monthNames[monthIndex]
-      const salarySlipYear = year.toString()
-
-      // Calculate start and end dates for the month of the pay date (for attendance)
+      // Calculate start and end dates for the selected month
       const startDate = new Date(year, monthIndex, 1)
       const endDate = new Date(year, monthIndex + 1, 0) // Last day of the month
       const startDateStr = format(startDate, 'yyyy-MM-dd')
@@ -1026,18 +1039,51 @@ export const MemberDetailClient = ({ workspaceId, userId }: MemberDetailClientPr
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="max-w-xs space-y-2">
-                    <Label htmlFor="salarySlipPayDate">Pay date</Label>
-                    <Input
-                      id="salarySlipPayDate"
-                      type="date"
-                      value={salarySlipPayDate}
-                      onChange={(e) => setSalarySlipPayDate(e.target.value)}
-                      disabled={isGenerating || isSendingSalarySlip}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Month and year for the slip are taken from this date.
-                    </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Month</Label>
+                      <Select value={salarySlipMonth} onValueChange={setSalarySlipMonth}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="January">January</SelectItem>
+                          <SelectItem value="February">February</SelectItem>
+                          <SelectItem value="March">March</SelectItem>
+                          <SelectItem value="April">April</SelectItem>
+                          <SelectItem value="May">May</SelectItem>
+                          <SelectItem value="June">June</SelectItem>
+                          <SelectItem value="July">July</SelectItem>
+                          <SelectItem value="August">August</SelectItem>
+                          <SelectItem value="September">September</SelectItem>
+                          <SelectItem value="October">October</SelectItem>
+                          <SelectItem value="November">November</SelectItem>
+                          <SelectItem value="December">December</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Year</Label>
+                      <Input
+                        type="text"
+                        value={salarySlipYear}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^\d]/g, '')
+                          setSalarySlipYear(value)
+                        }}
+                        placeholder="2025"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="salarySlipPayDate">Pay date</Label>
+                      <Input
+                        id="salarySlipPayDate"
+                        type="date"
+                        value={salarySlipPayDate}
+                        onChange={(e) => setSalarySlipPayDate(e.target.value)}
+                        disabled={isGenerating || isSendingSalarySlip}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex gap-3">
