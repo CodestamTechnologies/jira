@@ -61,6 +61,7 @@ export const InvoiceGenerator = () => {
 
   // Invoice Information
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [invoiceDate, setInvoiceDate] = useState<string>(() => format(new Date(), 'yyyy-MM-dd'));
   const [items, setItems] = useState<InvoiceItem[]>([
     { id: '1', description: '', price: 0 },
   ]);
@@ -188,7 +189,7 @@ export const InvoiceGenerator = () => {
     logoUrl: COMPANY_INFO.logoUrl,
     udyamRegistrationNumber: COMPANY_INFO.udyamRegistrationNumber,
     invoiceNumber: invoiceNumber || 'CS/0000/00/00/00',
-    invoiceDate: format(new Date(), 'MMM dd, yyyy'),
+    invoiceDate: format(new Date(invoiceDate), 'MMM dd, yyyy'),
     status,
     clientName,
     clientEmail,
@@ -391,12 +392,13 @@ export const InvoiceGenerator = () => {
             />
           </div>
           <div className="space-y-2">
-            <Label>Date</Label>
+            <Label htmlFor="invoiceDate">Date</Label>
             <Input
-              type="text"
-              value={format(new Date(), 'MMM dd, yyyy')}
-              disabled
-              className="bg-muted"
+              id="invoiceDate"
+              type="date"
+              value={invoiceDate}
+              onChange={(e) => setInvoiceDate(e.target.value)}
+              disabled={isGeneratingOrCreating}
             />
           </div>
         </div>
