@@ -36,8 +36,9 @@ const app = new Hono()
         const filename = `Salary-Slip-${employeeName.replace(/\s+/g, '-')}-${month}-${year}.pdf`
 
         // Send email with PDF attachment (default CC and BCC are automatically added)
+        // Use verified sending domain (codestam.com must be verified in Resend to use noreply@codestam.com)
         const emailResult = await sendEmailWithDefaults({
-          from: 'Codestam Technologies <noreply@codestam.com>',
+          from: 'Codestam Technologies <noreply@manyblogs.blog>',
           to: employeeEmail,
           subject: `Salary Slip - ${month} ${year}`,
           html: `
