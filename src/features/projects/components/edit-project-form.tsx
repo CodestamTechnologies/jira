@@ -45,6 +45,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
     defaultValues: {
       ...initialValues,
       description: initialValues.description ?? '',
+      link: initialValues.link ?? '',
       image: initialValues.imageUrl ?? '',
       clientEmail: initialValues.clientEmail ?? '',
       clientAddress: initialValues.clientAddress ?? '',
@@ -175,6 +176,21 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                           rows={3}
                           className="resize-none"
                         />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  disabled={isPending}
+                  control={updateProjectForm.control}
+                  name="link"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Link</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="url" placeholder="https://example.com" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
