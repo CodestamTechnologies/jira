@@ -37,6 +37,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
     defaultValues: {
       name: '',
       description: '',
+      link: '',
       image: undefined,
       workspaceId,
     },
@@ -122,6 +123,21 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                         rows={3}
                         className="resize-none"
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={createProjectForm.control}
+                name="link"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Link</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="url" placeholder="https://example.com" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
