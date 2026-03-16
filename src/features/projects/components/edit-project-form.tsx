@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDeleteProject } from '@/features/projects/api/use-delete-project';
 import { useUpdateProject } from '@/features/projects/api/use-update-project';
@@ -43,6 +44,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
     resolver: zodResolver(updateProjectSchema),
     defaultValues: {
       ...initialValues,
+      description: initialValues.description ?? '',
       image: initialValues.imageUrl ?? '',
       clientEmail: initialValues.clientEmail ?? '',
       clientAddress: initialValues.clientAddress ?? '',
@@ -154,6 +156,26 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                         <Input {...field} type="text" placeholder="Enter project name" />
                       </FormControl>
 
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  disabled={isPending}
+                  control={updateProjectForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="Brief description of the project"
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
