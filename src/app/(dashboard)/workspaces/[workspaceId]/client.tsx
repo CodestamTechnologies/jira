@@ -23,6 +23,7 @@ import type { Member } from '@/features/members/types';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useCreateProjectModal } from '@/features/projects/hooks/use-create-project-modal';
+import { getProjectStatusLabel } from '@/features/projects/utils';
 import type { Project } from '@/features/projects/types';
 import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
@@ -677,6 +678,7 @@ export const ProjectList = ({ data, total, projectTaskCounts, isAdmin, filters, 
                         <div aria-hidden className="size-1 rounded-full bg-muted shrink-0" />
                         <span className="line-clamp-1">{counts.people} people</span>
                       </div>
+                      <span className="line-clamp-1 font-medium text-sm">Status: {getProjectStatusLabel(project)} </span>
                     </CardContent>
                   </Card>
                 </Link>

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
+import { getProjectStatusLabel } from '@/features/projects/utils';
 import { useCreateProjectModal } from '@/features/projects/hooks/use-create-project-modal';
 import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
 import { TaskStatus } from '@/features/tasks/types';
@@ -132,7 +133,9 @@ export const ProjectsPageClient = () => {
                           <span className="line-clamp-1">{counts.backlog} backlog</span>
                           <div aria-hidden className="size-1 rounded-full bg-muted shrink-0" />
                           <span className="line-clamp-1">{counts.people} people</span>
+                          
                         </div>
+                        <span className="line-clamp-1 font-medium text-sm">Status: {getProjectStatusLabel(project)} </span>
                       </CardContent>
                     </Card>
                   </Link>

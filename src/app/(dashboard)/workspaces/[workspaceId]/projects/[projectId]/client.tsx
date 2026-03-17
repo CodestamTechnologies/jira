@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGetProject } from '@/features/projects/api/use-get-project';
 import { useGetProjectAnalytics } from '@/features/projects/api/use-get-project-analytics';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
+import { getProjectStatusLabel } from '@/features/projects/utils';
 import { useProjectId } from '@/features/projects/hooks/use-project-id';
 import { TaskViewSwitcher } from '@/features/tasks/components/task-view-switcher';
 
@@ -58,7 +59,7 @@ export const ProjectIdClient = () => {
             <div>
               <p className="text-xs font-medium text-muted-foreground">Status</p>
               <Badge variant={project.isClosed ? 'secondary' : 'default'} className="mt-0.5">
-                {project.isClosed ? 'Closed' : 'Open'}
+                {getProjectStatusLabel(project)}
               </Badge>
             </div>
             {project.link && (
