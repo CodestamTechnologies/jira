@@ -5,7 +5,7 @@ import { ArrowLeft, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldValues, type SubmitHandler } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
@@ -17,11 +17,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDeleteProject } from '@/features/projects/api/use-delete-project';
 import { useUpdateProject } from '@/features/projects/api/use-update-project';
-import { useUpdateProjectStatus } from '@/features/projects/api/use-update-project-status';
-import { updateProjectSchema, updateProjectStatusSchema } from '@/features/projects/schema';
-import type { Project } from '@/features/projects/types';
+import { updateProjectSchema } from '@/features/projects/schema';
+import type { Project, ProjectStatus } from '@/features/projects/types';
+import { PROJECT_STATUSES } from '@/features/projects/types';
 import { useConfirm } from '@/hooks/use-confirm';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +38,6 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
   const [DeleteDialog, confirmDelete] = useConfirm('Delete project', 'This action cannot be undone.', 'destructive');
 
   const { mutate: updateProject, isPending: isUpdatingProject } = useUpdateProject();
-  const { mutate: updateProjectStatus, isPending: isUpdatingStatus } = useUpdateProjectStatus();
   const { mutate: deleteProject, isPending: isDeletingProject } = useDeleteProject();
 
   const updateProjectForm = useForm<z.infer<typeof updateProjectSchema>>({
@@ -50,35 +50,17 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
       clientEmail: initialValues.clientEmail ?? '',
       clientAddress: initialValues.clientAddress ?? '',
       clientPhone: initialValues.clientPhone ?? '',
-    },
-  });
-
-  const updateStatusForm = useForm<z.infer<typeof updateProjectStatusSchema>>({
-    resolver: zodResolver(updateProjectStatusSchema),
-    defaultValues: {
-      workspaceId: initialValues.workspaceId,
+      status: (initialValues.status ?? 'active') as ProjectStatus,
       isClosed: initialValues.isClosed ?? false,
     },
   });
 
-  const onSubmit = (values: z.infer<typeof updateProjectSchema>) => {
-    const finalValues: Record<string, unknown> = {
-      ...values,
-      image: values.image instanceof File ? values.image : '',
-    };
-
+  const onSubmit: SubmitHandler<z.infer<typeof updateProjectSchema>> = (values) => {
     updateProject({
-      form: finalValues as any,
-      param: { projectId: initialValues.$id },
-    });
-  };
-
-  const handleStatusChange = (checked: boolean) => {
-    updateProjectStatus({
       form: {
-        workspaceId: initialValues.workspaceId,
-        isClosed: String(checked),
-      },
+        ...values,
+        image: values.image instanceof File ? values.image : '',
+      } as any,
       param: { projectId: initialValues.$id },
     });
   };
@@ -111,7 +93,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
     );
   };
 
-  const isPending = isUpdatingProject || isDeletingProject || isUpdatingStatus;
+  const isPending = isUpdatingProject || isDeletingProject;
 
   return (
     <div className="flex flex-col gap-y-4">
@@ -143,7 +125,7 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
 
         <CardContent className="p-7">
           <Form {...updateProjectForm}>
-            <form onSubmit={updateProjectForm.handleSubmit(onSubmit)}>
+            <form onSubmit={updateProjectForm.handleSubmit(onSubmit as SubmitHandler<FieldValues>)}>
               <div className="flex flex-col gap-y-4">
                 <FormField
                   disabled={isPending}
@@ -192,6 +174,37 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                       <FormControl>
                         <Input {...field} type="url" placeholder="https://example.com" />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  disabled={isPending}
+                  control={updateProjectForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        disabled={isPending}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PROJECT_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s.charAt(0).toUpperCase() + s.slice(1)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Active, Paused or Closed.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -320,36 +333,27 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                   />
                 </div>
 
-                <Separator />
-
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold">Project Status</h3>
-
-                  <FormField
-                    disabled={isPending}
-                    control={updateStatusForm.control}
-                    name="isClosed"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={(checked) => {
-                              field.onChange(checked);
-                              handleStatusChange(checked as boolean);
-                            }}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Mark project as closed</FormLabel>
-                          <FormDescription>
-                            Closed projects and their tasks will not be shown in the workspace. This action can be reversed.
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  disabled={isPending}
+                  control={updateProjectForm.control}
+                  name="isClosed"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>Mark project as closed</FormLabel>
+                        <FormDescription>
+                          Closed projects and their tasks will not be shown in the workspace.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <Separator className="py-7" />

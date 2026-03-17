@@ -28,7 +28,7 @@ const app = new Hono()
     const storage = ctx.get('storage');
     const user = ctx.get('user');
 
-    const { name, description, link, image, workspaceId, clientEmail, clientAddress, clientPhone } = ctx.req.valid('form');
+    const { name, description, link, image, workspaceId, clientEmail, clientAddress, clientPhone, status } = ctx.req.valid('form');
 
     const member = await getMember({
       databases,
@@ -81,6 +81,7 @@ const app = new Hono()
       clientAddress: clientAddress || undefined,
       clientPhone: clientPhone || undefined,
       isClosed: false, // Explicitly set to false so the field exists for queries
+      status: status ?? 'active',
     });
 
     // Create initial task for the project
@@ -374,7 +375,7 @@ const app = new Hono()
     const user = ctx.get('user');
 
     const { projectId } = ctx.req.param();
-    const { name, description, link, image, clientEmail, clientAddress, clientPhone } = ctx.req.valid('form');
+    const { name, description, link, image, clientEmail, clientAddress, clientPhone, status, isClosed } = ctx.req.valid('form');
 
     const existingProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
 
@@ -425,6 +426,8 @@ const app = new Hono()
     if (clientEmail !== undefined) updateData.clientEmail = clientEmail || undefined;
     if (clientAddress !== undefined) updateData.clientAddress = clientAddress || undefined;
     if (clientPhone !== undefined) updateData.clientPhone = clientPhone || undefined;
+    if (status !== undefined) updateData.status = status;
+    if (isClosed !== undefined) updateData.isClosed = isClosed;
 
     const project = await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, updateData);
 
@@ -463,7 +466,7 @@ const app = new Hono()
     const user = ctx.get('user');
 
     const { projectId } = ctx.req.param();
-    const { isClosed } = ctx.req.valid('form');
+    const { isClosed, status } = ctx.req.valid('form');
 
     const existingProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
 
@@ -482,9 +485,10 @@ const app = new Hono()
       );
     }
 
-    const project = await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, {
-      isClosed,
-    });
+    const updatePayload: { isClosed: boolean; status?: string } = { isClosed };
+    if (status !== undefined) updatePayload.status = status;
+
+    const project = await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, updatePayload);
 
     // Log activity
     const userInfo = getUserInfoForLogging(user);
@@ -499,8 +503,8 @@ const app = new Hono()
       username: userInfo.username,
       userEmail: userInfo.userEmail,
       changes: {
-        old: { isClosed: existingProject.isClosed },
-        new: { isClosed },
+        old: { isClosed: existingProject.isClosed, status: existingProject.status },
+        new: { isClosed, ...(status !== undefined && { status }) },
       },
       metadata,
     });

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const projectStatusSchema = z.enum(['active', 'paused', 'closed']);
+
 export const createProjectSchema = z.object({
   name: z.string().trim().min(1, 'Project name is required.'),
   description: z.string().trim().optional(),
@@ -11,6 +13,7 @@ export const createProjectSchema = z.object({
   clientEmail: z.string().email('Invalid email address.').optional().or(z.literal('')),
   clientAddress: z.string().optional(),
   clientPhone: z.string().optional(),
+  status: projectStatusSchema.optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -24,6 +27,8 @@ export const updateProjectSchema = z.object({
   clientEmail: z.string().email('Invalid email address.').optional().or(z.literal('')),
   clientAddress: z.string().optional(),
   clientPhone: z.string().optional(),
+  status: projectStatusSchema.optional(),
+  isClosed: z.coerce.boolean().optional(),
 });
 
 export const updateProjectStatusSchema = z.object({
@@ -31,4 +36,5 @@ export const updateProjectStatusSchema = z.object({
     message: 'Workspace id is required.',
   }),
   isClosed: z.coerce.boolean(),
+  status: projectStatusSchema.optional(),
 });

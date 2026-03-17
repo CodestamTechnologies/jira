@@ -13,11 +13,14 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateProject } from '@/features/projects/api/use-create-project';
 import { createProjectSchema } from '@/features/projects/schema';
+import { PROJECT_STATUSES } from '@/features/projects/types';
+import type { ProjectStatus } from '@/features/projects/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +43,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
       link: '',
       image: undefined,
       workspaceId,
+      status: 'active' as ProjectStatus,
     },
   });
 
@@ -139,6 +143,37 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                     <FormControl>
                       <Input {...field} type="url" placeholder="https://example.com" />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={createProjectForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      disabled={isPending}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {PROJECT_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s.charAt(0).toUpperCase() + s.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Active, Pending, or Closed.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
