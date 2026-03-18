@@ -2,6 +2,11 @@ import { z } from 'zod';
 
 export const projectStatusSchema = z.enum(['active', 'paused', 'closed']);
 
+/** Coerces form values to boolean: string "false" -> false, "true" or true -> true (z.coerce.boolean() treats "false" as true). */
+const formBoolean = z
+  .union([z.boolean(), z.literal('true'), z.literal('false')])
+  .transform((v) => v === true || v === 'true');
+
 export const createProjectSchema = z.object({
   name: z.string().trim().min(1, 'Project name is required.'),
   description: z.string().trim().optional(),
@@ -28,13 +33,13 @@ export const updateProjectSchema = z.object({
   clientAddress: z.string().optional(),
   clientPhone: z.string().optional(),
   status: projectStatusSchema.optional(),
-  isClosed: z.coerce.boolean().optional(),
+  isClosed: formBoolean.optional(),
 });
 
 export const updateProjectStatusSchema = z.object({
   workspaceId: z.string({
     message: 'Workspace id is required.',
   }),
-  isClosed: z.coerce.boolean(),
+  isClosed: formBoolean,
   status: projectStatusSchema.optional(),
 });

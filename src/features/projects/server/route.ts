@@ -15,7 +15,6 @@ import { MemberRole } from '@/features/members/types';
 import { getMember } from '@/features/members/utils';
 import { createProjectSchema, updateProjectSchema, updateProjectStatusSchema } from '@/features/projects/schema';
 import type { Project } from '@/features/projects/types';
-import { isProjectClosed } from '@/features/projects/utils';
 import { type Task, TaskStatus } from '@/features/tasks/types';
 import { sessionMiddleware } from '@/lib/session-middleware';
 import { NotificationService } from '@/lib/email/services/notification-service';
@@ -80,7 +79,6 @@ const app = new Hono()
       clientEmail: clientEmail || undefined,
       clientAddress: clientAddress || undefined,
       clientPhone: clientPhone || undefined,
-      isClosed: false, // Explicitly set to false so the field exists for queries
       status: status ?? 'active',
     });
 
@@ -161,7 +159,6 @@ const app = new Hono()
         let allProjects: Project[] = [];
         let projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
           Query.equal('workspaceId', workspaceId),
-          Query.notEqual('isClosed', true),
           Query.orderDesc('$createdAt'),
           Query.limit(100), // Get up to 100 projects at a time
         ]);
@@ -172,7 +169,6 @@ const app = new Hono()
         while (projectsResponse.documents.length === 100) {
           projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
             Query.equal('workspaceId', workspaceId),
-            Query.notEqual('isClosed', true),
             Query.orderDesc('$createdAt'),
             Query.limit(100),
             Query.offset(allProjects.length),
@@ -243,7 +239,6 @@ const app = new Hono()
         let allProjectsList: Project[] = [];
         let projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
           Query.equal('workspaceId', workspaceId),
-          Query.notEqual('isClosed', true),
           Query.contains('$id', projectIds),
           Query.orderDesc('$createdAt'),
           Query.limit(100), // Get up to 100 projects at a time
@@ -255,7 +250,6 @@ const app = new Hono()
         while (projectsResponse.documents.length === 100) {
           projectsResponse = await databases.listDocuments<Project>(DATABASE_ID, PROJECTS_ID, [
             Query.equal('workspaceId', workspaceId),
-            Query.notEqual('isClosed', true),
             Query.contains('$id', projectIds),
             Query.orderDesc('$createdAt'),
             Query.limit(100),
@@ -311,15 +305,7 @@ const app = new Hono()
 
     const project = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
 
-    // Don't allow access to closed projects (if isClosed is not defined, it's open)
-    if (isProjectClosed(project)) {
-      return ctx.json(
-        {
-          error: 'This project is closed and cannot be accessed.',
-        },
-        403,
-      );
-    }
+   
 
     const member = await getMember({
       databases,
@@ -375,7 +361,10 @@ const app = new Hono()
     const user = ctx.get('user');
 
     const { projectId } = ctx.req.param();
-    const { name, description, link, image, clientEmail, clientAddress, clientPhone, status, isClosed } = ctx.req.valid('form');
+    const form = ctx.req.valid('form');
+    const { name, description, link, image, clientEmail, clientAddress, clientPhone, status, isClosed } = form;
+    console.log('isClosed', isClosed);
+    // status = project workflow state (active | paused | closed). isClosed = visibility/hidden flag. Separate properties.
 
     const existingProject = await databases.getDocument<Project>(DATABASE_ID, PROJECTS_ID, projectId);
 
@@ -427,6 +416,7 @@ const app = new Hono()
     if (clientAddress !== undefined) updateData.clientAddress = clientAddress || undefined;
     if (clientPhone !== undefined) updateData.clientPhone = clientPhone || undefined;
     if (status !== undefined) updateData.status = status;
+    // isClosed is separate from status; persist whenever the form sends it
     if (isClosed !== undefined) updateData.isClosed = isClosed;
 
     const project = await databases.updateDocument(DATABASE_ID, PROJECTS_ID, projectId, updateData);
