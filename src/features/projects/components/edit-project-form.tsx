@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDeleteProject } from '@/features/projects/api/use-delete-project';
 import { useUpdateProject } from '@/features/projects/api/use-update-project';
@@ -40,27 +39,37 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
   const { mutate: updateProject, isPending: isUpdatingProject } = useUpdateProject();
   const { mutate: deleteProject, isPending: isDeletingProject } = useDeleteProject();
 
+  const validStatus = PROJECT_STATUSES.includes((initialValues.status as ProjectStatus) ?? 'active')
+    ? (initialValues.status as ProjectStatus)
+    : 'active';
+
   const updateProjectForm = useForm<z.infer<typeof updateProjectSchema>>({
     resolver: zodResolver(updateProjectSchema),
     defaultValues: {
-      ...initialValues,
+      name: initialValues.name,
       description: initialValues.description ?? '',
       link: initialValues.link ?? '',
       image: initialValues.imageUrl ?? '',
       clientEmail: initialValues.clientEmail ?? '',
       clientAddress: initialValues.clientAddress ?? '',
       clientPhone: initialValues.clientPhone ?? '',
-      status: (initialValues.status ?? 'active') as ProjectStatus,
-      isClosed: initialValues.isClosed ?? false,
+      workspaceId: initialValues.workspaceId,
+      status: validStatus,
+      isClosed: initialValues.isClosed ,
     },
   });
 
   const onSubmit: SubmitHandler<z.infer<typeof updateProjectSchema>> = (values) => {
+    // Read isClosed from form state at submit time (checkbox can be unreliable in values callback)
+    const isClosed = updateProjectForm.getValues('isClosed');
+    const formPayload = {
+      ...values,
+      image: values.image instanceof File ? values.image : '',
+      isClosed: isClosed ? true : false,
+    };
+    console.log('formPayload', formPayload);
     updateProject({
-      form: {
-        ...values,
-        image: values.image instanceof File ? values.image : '',
-      } as any,
+      form: formPayload as any,
       param: { projectId: initialValues.$id },
     });
   };
@@ -333,27 +342,35 @@ export const EditProjectForm = ({ onCancel, initialValues }: EditProjectFormProp
                   />
                 </div>
 
-                <FormField
-                  disabled={isPending}
-                  control={updateProjectForm.control}
-                  name="isClosed"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
+                  <FormField
+                    disabled={isPending}
+                    control={updateProjectForm.control}
+                    name="isClosed"
+                    render={({ field }) => (
+                      <FormItem className="rounded-md border p-4">
                         <FormLabel>Mark project as closed</FormLabel>
+                        <Select
+                          disabled={isPending}
+                          value={field.value === true ? 'yes' : 'no'}
+                          onValueChange={(value) => field.onChange(value === 'yes')}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="yes">Yes</SelectItem>
+                            <SelectItem value="no">No</SelectItem>
+                          </SelectContent>
+                        </Select>
                         <FormDescription>
                           Closed projects and their tasks will not be shown in the workspace.
                         </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
               </div>
 
               <Separator className="py-7" />
