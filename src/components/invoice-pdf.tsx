@@ -89,9 +89,8 @@ export interface InvoiceData {
   notes?: string;
   termsAndConditions?: string;
 
-  // Payment Link
-  paymentLinkUrl?: string;
-  paymentLinkQrCode?: string; // QR code data URL
+  // UPI QR (NPCI upi://pay — amount and invoice ref in payload)
+  upiQrCodeDataUrl?: string;
 
   // Bank Details
   bankName: string;
@@ -124,8 +123,7 @@ const InvoicePDF: React.FC<InvoiceData> = ({
   total,
   notes,
   termsAndConditions,
-  paymentLinkUrl,
-  paymentLinkQrCode,
+  upiQrCodeDataUrl,
   bankName,
   accountName,
   accountNumber,
@@ -256,29 +254,26 @@ const InvoicePDF: React.FC<InvoiceData> = ({
 
         <Text>----------------------------------------------------------------------------{"\n"}</Text>
 
-        {/* Payment Link */}
-        {paymentLinkUrl && (
+        {upiQrCodeDataUrl && upi && (
           <>
             <View style={{ marginTop: 6, marginBottom: 6 }}>
-              <Text style={{ fontWeight: 'bold', fontSize: 11 }}>PAYMENT LINK:{"\n"}</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 11 }}>UPI PAYMENT:{"\n"}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 4 }}>
-                {paymentLinkQrCode && (
-                  <View style={{ marginRight: 8 }}>
-                    <Image
-                      src={paymentLinkQrCode}
-                      style={{ width: 60, height: 60 }}
-                    />
-                  </View>
-                )}
+                <View style={{ marginRight: 8 }}>
+                  <Image
+                    src={upiQrCodeDataUrl}
+                    style={{ width: 72, height: 72 }}
+                  />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ ...styles.value, fontSize: 9, marginBottom: 2 }}>
-                    Scan QR code or visit:{"\n"}
+                    Scan with any UPI app. Amount and invoice reference are preset.{"\n"}
                   </Text>
-                  <Text style={{
-                    ...styles.value,
-                    fontSize: 8,
-                  }}>
-                    {paymentLinkUrl}{"\n"}
+                  <Text style={{ ...styles.value, fontSize: 9 }}>
+                    UPI ID: {upi.trim()}{"\n"}
+                  </Text>
+                  <Text style={{ ...styles.value, fontSize: 9 }}>
+                    Amount: Rs.{total.toFixed(2)}{"\n"}
                   </Text>
                 </View>
               </View>

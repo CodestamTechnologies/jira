@@ -19,13 +19,16 @@ export const COMPANY_INFO = {
 }
 
 // Bank Details - Can be used across PDFs
+// UPI QR uses BANK_DETAILS.upi; override with NEXT_PUBLIC_COMPANY_UPI if needed.
 export const BANK_DETAILS = {
   bankName: 'HDFC Bank',
   accountName: 'KBYTE TECHBUILDER PRIVATE LIMITED',
   accountNumber: '50200116657331',
   ifsc: 'HDFC0000719',
   branch: 'RANCHI 2ND - RANCHI - JHARKHAND',
-  upi: null,
+  upi:
+    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_COMPANY_UPI) ||
+    '8228840065@hdfc',
 }
 
 // Terms and Conditions - Shared across invoices

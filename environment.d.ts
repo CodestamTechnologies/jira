@@ -28,9 +28,8 @@ declare global {
       // Resend API key for email sending
       RESEND_API_KEY: string;
 
-      // Razorpay credentials
-      RAZORPAY_KEY_ID: string;
-      RAZORPAY_KEY_SECRET: string;
+      /** Business UPI VPA for invoice QR (e.g. merchant@hdfcbank) */
+      NEXT_PUBLIC_COMPANY_UPI?: string;
     }
   }
 }

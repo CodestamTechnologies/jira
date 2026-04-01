@@ -15,7 +15,6 @@ import logDownload from '@/features/activity-logs/server/log-download';
 import pdfTemplates from '@/features/pdf-templates/server/route';
 import leads from '@/features/leads/server/route';
 import reports from '@/features/reports/server/route';
-import payments from '@/features/payments/server/route';
 import expenses from '@/features/expenses/server/route';
 
 export const runtime = 'nodejs';
@@ -37,7 +36,6 @@ const routes = app
   .route('/pdf-templates', pdfTemplates)
   .route('/leads', leads)
   .route('/reports', reports)
-  .route('/payments', payments)
   .route('/expenses', expenses);
 
 export type AppType = typeof routes;
